@@ -15,7 +15,7 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
     useEffect(() => {
         const loadRegions = async () => {
             try {
-                const res = await DictionaryApi.getAll('regions', 0, 25);
+                const res = await DictionaryApi.getAll('regions', 0, 100);
                 setRegions(res.data.content || res.data || []);
             } catch (e) {
                 console.error(e);
@@ -38,12 +38,12 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                         if (distData.regionId) {
                             setSelectedRegion(distData.regionId);
 
-                            const districtsRes = await DictionaryApi.getByParam('districts', 'regionId', distData.regionId);
+                            const districtsRes = await DictionaryApi.getByParam('districts', 'regionId', distData.regionId + '&size=1000');
                             setDistricts(districtsRes.data.content || districtsRes.data || []);
 
                             setSelectedDistrict(cityData.districtId);
 
-                            const citiesRes = await DictionaryApi.getByParam('cities', 'districtId', cityData.districtId);
+                            const citiesRes = await DictionaryApi.getByParam('cities', 'districtId', cityData.districtId + '&size=1000');
                             setCities(citiesRes.data.content || citiesRes.data || []);
 
                             setSelectedCity(selectedCityId);
@@ -75,7 +75,7 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
 
         if (regionId) {
             try {
-                const res = await DictionaryApi.getByParam('districts', 'regionId', regionId);
+                const res = await DictionaryApi.getByParam('districts', 'regionId', regionId + '&size=1000');
                 setDistricts(res.data.content || res.data || []);
             } catch (e) {
                 console.error(e);
@@ -93,7 +93,7 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
 
         if (districtId) {
             try {
-                const res = await DictionaryApi.getByParam('cities', 'districtId', districtId);
+                const res = await DictionaryApi.getByParam('cities', 'districtId', districtId + '&size=1000');
                 setCities(res.data.content || res.data || []);
             } catch (e) {
                 console.error(e);
@@ -108,12 +108,14 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
     };
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', mt: 1, mb: 1 }}>  
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', mt: 1, mb: 1 }}>
             <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                 <Public sx={{ color: 'primary.main', mr: 2 }} />
                 <FormControl fullWidth size="small">
-                    <InputLabel>1. Оберіть область</InputLabel>
+                    <InputLabel id="region-label">1. Оберіть область</InputLabel>
                     <Select 
+                        labelId="region-label"
+                        id="region-select"
                         value={selectedRegion} 
                         label="1. Оберіть область" 
                         onChange={handleRegionChange}
@@ -130,8 +132,10 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                     <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                         <Map sx={{ color: 'primary.main', mr: 2 }} />
                         <FormControl fullWidth size="small">
-                            <InputLabel>2. Оберіть район</InputLabel>
+                            <InputLabel id="district-label">2. Оберіть район</InputLabel>
                             <Select 
+                                labelId="district-label"
+                                id="district-select"
                                 value={selectedDistrict} 
                                 label="2. Оберіть район" 
                                 onChange={handleDistrictChange}
@@ -144,14 +148,16 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
             </Grow>
 
             <Grow in={!!selectedDistrict} style={{ transformOrigin: '0 0 0' }} timeout={500}>
-                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>  
+                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <ArrowDownward sx={{ color: 'text.secondary', my: 1 }} />
 
                     <Box sx={{ width: '100%', display: 'flex', alignItems: 'center' }}>
                         <LocationOn sx={{ color: selectedCity ? 'success.main' : 'primary.main', mr: 2 }} />
                         <FormControl fullWidth size="small" error={!!error}>
-                            <InputLabel>3. Оберіть населений пункт</InputLabel>
+                            <InputLabel id="city-label">3. Оберіть населений пункт</InputLabel>
                             <Select 
+                                labelId="city-label"
+                                id="city-select"
                                 value={selectedCity} 
                                 label="3. Оберіть населений пункт" 
                                 onChange={handleCityChange}
