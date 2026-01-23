@@ -7,10 +7,10 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
+import LocationSelector from '../components/LocationSelector';
 
 const BranchesPage = () => {
     const [branches, setBranches] = useState([]);
-    const [cities, setCities] = useState([]);
     const [branchTypes, setBranchTypes] = useState([]);
 
     const [page, setPage] = useState(0);
@@ -22,19 +22,15 @@ const BranchesPage = () => {
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
-        const loadDictionaries = async () => {
+        const loadTypes = async () => {
             try {
-                const [citiesRes, typesRes] = await Promise.all([
-                    DictionaryApi.getAll('cities', 0, 1000),
-                    DictionaryApi.getAll('branch-types', 0, 100)
-                ]);
-                setCities(citiesRes.data.content || citiesRes.data || []);
+                const typesRes = await DictionaryApi.getAll('branch-types', 0, 100);
                 setBranchTypes(typesRes.data.content || typesRes.data || []);
             } catch (error) {
-                console.error("Помилка завантаження довідників", error);
+                console.error("Помилка завантаження типів", error);
             }
         };
-        loadDictionaries();
+        loadTypes();
     }, []);
 
     const loadTableData = async () => {
@@ -63,6 +59,11 @@ const BranchesPage = () => {
     };
 
     const handleSave = async () => {
+        if (!currentItem.cityId) {
+            setNotification({ open: true, message: 'Будь ласка, оберіть населений пункт', severity: 'error' });
+            return;
+        }
+
         try {
             if (currentItem.id) {
                 await DictionaryApi.update('branches', currentItem.id, currentItem);
@@ -119,8 +120,8 @@ const BranchesPage = () => {
                             <TableRow key={row.id} hover>
                                 <TableCell>{row.name}</TableCell>
                                 <TableCell>{row.address}</TableCell>
-                                <TableCell>{row.cityName}</TableCell>
-                                <TableCell>{row.branchTypeName}</TableCell>
+                                <TableCell>{row.cityName || 'Невідомо'}</TableCell>
+                                <TableCell>{row.branchTypeName || 'Невідомо'}</TableCell>
                                 <TableCell align="right">
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                                         <IconButton color="primary" size="small" onClick={() => openModal(row)}>
@@ -156,25 +157,20 @@ const BranchesPage = () => {
                         value={currentItem.name}
                         onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })}
                     />
+
+                    <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Локація:</Typography>
+
+                    <LocationSelector 
+                        selectedCityId={currentItem.cityId}
+                        onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })}
+                    />
+
                     <TextField
-                        label="Адреса"
+                        label="Адреса (вулиця та номер)"
                         fullWidth
                         value={currentItem.address}
                         onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })}
                     />
-
-                    <FormControl fullWidth>
-                        <InputLabel>Місто</InputLabel>
-                        <Select
-                            value={currentItem.cityId || ''}
-                            label="Місто"
-                            onChange={(e) => setCurrentItem({ ...currentItem, cityId: e.target.value })}
-                        >
-                            {cities.map(city => (
-                                <MenuItem key={city.id} value={city.id}>{city.name}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
 
                     <FormControl fullWidth>
                         <InputLabel>Тип відділення</InputLabel>

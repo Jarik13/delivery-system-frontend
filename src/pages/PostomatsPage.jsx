@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-    TextField, Box, Typography, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
+    TextField, Box, Typography, Snackbar, Alert,
     Checkbox, FormControlLabel, Chip,
     TablePagination
 } from '@mui/material';
 import { Add, Edit, Delete, CheckCircle, Cancel } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
+import LocationSelector from '../components/LocationSelector';
 
 const PostomatsPage = () => {
     const [postomats, setPostomats] = useState([]);
-    const [cities, setCities] = useState([]);
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -20,18 +20,6 @@ const PostomatsPage = () => {
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
-
-    useEffect(() => {
-        const loadDictionaries = async () => {
-            try {
-                const citiesRes = await DictionaryApi.getAll('cities', 0, 1000);
-                setCities(citiesRes.data.content || citiesRes.data || []);
-            } catch (error) {
-                console.error("Помилка завантаження міст");
-            }
-        };
-        loadDictionaries();
-    }, []);
 
     const loadTableData = async () => {
         try {
@@ -49,7 +37,6 @@ const PostomatsPage = () => {
         loadTableData();
     }, [page, rowsPerPage]);
 
-
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
     };
@@ -60,6 +47,11 @@ const PostomatsPage = () => {
     };
 
     const handleSave = async () => {
+        if (!currentItem.cityId) {
+            setNotification({ open: true, message: 'Будь ласка, оберіть населений пункт', severity: 'error' });
+            return;
+        }
+
         try {
             if (currentItem.id) {
                 await DictionaryApi.update('postomats', currentItem.id, currentItem);
@@ -68,7 +60,7 @@ const PostomatsPage = () => {
             }
             setOpen(false);
             loadTableData();
-            setNotification({ open: true, message: 'Збережено', severity: 'success' });
+            setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
             setNotification({ open: true, message: 'Помилка збереження', severity: 'error' });
         }
@@ -79,6 +71,7 @@ const PostomatsPage = () => {
             try {
                 await DictionaryApi.delete('postomats', id);
                 loadTableData();
+                setNotification({ open: true, message: 'Видалено', severity: 'success' });
             } catch (e) {
                 setNotification({ open: true, message: 'Помилка видалення', severity: 'error' });
             }
@@ -118,7 +111,7 @@ const PostomatsPage = () => {
                                 <TableCell><b>{row.code}</b></TableCell>
                                 <TableCell>{row.name}</TableCell>
                                 <TableCell>{row.address}</TableCell>
-                                <TableCell>{row.cityName}</TableCell>
+                                <TableCell>{row.cityName || '-'}</TableCell>
                                 <TableCell>{row.cellsCount}</TableCell>
                                 <TableCell align="center">
                                     {row.isActive
@@ -157,18 +150,15 @@ const PostomatsPage = () => {
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
                     <TextField label="Технічний код" value={currentItem.code} onChange={(e) => setCurrentItem({ ...currentItem, code: e.target.value })} fullWidth />
                     <TextField label="Назва" value={currentItem.name} onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })} fullWidth />
-                    <TextField label="Адреса" value={currentItem.address} onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })} fullWidth />
 
-                    <FormControl fullWidth>
-                        <InputLabel>Місто</InputLabel>
-                        <Select
-                            value={currentItem.cityId || ''}
-                            label="Місто"
-                            onChange={(e) => setCurrentItem({ ...currentItem, cityId: e.target.value })}
-                        >
-                            {cities.map(city => <MenuItem key={city.id} value={city.id}>{city.name}</MenuItem>)}
-                        </Select>
-                    </FormControl>
+                    <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Локація:</Typography>
+                    
+                    <LocationSelector 
+                        selectedCityId={currentItem.cityId}
+                        onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })}
+                    />
+
+                    <TextField label="Адреса (вулиця, будинок, орієнтир)" value={currentItem.address} onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })} fullWidth />
 
                     <TextField
                         label="Кількість комірок"
