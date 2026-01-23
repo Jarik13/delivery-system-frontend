@@ -25,7 +25,7 @@ const PostomatsPage = () => {
         try {
             const response = await DictionaryApi.getAll('postomats', page, rowsPerPage);
             const data = response.data;
-            
+
             setPostomats(data.content || []);
             setTotalElements(data.totalElements || 0);
         } catch (error) {
@@ -148,24 +148,46 @@ const PostomatsPage = () => {
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
                 <DialogTitle>{currentItem.id ? 'Редагувати' : 'Новий поштомат'}</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-                    <TextField label="Технічний код" value={currentItem.code} onChange={(e) => setCurrentItem({ ...currentItem, code: e.target.value })} fullWidth />
-                    <TextField label="Назва" value={currentItem.name} onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })} fullWidth />
+                    <TextField
+                        label="Технічний код"
+                        value={currentItem.code || ''}
+                        disabled
+                        fullWidth
+                        margin="dense"
+                        helperText={!currentItem.id ? "Генерується автоматично після збереження" : ""}
+                        variant="filled"
+                    />
+
+                    <TextField
+                        label="Назва"
+                        value={currentItem.name || ''}
+                        onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })}
+                        fullWidth
+                        margin="dense"
+                    />
 
                     <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Локація:</Typography>
-                    
-                    <LocationSelector 
+
+                    <LocationSelector
                         selectedCityId={currentItem.cityId}
                         onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })}
                     />
 
-                    <TextField label="Адреса (вулиця, будинок, орієнтир)" value={currentItem.address} onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })} fullWidth />
+                    <TextField
+                        label="Адреса (вулиця, будинок, орієнтир)"
+                        value={currentItem.address || ''}
+                        onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })}
+                        fullWidth
+                        margin="dense"
+                    />
 
                     <TextField
                         label="Кількість комірок"
                         type="number"
-                        value={currentItem.cellsCount}
+                        value={currentItem.cellsCount || ''}
                         onChange={(e) => setCurrentItem({ ...currentItem, cellsCount: e.target.value })}
                         fullWidth
+                        margin="dense"
                     />
 
                     <FormControlLabel
