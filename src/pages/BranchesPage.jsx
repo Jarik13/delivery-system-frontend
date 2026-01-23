@@ -154,8 +154,9 @@ const BranchesPage = () => {
                     <TextField
                         label="Назва"
                         fullWidth
-                        value={currentItem.name}
+                        value={currentItem.name || ''} 
                         onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })}
+                        margin="dense"
                     />
 
                     <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Локація:</Typography>
@@ -173,8 +174,10 @@ const BranchesPage = () => {
                     />
 
                     <FormControl fullWidth>
-                        <InputLabel>Тип відділення</InputLabel>
+                        <InputLabel id="branch-type-label">Тип відділення</InputLabel>
                         <Select
+                            labelId="branch-type-label"
+                            id="branch-type-select"
                             value={currentItem.branchTypeId || ''}
                             label="Тип відділення"
                             onChange={(e) => setCurrentItem({ ...currentItem, branchTypeId: e.target.value })}
