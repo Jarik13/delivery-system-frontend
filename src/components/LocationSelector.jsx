@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FormControl, InputLabel, Select, MenuItem, Box, FormHelperText, Grow } from '@mui/material';
 import { ArrowDownward, LocationOn, Map, Public } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
@@ -10,7 +10,10 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
 
     const [selectedRegion, setSelectedRegion] = useState('');
     const [selectedDistrict, setSelectedDistrict] = useState('');
-    const [selectedCity, setSelectedCity] = useState(selectedCityId || '');
+    const [selectedCity, setSelectedCity] = useState('');
+
+    const isInternalChange = useRef(false);
+    const isInitialMount = useRef(true);
 
     useEffect(() => {
         const loadRegions = async () => {
@@ -25,42 +28,58 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
     }, []);
 
     useEffect(() => {
-        if (selectedCityId && !selectedRegion && regions.length > 0) {
-            const prefillLocation = async () => {
+        if (isInternalChange.current) {
+            isInternalChange.current = false;
+            return;
+        }
+
+        const loadCityHierarchy = async () => {
+            if (selectedCityId && regions.length > 0) {
                 try {
                     const cityRes = await DictionaryApi.getById('cities', selectedCityId);
                     const cityData = cityRes.data;
 
-                    if (cityData.districtId) {
-                        const distRes = await DictionaryApi.getById('districts', cityData.districtId);
+                    const districtId = cityData.districtId || 
+                                       (cityData.district && cityData.district.id) || 
+                                       (cityData.district_id);
+
+                    if (districtId) {
+                        const distRes = await DictionaryApi.getById('districts', districtId);
                         const distData = distRes.data;
 
-                        if (distData.regionId) {
-                            setSelectedRegion(distData.regionId);
+                        const regionId = distData.regionId || 
+                                         (distData.region && distData.region.id) || 
+                                         (distData.region_id);
 
-                            const districtsRes = await DictionaryApi.getByParam('districts', 'regionId', distData.regionId + '&size=1000');
+                        if (regionId) {
+                            setSelectedRegion(regionId);
+
+                            const districtsRes = await DictionaryApi.getByParam('districts', 'regionId', regionId + '&size=1000');
                             setDistricts(districtsRes.data.content || districtsRes.data || []);
 
-                            setSelectedDistrict(cityData.districtId);
+                            setSelectedDistrict(districtId);
 
-                            const citiesRes = await DictionaryApi.getByParam('cities', 'districtId', cityData.districtId + '&size=1000');
+                            const citiesRes = await DictionaryApi.getByParam('cities', 'districtId', districtId + '&size=1000');
                             setCities(citiesRes.data.content || citiesRes.data || []);
 
                             setSelectedCity(selectedCityId);
                         }
                     }
                 } catch (e) {
-                    console.error("Failed to prefill location", e);
+                    console.error("Failed to load city hierarchy", e);
                 }
-            };
-            prefillLocation();
-        } else if (!selectedCityId) {
-            setSelectedRegion('');
-            setSelectedDistrict('');
-            setSelectedCity('');
-            setDistricts([]);
-            setCities([]);
-        }
+            } else if (!selectedCityId && !isInitialMount.current) {
+                setSelectedRegion('');
+                setSelectedDistrict('');
+                setSelectedCity('');
+                setDistricts([]);
+                setCities([]);
+            }
+            
+            isInitialMount.current = false;
+        };
+
+        loadCityHierarchy();
     }, [selectedCityId, regions.length]);
 
     const handleRegionChange = async (e) => {
@@ -71,6 +90,8 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
         setSelectedCity('');
         setDistricts([]);
         setCities([]);
+        
+        isInternalChange.current = true;
         onCityChange(null);
 
         if (regionId) {
@@ -89,6 +110,8 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
         
         setSelectedCity('');
         setCities([]);
+        
+        isInternalChange.current = true;
         onCityChange(null);
 
         if (districtId) {
@@ -104,6 +127,7 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
     const handleCityChange = (e) => {
         const cityId = e.target.value;
         setSelectedCity(cityId);
+        isInternalChange.current = true;
         onCityChange(cityId);
     };
 
@@ -113,11 +137,11 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                 <Public sx={{ color: 'primary.main', mr: 2 }} />
                 <FormControl fullWidth size="small">
                     <InputLabel id="region-label">1. Оберіть область</InputLabel>
-                    <Select 
+                    <Select
                         labelId="region-label"
                         id="region-select"
-                        value={selectedRegion} 
-                        label="1. Оберіть область" 
+                        value={selectedRegion}
+                        label="1. Оберіть область"
                         onChange={handleRegionChange}
                     >
                         {regions.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
@@ -133,11 +157,11 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                         <Map sx={{ color: 'primary.main', mr: 2 }} />
                         <FormControl fullWidth size="small">
                             <InputLabel id="district-label">2. Оберіть район</InputLabel>
-                            <Select 
+                            <Select
                                 labelId="district-label"
                                 id="district-select"
-                                value={selectedDistrict} 
-                                label="2. Оберіть район" 
+                                value={selectedDistrict}
+                                label="2. Оберіть район"
                                 onChange={handleDistrictChange}
                             >
                                 {districts.map(d => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
@@ -155,11 +179,11 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                         <LocationOn sx={{ color: selectedCity ? 'success.main' : 'primary.main', mr: 2 }} />
                         <FormControl fullWidth size="small" error={!!error}>
                             <InputLabel id="city-label">3. Оберіть населений пункт</InputLabel>
-                            <Select 
+                            <Select
                                 labelId="city-label"
                                 id="city-select"
-                                value={selectedCity} 
-                                label="3. Оберіть населений пункт" 
+                                value={selectedCity}
+                                label="3. Оберіть населений пункт"
                                 onChange={handleCityChange}
                             >
                                 {cities.map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
