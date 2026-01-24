@@ -1,5 +1,3 @@
-// src/constants/dictionaries.js
-
 const DEFAULT_COLS = [
     { id: 'name', label: 'Назва' }
 ];
