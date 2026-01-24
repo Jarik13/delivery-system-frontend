@@ -3,13 +3,14 @@ import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
-    TablePagination
+    TablePagination, Tooltip, useTheme, alpha
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, Apartment, Place, Store } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 
 const BranchesPage = () => {
+    const theme = useTheme();
     const [branches, setBranches] = useState([]);
     const [branchTypes, setBranchTypes] = useState([]);
 
@@ -37,7 +38,6 @@ const BranchesPage = () => {
         try {
             const response = await DictionaryApi.getAll('branches', page, rowsPerPage);
             const data = response.data;
-            
             setBranches(data.content || []);
             setTotalElements(data.totalElements || 0);
         } catch (error) {
@@ -60,10 +60,9 @@ const BranchesPage = () => {
 
     const handleSave = async () => {
         if (!currentItem.cityId) {
-            setNotification({ open: true, message: 'Будь ласка, оберіть населений пункт', severity: 'error' });
+            setNotification({ open: true, message: 'Оберіть населений пункт', severity: 'warning' });
             return;
         }
-
         try {
             if (currentItem.id) {
                 await DictionaryApi.update('branches', currentItem.id, currentItem);
@@ -96,61 +95,125 @@ const BranchesPage = () => {
     };
 
     return (
-        <Paper sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h5" fontWeight="bold">Відділення</Typography>
-                <Button variant="contained" color="secondary" startIcon={<Add />} onClick={() => openModal()}>
+        <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
+            <Paper 
+                elevation={0} 
+                sx={{ 
+                    p: 2, mb: 2, 
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                    color: 'white',
+                    borderRadius: 3,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
+                        <Apartment fontSize="medium" color="inherit" />
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" fontWeight="bold">Відділення</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
+                            Пункти прийому та видачі вантажів
+                        </Typography>
+                    </Box>
+                </Box>
+                <Button 
+                    variant="contained" 
+                    size="small"
+                    sx={{ 
+                        bgcolor: 'white', color: '#2e7d32',
+                        fontWeight: 'bold', textTransform: 'none',
+                        '&:hover': { bgcolor: '#f1f8e9' }
+                    }}
+                    startIcon={<Add />} 
+                    onClick={() => openModal()}
+                >
                     Додати відділення
                 </Button>
-            </Box>
+            </Paper>
 
-            <TableContainer>
-                <Table>
-                    <TableHead>
-                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                            <TableCell><b>Назва</b></TableCell>
-                            <TableCell><b>Адреса</b></TableCell>
-                            <TableCell><b>Місто</b></TableCell>
-                            <TableCell><b>Тип</b></TableCell>
-                            <TableCell align="right"><b>Дії</b></TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {branches.map((row) => (
-                            <TableRow key={row.id} hover>
-                                <TableCell>{row.name}</TableCell>
-                                <TableCell>{row.address}</TableCell>
-                                <TableCell>{row.cityName || 'Невідомо'}</TableCell>
-                                <TableCell>{row.branchTypeName || 'Невідомо'}</TableCell>
-                                <TableCell align="right">
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                        <IconButton color="primary" size="small" onClick={() => openModal(row)}>
-                                            <Edit fontSize="small" />
-                                        </IconButton>
-                                        <IconButton color="error" size="small" onClick={() => handleDelete(row.id)}>
-                                            <Delete fontSize="small" />
-                                        </IconButton>
-                                    </Box>
-                                </TableCell>
+            <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e0e0e0' }} elevation={0}>
+                <TableContainer>
+                    <Table sx={{ minWidth: 700 }}>
+                        <TableHead>
+                            <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', pl: 3 }}>НАЗВА</TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>АДРЕСА</TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>ТИП</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', pr: 3 }}>ДІЇ</TableCell>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                            {branches.map((row) => (
+                                <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                    <TableCell sx={{ pl: 3 }}>
+                                        <Typography variant="subtitle2" fontWeight="bold">{row.name}</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5, color: 'text.secondary' }}>
+                                            <Place sx={{ fontSize: 14 }} />
+                                            <Typography variant="caption">{row.cityName || 'Невідомо'}</Typography>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2">{row.address}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Store color="action" fontSize="small" />
+                                            <Typography variant="body2">{row.branchTypeName || '-'}</Typography>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ pr: 3 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                            <Tooltip title="Редагувати">
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={() => openModal(row)}
+                                                    sx={{ 
+                                                        color: theme.palette.primary.main, 
+                                                        bgcolor: alpha(theme.palette.primary.main, 0.05) 
+                                                    }}
+                                                >
+                                                    <Edit fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Видалити">
+                                                <IconButton 
+                                                    size="small" 
+                                                    onClick={() => handleDelete(row.id)}
+                                                    sx={{ 
+                                                        color: theme.palette.error.main, 
+                                                        bgcolor: alpha(theme.palette.error.main, 0.05) 
+                                                    }}
+                                                >
+                                                    <Delete fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
 
-            <TablePagination
-                component="div"
-                count={totalElements}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="Рядків на сторінці:"
-            />
+                <TablePagination
+                    component="div"
+                    count={totalElements}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    labelRowsPerPage="Рядків:"
+                />
+            </Paper>
 
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
-                <DialogTitle>{currentItem.id ? 'Редагувати' : 'Нове відділення'}</DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}>
+                    <Apartment color="primary" />
+                    <Typography variant="h6">{currentItem.id ? 'Редагувати' : 'Нове відділення'}</Typography>
+                </DialogTitle>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
                     <TextField
                         label="Назва"
                         fullWidth
@@ -158,26 +221,25 @@ const BranchesPage = () => {
                         onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })}
                         margin="dense"
                     />
-
-                    <Typography variant="subtitle2" sx={{ mt: 1, color: 'text.secondary' }}>Локація:</Typography>
-
-                    <LocationSelector 
-                        selectedCityId={currentItem.cityId}
-                        onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })}
-                    />
-
-                    <TextField
-                        label="Адреса (вулиця та номер)"
-                        fullWidth
-                        value={currentItem.address}
-                        onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })}
-                    />
+                    
+                    <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>Локація</Typography>
+                        <LocationSelector 
+                            selectedCityId={currentItem.cityId}
+                            onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })}
+                        />
+                        <TextField
+                            label="Вулиця та номер будинку"
+                            fullWidth
+                            value={currentItem.address}
+                            onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })}
+                            sx={{ mt: 2 }}
+                        />
+                    </Box>
 
                     <FormControl fullWidth>
-                        <InputLabel id="branch-type-label">Тип відділення</InputLabel>
+                        <InputLabel>Тип відділення</InputLabel>
                         <Select
-                            labelId="branch-type-label"
-                            id="branch-type-select"
                             value={currentItem.branchTypeId || ''}
                             label="Тип відділення"
                             onChange={(e) => setCurrentItem({ ...currentItem, branchTypeId: e.target.value })}
@@ -188,16 +250,16 @@ const BranchesPage = () => {
                         </Select>
                     </FormControl>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpen(false)}>Скасувати</Button>
-                    <Button onClick={handleSave} variant="contained">Зберегти</Button>
+                <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
+                    <Button onClick={() => setOpen(false)} sx={{ borderRadius: 2 }}>Скасувати</Button>
+                    <Button onClick={handleSave} variant="contained" disableElevation sx={{ borderRadius: 2 }}>Зберегти</Button>
                 </DialogActions>
             </Dialog>
 
             <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })}>
-                <Alert severity={notification.severity}>{notification.message}</Alert>
+                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2 }}>{notification.message}</Alert>
             </Snackbar>
-        </Paper>
+        </Box>
     );
 };
 

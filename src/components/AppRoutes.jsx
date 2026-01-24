@@ -1,23 +1,23 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import GenericTable from './GenericTable';
 import { MENU_GROUPS } from '../constants/dictionaries';
 
-// Імпортуємо нові сторінки
 import BranchesPage from '../pages/BranchesPage';
 import PostomatsPage from '../pages/PostomatsPage';
+import RoutesPage from '../pages/RoutesPage';
 
 const AppRoutes = () => {
     return (
         <Routes>
-            <Route path="/" element={<h2>Головна</h2>} />
+            <Route path="/" element={<Navigate to="/branches" replace />} />
             
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/postomats" element={<PostomatsPage />} />
+            <Route path="/routes" element={<RoutesPage />} />
 
             {MENU_GROUPS.flatMap(group => group.items).map((item) => (
-                item.path !== 'branches' && item.path !== 'postomats' && (
+                !item.isCustomPage && (
                     <Route 
                         key={item.path} 
                         path={`/${item.path}`} 
@@ -31,6 +31,8 @@ const AppRoutes = () => {
                     />
                 )
             ))}
+            
+            <Route path="*" element={<h2>Сторінку не знайдено</h2>} />
         </Routes>
     );
 };

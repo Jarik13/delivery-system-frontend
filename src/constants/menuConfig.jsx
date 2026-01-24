@@ -1,8 +1,9 @@
+import React from 'react';
 import {
     Business, Apartment, LocalPostOffice, LocalShipping, DirectionsCar, AttachMoney,
     LocationCity, Category, People, Inventory,
     LocalAtm, Assignment, Public, Place, Home,
-    LocationOn, Route, Badge, DeliveryDining,
+    LocationOn, AltRoute, Badge, DeliveryDining,
     Payments, AssignmentReturned, LocalConvenienceStore,
     AirportShuttle, AirlineSeatReclineNormal, DirectionsBus,
     BuildCircle, SettingsEthernet, SettingsInputComponent, EvStation,
@@ -16,8 +17,8 @@ export const GROUP_COLORS = {
     "Мережа доставки": '#2196f3',
     "Відділення": '#4caf50',
     "Поштомати": '#ff9800',
+    "Логістика та Автопарк": '#f44336',
     "Вантажі та Пакування": '#9c27b0',
-    "Автопарк (Fleet)": '#f44336',
     "Організація та Фінанси": '#009688',
     "default": '#757575'
 };
@@ -27,8 +28,8 @@ export const groupIcons = {
     "Мережа доставки": <Business />,
     "Відділення": <Apartment />,
     "Поштомати": <LocalPostOffice />,
-    "Вантажі та Пакування": <LocalShipping />,
-    "Автопарк (Fleet)": <DirectionsCar />,
+    "Логістика та Автопарк": <LocalShipping />,
+    "Вантажі та Пакування": <Inventory />,
     "Організація та Фінанси": <AttachMoney />
 };
 
@@ -38,7 +39,7 @@ export const itemIcons = {
     "regions": <Public />,
     "districts": <Place />,
     "cities": <LocationCity />,
-    "streets": <Route />,
+    "streets": <AltRoute />,
     "address-houses": <Home />,
 
     // ========== ВІДДІЛЕННЯ ==========
@@ -63,7 +64,8 @@ export const itemIcons = {
     "returns": <AssignmentReturned />,
     "return-reasons": <HelpOutline />,
 
-    // ========== АВТОПАРК (FLEET) ==========
+    // ========== ЛОГІСТИКА ТА АВТОПАРК ==========
+    "routes": <AltRoute />,
     "fleets": <DirectionsCarFilled />,
     "vehicles": <DirectionsCarOutlined />,
     "fleet-brands": <DirectionsCar />,
@@ -75,7 +77,6 @@ export const itemIcons = {
     "drivers": <AirlineSeatReclineNormal />,
     "trips": <DirectionsBus />,
     "trip-statuses": <TripOrigin />,
-    "routes": <Route />,
 
     // ========== ОРГАНІЗАЦІЯ ТА ФІНАНСИ ==========
     "clients": <People />,
