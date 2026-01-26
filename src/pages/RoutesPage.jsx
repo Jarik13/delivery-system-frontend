@@ -2,23 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-    Box, Typography, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel,
-    TablePagination, Chip, Checkbox, FormControlLabel, Tooltip,
-    useTheme, alpha
+    Box, Typography, Snackbar, Alert, Chip, Checkbox, FormControlLabel,
+    TablePagination
 } from '@mui/material';
 import {
     Add, Edit, Delete, LocalShipping, SwapHoriz,
-    ArrowRightAlt, Map
+    ArrowRightAlt, Map, TripOrigin, LocationOn
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
+import RouteBranchSelector from '../components/RouteBranchSelector';
 
 const RoutesPage = () => {
-    const theme = useTheme();
     const [routes, setRoutes] = useState([]);
-    const [branches, setBranches] = useState([]);
-    console.log(routes)
-
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
@@ -26,51 +22,45 @@ const RoutesPage = () => {
     const [filters, setFilters] = useState({
         originBranchName: '',
         destinationBranchName: '',
-        needSorting: '' 
+        needSorting: ''
     });
 
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
+    const [originCityId, setOriginCityId] = useState(null);
+    const [destCityId, setDestCityId] = useState(null);
+
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     const loadTableData = useCallback(async () => {
         try {
             const response = await DictionaryApi.getAll('routes', page, rowsPerPage, filters);
-            const data = response.data;
-            setRoutes(data.content || []);
-            setTotalElements(data.totalElements || 0);
+            setRoutes(response.data.content || []);
+            setTotalElements(response.data.totalElements || 0);
         } catch (error) {
-            setNotification({ open: true, message: 'Помилка завантаження маршрутів', severity: 'error' });
+            setNotification({ open: true, message: 'Помилка завантаження', severity: 'error' });
         }
     }, [page, rowsPerPage, filters]);
 
     useEffect(() => {
-        const loadBranches = async () => {
-            try {
-                const res = await DictionaryApi.getAll('branches', 0, 1000);
-                setBranches(res.data.content || []);
-            } catch (error) {
-                console.error("Не вдалося завантажити список відділень");
-            }
-        };
-        loadBranches();
-    }, []);
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            loadTableData();
-        }, 400);
+        const timer = setTimeout(() => { loadTableData(); }, 400);
         return () => clearTimeout(timer);
     }, [loadTableData]);
 
-    const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
-        setPage(0);
-    };
-
-    const handleClearFilters = () => {
-        setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' });
-        setPage(0);
+    const openModal = async (item = { originBranchId: '', destinationBranchId: '', needSorting: false }) => {
+        if (item.id) {
+            try {
+                const oRes = await DictionaryApi.getById('branches', item.originBranchId);
+                const dRes = await DictionaryApi.getById('branches', item.destinationBranchId);
+                setOriginCityId(oRes.data.cityId);
+                setDestCityId(dRes.data.cityId);
+            } catch (e) { console.error(e); }
+        } else {
+            setOriginCityId(null);
+            setDestCityId(null);
+        }
+        setCurrentItem(item);
+        setOpen(true);
     };
 
     const handleSave = async () => {
@@ -78,19 +68,12 @@ const RoutesPage = () => {
             setNotification({ open: true, message: 'Оберіть обидва відділення', severity: 'warning' });
             return;
         }
-        if (currentItem.originBranchId === currentItem.destinationBranchId) {
-            setNotification({ open: true, message: 'Відділення не можуть співпадати', severity: 'error' });
-            return;
-        }
         try {
-            if (currentItem.id) {
-                await DictionaryApi.update('routes', currentItem.id, currentItem);
-            } else {
-                await DictionaryApi.create('routes', currentItem);
-            }
+            if (currentItem.id) await DictionaryApi.update('routes', currentItem.id, currentItem);
+            else await DictionaryApi.create('routes', currentItem);
             setOpen(false);
             loadTableData();
-            setNotification({ open: true, message: 'Маршрут збережено', severity: 'success' });
+            setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
             setNotification({ open: true, message: 'Помилка збереження', severity: 'error' });
         }
@@ -101,164 +84,198 @@ const RoutesPage = () => {
             try {
                 await DictionaryApi.delete('routes', id);
                 loadTableData();
-                setNotification({ open: true, message: 'Маршрут видалено', severity: 'success' });
-            } catch (error) {
-                setNotification({ open: true, message: 'Помилка видалення', severity: 'error' });
-            }
+                setNotification({ open: true, message: 'Видалено', severity: 'success' });
+            } catch (error) { console.error(error); }
         }
     };
-
-    const openModal = (item = { originBranchId: '', destinationBranchId: '', isNeedSorting: false }) => {
-        setCurrentItem(item);
-        setOpen(true);
-    };
-
-    const filterFields = [
-        { name: 'originBranchName', label: 'Звідки (назва)', type: 'text' },
-        { name: 'destinationBranchName', label: 'Куди (назва)', type: 'text' },
-        {
-            name: 'needSorting',
-            label: 'Тип логістики', 
-            type: 'select',
-            options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }]
-        }
-    ];
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
-            <Paper elevation={0} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+            <Paper elevation={0} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', color: 'white', borderRadius: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}><Map fontSize="medium" color="inherit" /></Box>
+                    <Map fontSize="medium" color="inherit" />
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Магістральні маршрути</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.8, display: 'block' }}>Управління логістичними ланцюжками</Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" size="small" sx={{ bgcolor: 'white', color: '#1565c0', fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }} startIcon={<Add />} onClick={() => openModal()}>Створити маршрут</Button>
+                <Button variant="contained" size="small" sx={{ bgcolor: 'white', color: '#1565c0', fontWeight: 'bold' }} startIcon={<Add />} onClick={() => openModal()}>
+                    Створити маршрут
+                </Button>
             </Paper>
 
-            <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />
+            <DataFilters
+                filters={filters}
+                onChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(0); }}
+                onClear={() => setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' })}
+                fields={[
+                    { name: 'originBranchName', label: 'Звідки (назва)', type: 'text' },
+                    { name: 'destinationBranchName', label: 'Куди (назва)', type: 'text' },
+                    { name: 'needSorting', label: 'Тип логістики', type: 'select', options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] }
+                ]}
+            />
 
-            <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e0e0e0' }} elevation={0}>
-                <TableContainer>
-                    <Table sx={{ minWidth: 800 }}>
-                        <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                                <TableCell sx={{ color: 'text.secondary', fontWeight: 600, width: '75%', pl: 3 }}>МАРШРУТ</TableCell>
-                                <TableCell sx={{ color: 'text.secondary', fontWeight: 600, width: '15%' }} align="center">ЛОГІСТИКА</TableCell>
-                                <TableCell sx={{ color: 'text.secondary', fontWeight: 600, width: '10%' }} align="right">ДІЇ</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {routes.map((row) => {
-                                return (
-                                    <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 }, transition: 'background 0.2s', }}>
-                                        <TableCell sx={{ pl: 3 }}>
+            <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e0e0e0' }}>
+                <Table sx={{ minWidth: 800 }}>
+                    <TableHead sx={{ bgcolor: '#f8f9fa' }}>
+                        <TableRow>
+                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary', pl: 3 }}>МАРШРУТ</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600, color: 'text.secondary' }}>ЛОГІСТИКА</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', pr: 3 }}>ДІЇ</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {routes.map((row) => (
+                            <TableRow key={row.id} hover>
+                                <TableCell sx={{ pl: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ flex: 1, textAlign: 'right', fontWeight: 700 }}>
+                                            {row.originBranchName}
+                                        </Typography>
+
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120, px: 1 }}>
+                                            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled', mb: 0.5, letterSpacing: 1 }}>КУДИ</Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                <Box sx={{ flex: 1, textAlign: 'right', pr: 2 }}>
-                                                    <Typography variant="subtitle2" fontWeight="bold" lineHeight={1.3} sx={{ fontSize: '0.95rem' }}>{row.originBranchName || 'Не вказано'}</Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'text.disabled', px: 1, minWidth: '90px' }}>
-                                                    <Typography variant="caption" sx={{ mb: -0.5, fontSize: '0.6rem', letterSpacing: 0.5 }}>КУДИ</Typography>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                        <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: '#bdbdbd' }} />
-                                                        <Box sx={{ flex: 1, height: 1, borderTop: '2px dashed #e0e0e0', minWidth: '20px' }} />
-                                                        <LocalShipping sx={{ color: theme.palette.primary.main, fontSize: 20, mx: 0.5 }} />
-                                                        <Box sx={{ flex: 1, height: 1, borderTop: '2px dashed #e0e0e0', minWidth: '20px' }} />
-                                                        <ArrowRightAlt sx={{ color: '#bdbdbd', fontSize: 16 }} />
-                                                    </Box>
-                                                </Box>
-                                                <Box sx={{ flex: 1, pl: 2 }}>
-                                                    <Typography variant="subtitle2" fontWeight="bold" lineHeight={1.3} sx={{ fontSize: '0.95rem' }}>{row.destinationBranchName || 'Не вказано'}</Typography>
-                                                </Box>
+                                                <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'divider' }} />
+                                                <Box sx={{ flex: 1, height: 0, borderTop: '1px dashed', borderColor: 'divider' }} />
+                                                <LocalShipping color="primary" sx={{ fontSize: 20, mx: 0.5 }} />
+                                                <Box sx={{ flex: 1, height: 0, borderTop: '1px dashed', borderColor: 'divider' }} />
+                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 18, ml: -0.5 }} />
                                             </Box>
-                                        </TableCell>
-                                        <TableCell align="center">
-                                            {row.needSorting ? (
-                                                <Tooltip title="Маршрут через термінал (потребує сортування вантажу)" arrow>
-                                                    <Chip
-                                                        icon={<SwapHoriz style={{ fontSize: 18 }} />}
-                                                        label="Сортування"
-                                                        sx={{
-                                                            bgcolor: alpha(theme.palette.warning.main, 0.1),
-                                                            color: theme.palette.warning.dark,
-                                                            borderColor: alpha(theme.palette.warning.main, 0.3),
-                                                            fontWeight: 700,
-                                                            border: '1px solid',
-                                                            height: 28,
-                                                            fontSize: '0.75rem',
-                                                            cursor: 'help'
-                                                        }}
-                                                    />
-                                                </Tooltip>
-                                            ) : (
-                                                <Tooltip title="Пряма доставка з точки А в точку Б (без терміналу)" arrow>
-                                                    <Chip
-                                                        icon={<ArrowRightAlt style={{ fontSize: 18 }} />}
-                                                        label="Прямий"
-                                                        sx={{
-                                                            bgcolor: alpha(theme.palette.success.main, 0.1),
-                                                            color: theme.palette.success.dark,
-                                                            borderColor: alpha(theme.palette.success.main, 0.3),
-                                                            fontWeight: 700,
-                                                            border: '1px solid',
-                                                            height: 28,
-                                                            fontSize: '0.75rem',
-                                                            cursor: 'help'
-                                                        }}
-                                                    />
-                                                </Tooltip>
-                                            )}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                                                <Tooltip title="Редагувати"><IconButton size="small" onClick={() => openModal(row)} sx={{ color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.05), }}><Edit fontSize="small" /></IconButton></Tooltip>
-                                                <Tooltip title="Видалити"><IconButton size="small" onClick={() => handleDelete(row.id)} sx={{ color: theme.palette.error.main, bgcolor: alpha(theme.palette.error.main, 0.05), }}><Delete fontSize="small" /></IconButton></Tooltip>
-                                            </Box>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <TablePagination
-                    component="div" count={totalElements} page={page} onPageChange={(e, newPage) => setPage(newPage)}
-                    rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-                    labelRowsPerPage="Рядків:"
-                />
-            </Paper>
+                                        </Box>
 
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}><LocalShipping color="primary" /><Typography variant="h6">{currentItem.id ? 'Редагувати маршрут' : 'Новий маршрут'}</Typography></DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 3 }}>
-                    <Box sx={{ mt: 1 }}>
-                        <FormControl fullWidth>
-                            <InputLabel>Відділення відправлення</InputLabel>
-                            <Select value={currentItem.originBranchId || ''} label="Відділення відправлення" onChange={(e) => setCurrentItem({ ...currentItem, originBranchId: e.target.value })}>
-                                {branches.map(b => (<MenuItem key={b.id} value={b.id}>{b.name} ({b.cityName})</MenuItem>))}
-                            </Select>
-                        </FormControl>
+                                        <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 700 }}>
+                                            {row.destinationBranchName}
+                                        </Typography>
+                                    </Box>
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Chip
+                                        icon={row.needSorting ? <SwapHoriz /> : <ArrowRightAlt />}
+                                        label={row.needSorting ? "Сортування" : "Прямий"}
+                                        color={row.needSorting ? "warning" : "success"}
+                                        size="small" variant="outlined" sx={{ fontWeight: 600 }}
+                                    />
+                                </TableCell>
+                                <TableCell align="right" sx={{ pr: 3 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                        <IconButton onClick={() => openModal(row)} color="primary" size="small">
+                                            <Edit fontSize="small" />
+                                        </IconButton>
+                                        <IconButton onClick={() => handleDelete(row.id)} color="error" size="small">
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))} labelRowsPerPage="Рядків:" />
+            </TableContainer>
+
+            <Dialog
+                open={open}
+                onClose={() => setOpen(false)}
+                fullWidth
+                maxWidth="lg"
+                PaperProps={{
+                    sx: {
+                        borderRadius: 4,
+                        maxWidth: '1050px',
+                        width: '100%'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ borderBottom: '1px solid #eee', fontWeight: 'bold', py: 2 }}>
+                    {currentItem.id ? 'Редагувати магістральний маршрут' : 'Новий маршрут'}
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3, overflowX: 'hidden' }}>
+                    <Box sx={{
+                        display: 'flex',
+                        mt: 3,
+                        gap: 2,
+                        flexDirection: { xs: 'column', md: 'row' },
+                        alignItems: 'stretch'
+                    }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <RouteBranchSelector
+                                title="Точка відправлення"
+                                icon={TripOrigin}
+                                color="primary.main"
+                                cityId={originCityId}
+                                branchId={currentItem.originBranchId}
+                                onCityChange={(id) => {
+                                    setOriginCityId(id);
+                                    setCurrentItem(prev => ({ ...prev, originBranchId: '' }));
+                                }}
+                                onBranchChange={(id) => setCurrentItem(prev => ({ ...prev, originBranchId: id }))}
+                            />
+                        </Box>
+
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <RouteBranchSelector
+                                title="Точка призначення"
+                                icon={LocationOn}
+                                color="success.main"
+                                cityId={destCityId}
+                                branchId={currentItem.destinationBranchId}
+                                onCityChange={(id) => {
+                                    setDestCityId(id);
+                                    setCurrentItem(prev => ({ ...prev, destinationBranchId: '' }));
+                                }}
+                                onBranchChange={(id) => setCurrentItem(prev => ({ ...prev, destinationBranchId: id }))}
+                            />
+                        </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', my: -1 }}><Box sx={{ bgcolor: '#f5f5f5', p: 1, borderRadius: '50%' }}><ArrowRightAlt sx={{ transform: 'rotate(90deg)', color: 'text.secondary' }} /></Box></Box>
-                    <FormControl fullWidth>
-                        <InputLabel>Відділення призначення</InputLabel>
-                        <Select value={currentItem.destinationBranchId || ''} label="Відділення призначення" onChange={(e) => setCurrentItem({ ...currentItem, destinationBranchId: e.target.value })}>
-                            {branches.map(b => (<MenuItem key={b.id} value={b.id} disabled={b.id === currentItem.originBranchId}>{b.name} ({b.cityName})</MenuItem>))}
-                        </Select>
-                    </FormControl>
-                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), borderColor: alpha(theme.palette.warning.main, 0.2) }}>
-                        <FormControlLabel control={<Checkbox checked={currentItem.isNeedSorting || false} onChange={(e) => setCurrentItem({ ...currentItem, isNeedSorting: e.target.checked })} color="warning" />} label={<Typography fontWeight={500}>Необхідне сортування</Typography>} />
-                    </Paper>
+
+                    <Box sx={{ mt: 3 }}>
+                        <Paper
+                            variant="outlined"
+                            sx={{
+                                p: 2,
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                bgcolor: 'transparent',
+                                borderColor: '#e0e0e0'
+                            }}
+                        >
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={!!currentItem.needSorting}
+                                        onChange={(e) => setCurrentItem(p => ({ ...p, needSorting: e.target.checked }))}
+                                        color="warning"
+                                    />
+                                }
+                                label={
+                                    <Typography fontWeight={500}>
+                                        Маршрут потребує додаткового сортування на терміналі
+                                    </Typography>
+                                }
+                                sx={{ width: '100%', ml: 0 }}
+                            />
+                        </Paper>
+                    </Box>
                 </DialogContent>
+
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ borderRadius: 2 }}>Скасувати</Button>
-                    <Button onClick={handleSave} variant="contained" disableElevation sx={{ borderRadius: 2 }}>Зберегти</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Скасувати</Button>
+                    <Button
+                        onClick={handleSave}
+                        variant="contained"
+                        disableElevation
+                        sx={{ px: 4, borderRadius: 2, fontWeight: 'bold' }}
+                    >
+                        Зберегти маршрут
+                    </Button>
                 </DialogActions>
             </Dialog>
 
-            <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2 }}>{notification.message}</Alert>
+            <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })}>
+                <Alert severity={notification.severity} variant="filled">{notification.message}</Alert>
             </Snackbar>
         </Box>
     );
