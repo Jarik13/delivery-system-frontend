@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { 
     Add, Edit, Delete, LocalShipping, SwapHoriz, 
-    Place, ArrowRightAlt, Map 
+    ArrowRightAlt, Map 
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 
@@ -92,15 +92,6 @@ const RoutesPage = () => {
         setOpen(true);
     };
 
-    const parseLocation = (fullName) => {
-        if (!fullName) return { main: 'Не вказано', sub: '' };
-        const match = fullName.match(/^(.*?)\s*\((.*?)\)$/);
-        if (match) {
-            return { main: match[2], sub: match[1] };
-        }
-        return { main: fullName, sub: 'Відділення' };
-    };
-
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
             <Paper 
@@ -161,9 +152,6 @@ const RoutesPage = () => {
                         </TableHead>
                         <TableBody>
                             {routes.map((row) => {
-                                const origin = parseLocation(row.originBranchName);
-                                const dest = parseLocation(row.destinationBranchName);
-
                                 return (
                                     <TableRow 
                                         key={row.id} 
@@ -177,11 +165,7 @@ const RoutesPage = () => {
                                             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                                 <Box sx={{ flex: 1, textAlign: 'right', pr: 2 }}>
                                                     <Typography variant="subtitle2" fontWeight="bold" lineHeight={1.3} sx={{ fontSize: '0.95rem' }}>
-                                                        {origin.main}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                                        <Place sx={{ fontSize: 12, mr: 0.5, verticalAlign: 'text-top' }} />
-                                                        {origin.sub}
+                                                        {row.originBranchName || 'Не вказано'}
                                                     </Typography>
                                                 </Box>
 
@@ -198,11 +182,7 @@ const RoutesPage = () => {
 
                                                 <Box sx={{ flex: 1, pl: 2 }}>
                                                     <Typography variant="subtitle2" fontWeight="bold" lineHeight={1.3} sx={{ fontSize: '0.95rem' }}>
-                                                        {dest.main}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                                        <Place sx={{ fontSize: 12, mr: 0.5, verticalAlign: 'text-top' }} />
-                                                        {dest.sub}
+                                                        {row.destinationBranchName || 'Не вказано'}
                                                     </Typography>
                                                 </Box>
                                             </Box>
