@@ -14,6 +14,7 @@ import {
 
 // 1. КОЛЬОРИ ГРУП
 export const GROUP_COLORS = {
+    "Керування логістикою": '#673ab7', // Додано колір для нової групи
     "Мережа доставки": '#2196f3',
     "Відділення": '#4caf50',
     "Поштомати": '#ff9800',
@@ -25,6 +26,7 @@ export const GROUP_COLORS = {
 
 // 2. ІКОНКИ ГРУП
 export const groupIcons = {
+    "Керування логістикою": <Inventory />, // Додано іконку для заголовка групи
     "Мережа доставки": <Business />,
     "Відділення": <Apartment />,
     "Поштомати": <LocalPostOffice />,
@@ -35,6 +37,9 @@ export const groupIcons = {
 
 // 3. ІКОНКИ ПУНКТІВ МЕНЮ
 export const itemIcons = {
+    // ========== КЕРУВАННЯ ЛОГІСТИКОЮ ==========
+    "parcels": <Inventory />, // Додано іконку для пункту "Посилки"
+
     // ========== МЕРЕЖА ДОСТАВКИ ==========
     "regions": <Public />,
     "districts": <Place />,
@@ -54,7 +59,6 @@ export const itemIcons = {
 
     // ========== ВАНТАЖІ ТА ПАКУВАННЯ ==========
     "shipments": <LocalShipping />,
-    "parcels": <Inventory />,
     "parcel-types": <Category />,
     "box-types": <Inbox />,
     "box-variants": <Storage />,

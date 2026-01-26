@@ -4,6 +4,17 @@ const DEFAULT_COLS = [
 
 export const MENU_GROUPS = [
     {
+        title: "Керування логістикою",
+        items: [
+            { 
+                label: 'Посилки', 
+                path: 'parcels', 
+                isCustomPage: true,
+                endpoint: 'parcels'
+            },
+        ]
+    },
+    {
         title: "Мережа доставки",
         items: [
             { 
