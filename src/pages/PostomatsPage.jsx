@@ -13,7 +13,6 @@ import DataFilters from '../components/DataFilters';
 const PostomatsPage = () => {
     const theme = useTheme();
     const [postomats, setPostomats] = useState([]);
-
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
@@ -22,7 +21,9 @@ const PostomatsPage = () => {
         name: '',
         code: '',
         address: '',
-        isActive: ''
+        isActive: '',
+        cellsCountMin: 0,
+        cellsCountMax: 100
     });
 
     const [open, setOpen] = useState(false);
@@ -53,7 +54,14 @@ const PostomatsPage = () => {
     };
 
     const handleClearFilters = () => {
-        setFilters({ name: '', code: '', address: '', isActive: '' });
+        setFilters({
+            name: '',
+            code: '',
+            address: '',
+            isActive: '',
+            cellsCountMin: 0,
+            cellsCountMax: 100
+        });
         setPage(0);
     };
 
@@ -101,11 +109,19 @@ const PostomatsPage = () => {
 
     const filterFields = [
         { name: 'name', label: 'Назва', type: 'text' },
-        { name: 'code', label: 'Код поштомату', type: 'text' },
+        { name: 'code', label: 'Код', type: 'text' },
         { name: 'address', label: 'Адреса', type: 'text' },
         { 
             name: 'isActive', label: 'Статус', type: 'select', 
             options: [{ id: 'true', name: 'Активний' }, { id: 'false', name: 'Неактивний' }] 
+        },
+        { 
+            label: 'Кількість комірок', 
+            type: 'range', 
+            minName: 'cellsCountMin', 
+            maxName: 'cellsCountMax',
+            min: 0, 
+            max: 200 
         }
     ];
 
@@ -127,8 +143,8 @@ const PostomatsPage = () => {
             <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e0e0e0' }} elevation={0}>
                 <TableContainer>
                     <Table sx={{ minWidth: 800 }}>
-                        <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8f9fa' }}>
+                        <TableHead sx={{ bgcolor: '#f8f9fa' }}>
+                            <TableRow>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', pl: 3 }}>ПОШТОМАТ</TableCell>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>АДРЕСА</TableCell>
                                 <TableCell align="center" sx={{ fontWeight: 600, color: 'text.secondary' }}>КОМІРОК</TableCell>
@@ -179,30 +195,29 @@ const PostomatsPage = () => {
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}><AllInbox color="primary" /><Typography variant="h6">{currentItem.id ? 'Редагувати' : 'Новий поштомат'}</Typography></DialogTitle>
+                <DialogTitle sx={{ borderBottom: '1px solid #eee' }}><AllInbox color="primary" /> {currentItem.id ? 'Редагувати' : 'Новий поштомат'}</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
                     <TextField label="Назва" value={currentItem.name || ''} onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })} fullWidth margin="dense" />
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField label="Технічний код" value={currentItem.code || ''} disabled fullWidth margin="dense" helperText={!currentItem.id ? "Генерується автоматично" : ""} variant="filled" sx={{ flex: 1 }} />
-                        <TextField label="Кількість комірок" type="number" value={currentItem.cellsCount || ''} onChange={(e) => setCurrentItem({ ...currentItem, cellsCount: e.target.value })} fullWidth margin="dense" sx={{ flex: 1 }} />
+                        <TextField label="Код" value={currentItem.code || ''} disabled fullWidth variant="filled" />
+                        <TextField label="Комірок" type="number" value={currentItem.cellsCount || ''} onChange={(e) => setCurrentItem({ ...currentItem, cellsCount: e.target.value })} fullWidth />
                     </Box>
                     <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>Локація</Typography>
                         <LocationSelector selectedCityId={currentItem.cityId} onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })} />
                         <TextField label="Вулиця та номер" value={currentItem.address || ''} onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })} fullWidth sx={{ mt: 2 }} />
                     </Box>
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                        <FormControlLabel control={<Checkbox checked={!!currentItem.isActive} onChange={(e) => setCurrentItem({ ...currentItem, isActive: e.target.checked })} color="success" />} label="Поштомат активний і працює" />
+                        <FormControlLabel control={<Checkbox checked={!!currentItem.isActive} onChange={(e) => setCurrentItem({ ...currentItem, isActive: e.target.checked })} color="success" />} label="Поштомат активний" />
                     </Paper>
                 </DialogContent>
-                <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ borderRadius: 2 }}>Скасувати</Button>
-                    <Button onClick={handleSave} variant="contained" disableElevation sx={{ borderRadius: 2 }}>Зберегти</Button>
+                <DialogActions sx={{ p: 2.5 }}>
+                    <Button onClick={() => setOpen(false)}>Скасувати</Button>
+                    <Button onClick={handleSave} variant="contained">Зберегти</Button>
                 </DialogActions>
             </Dialog>
 
             <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })}>
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2 }}>{notification.message}</Alert>
+                <Alert severity={notification.severity} variant="filled">{notification.message}</Alert>
             </Snackbar>
         </Box>
     );
