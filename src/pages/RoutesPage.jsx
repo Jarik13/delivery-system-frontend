@@ -6,9 +6,9 @@ import {
     TablePagination, Chip, Checkbox, FormControlLabel, Tooltip,
     useTheme, alpha
 } from '@mui/material';
-import { 
-    Add, Edit, Delete, LocalShipping, SwapHoriz, 
-    ArrowRightAlt, Map 
+import {
+    Add, Edit, Delete, LocalShipping, SwapHoriz,
+    ArrowRightAlt, Map
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -16,7 +16,8 @@ import DataFilters from '../components/DataFilters';
 const RoutesPage = () => {
     const theme = useTheme();
     const [routes, setRoutes] = useState([]);
-    const [branches, setBranches] = useState([]); 
+    const [branches, setBranches] = useState([]);
+    console.log(routes)
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -25,7 +26,7 @@ const RoutesPage = () => {
     const [filters, setFilters] = useState({
         originBranchName: '',
         destinationBranchName: '',
-        isNeedSorting: ''
+        needSorting: '' 
     });
 
     const [open, setOpen] = useState(false);
@@ -68,7 +69,7 @@ const RoutesPage = () => {
     };
 
     const handleClearFilters = () => {
-        setFilters({ originBranchName: '', destinationBranchName: '', isNeedSorting: '' });
+        setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' });
         setPage(0);
     };
 
@@ -115,9 +116,11 @@ const RoutesPage = () => {
     const filterFields = [
         { name: 'originBranchName', label: 'Звідки (назва)', type: 'text' },
         { name: 'destinationBranchName', label: 'Куди (назва)', type: 'text' },
-        { 
-            name: 'isNeedSorting', label: 'Тип логістики', type: 'select', 
-            options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] 
+        {
+            name: 'needSorting',
+            label: 'Тип логістики', 
+            type: 'select',
+            options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }]
         }
     ];
 
@@ -171,10 +174,41 @@ const RoutesPage = () => {
                                             </Box>
                                         </TableCell>
                                         <TableCell align="center">
-                                            {row.isNeedSorting ? 
-                                                <Chip icon={<SwapHoriz style={{ fontSize: 16 }} />} label="Сортування" sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark, fontWeight: 600, border: '1px solid', borderColor: alpha(theme.palette.warning.main, 0.2), height: 24, fontSize: '0.75rem' }} /> : 
-                                                <Chip icon={<ArrowRightAlt style={{ fontSize: 16 }} />} label="Прямий" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark, fontWeight: 600, border: '1px solid', borderColor: alpha(theme.palette.success.main, 0.2), height: 24, fontSize: '0.75rem' }} />
-                                            }
+                                            {row.needSorting ? (
+                                                <Tooltip title="Маршрут через термінал (потребує сортування вантажу)" arrow>
+                                                    <Chip
+                                                        icon={<SwapHoriz style={{ fontSize: 18 }} />}
+                                                        label="Сортування"
+                                                        sx={{
+                                                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                                                            color: theme.palette.warning.dark,
+                                                            borderColor: alpha(theme.palette.warning.main, 0.3),
+                                                            fontWeight: 700,
+                                                            border: '1px solid',
+                                                            height: 28,
+                                                            fontSize: '0.75rem',
+                                                            cursor: 'help'
+                                                        }}
+                                                    />
+                                                </Tooltip>
+                                            ) : (
+                                                <Tooltip title="Пряма доставка з точки А в точку Б (без терміналу)" arrow>
+                                                    <Chip
+                                                        icon={<ArrowRightAlt style={{ fontSize: 18 }} />}
+                                                        label="Прямий"
+                                                        sx={{
+                                                            bgcolor: alpha(theme.palette.success.main, 0.1),
+                                                            color: theme.palette.success.dark,
+                                                            borderColor: alpha(theme.palette.success.main, 0.3),
+                                                            fontWeight: 700,
+                                                            border: '1px solid',
+                                                            height: 28,
+                                                            fontSize: '0.75rem',
+                                                            cursor: 'help'
+                                                        }}
+                                                    />
+                                                </Tooltip>
+                                            )}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
@@ -196,7 +230,7 @@ const RoutesPage = () => {
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-               <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}><LocalShipping color="primary" /><Typography variant="h6">{currentItem.id ? 'Редагувати маршрут' : 'Новий маршрут'}</Typography></DialogTitle>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}><LocalShipping color="primary" /><Typography variant="h6">{currentItem.id ? 'Редагувати маршрут' : 'Новий маршрут'}</Typography></DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 3 }}>
                     <Box sx={{ mt: 1 }}>
                         <FormControl fullWidth>
