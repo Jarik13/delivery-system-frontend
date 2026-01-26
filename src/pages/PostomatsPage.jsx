@@ -108,20 +108,22 @@ const PostomatsPage = () => {
     };
 
     const filterFields = [
-        { name: 'name', label: 'Назва', type: 'text' },
-        { name: 'code', label: 'Код', type: 'text' },
-        { name: 'address', label: 'Адреса', type: 'text' },
+        { name: 'name', label: 'Назва', type: 'text', md: 2 },
+        { name: 'code', label: 'Код', type: 'text', md: 1.5 },
+        { name: 'address', label: 'Адреса', type: 'text', md: 2.5 },
         { 
             name: 'isActive', label: 'Статус', type: 'select', 
-            options: [{ id: 'true', name: 'Активний' }, { id: 'false', name: 'Неактивний' }] 
+            options: [{ id: 'true', name: 'Активний' }, { id: 'false', name: 'Неактивний' }],
+            md: 2
         },
         { 
-            label: 'Кількість комірок', 
+            label: 'Комірок', 
             type: 'range', 
             minName: 'cellsCountMin', 
             maxName: 'cellsCountMax',
             min: 0, 
-            max: 200 
+            max: 200,
+            md: 4
         }
     ];
 
