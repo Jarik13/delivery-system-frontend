@@ -3,7 +3,7 @@ import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert,
-    Checkbox, FormControlLabel, Chip, Tooltip, TablePagination, useTheme, alpha
+    Checkbox, FormControlLabel, Chip, Tooltip, TablePagination, useTheme, alpha, FormHelperText
 } from '@mui/material';
 import { Add, Edit, Delete, CheckCircle, Cancel, AllInbox, Place, GridView } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
@@ -22,16 +22,12 @@ const PostomatsPage = () => {
     const [totalElements, setTotalElements] = useState(0);
 
     const [filters, setFilters] = useState({
-        name: '',
-        code: '',
-        address: '',
-        isActive: '',
-        cellsCountMin: 0,
-        cellsCountMax: 100
+        name: '', code: '', address: '', isActive: '', cellsCountMin: 0, cellsCountMax: 100
     });
 
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     const loadTableData = useCallback(async () => {
@@ -46,9 +42,7 @@ const PostomatsPage = () => {
     }, [page, rowsPerPage, filters]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            loadTableData();
-        }, 400);
+        const timer = setTimeout(() => { loadTableData(); }, 400);
         return () => clearTimeout(timer);
     }, [loadTableData]);
 
@@ -58,28 +52,19 @@ const PostomatsPage = () => {
     };
 
     const handleClearFilters = () => {
-        setFilters({
-            name: '',
-            code: '',
-            address: '',
-            isActive: '',
-            cellsCountMin: 0,
-            cellsCountMax: 100
-        });
+        setFilters({ name: '', code: '', address: '', isActive: '', cellsCountMin: 0, cellsCountMax: 100 });
         setPage(0);
     };
 
-    const handleChangePage = (event, newPage) => setPage(newPage);
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
+    const handleValueChange = (key, value) => {
+        setCurrentItem(prev => ({ ...prev, [key]: value }));
+        if (fieldErrors[key]) {
+            setFieldErrors(prev => ({ ...prev, [key]: null }));
+        }
     };
 
     const handleSave = async () => {
-        if (!currentItem.cityId) {
-            setNotification({ open: true, message: 'Оберіть населений пункт', severity: 'warning' });
-            return;
-        }
+        setFieldErrors({});
         try {
             if (currentItem.id) {
                 await DictionaryApi.update('postomats', currentItem.id, currentItem);
@@ -90,7 +75,15 @@ const PostomatsPage = () => {
             loadTableData();
             setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
-            setNotification({ open: true, message: 'Помилка збереження', severity: 'error' });
+            const serverData = error.response?.data;
+            if (serverData?.validationErrors) {
+                setFieldErrors(serverData.validationErrors);
+            }
+            setNotification({ 
+                open: true, 
+                message: serverData?.message || 'Помилка збереження', 
+                severity: 'error' 
+            });
         }
     };
 
@@ -106,7 +99,8 @@ const PostomatsPage = () => {
         }
     };
 
-    const openModal = (item = { name: '', code: '', address: '', cityId: '', cellsCount: 0, isActive: true }) => {
+    const openModal = (item = { name: '', code: 'АВТО', address: '', cityId: null, cellsCount: null, isActive: true }) => {
+        setFieldErrors({});
         setCurrentItem(item);
         setOpen(true);
     };
@@ -121,13 +115,8 @@ const PostomatsPage = () => {
             md: 2
         },
         {
-            label: 'Комірок',
-            type: 'range',
-            minName: 'cellsCountMin',
-            maxName: 'cellsCountMax',
-            min: 0,
-            max: 200,
-            md: 4
+            label: 'Комірок', type: 'range', minName: 'cellsCountMin', maxName: 'cellsCountMax',
+            min: 0, max: 200, md: 4
         }
     ];
 
@@ -136,9 +125,7 @@ const PostomatsPage = () => {
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: `0 4px 20px ${alpha(mainColor, 0.3)}`
+                color: 'white', borderRadius: 3, boxShadow: `0 4px 20px ${alpha(mainColor, 0.3)}`
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
@@ -146,21 +133,11 @@ const PostomatsPage = () => {
                     </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Поштомати</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
-                            Мережа автоматизованих терміналів
-                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>Мережа автоматизованих терміналів</Typography>
                     </Box>
                 </Box>
-                <Button
-                    variant="contained" size="small"
-                    sx={{
-                        bgcolor: 'white',
-                        color: mainColor,
-                        fontWeight: 'bold',
-                        '&:hover': { bgcolor: '#f5f5f5' }
-                    }}
-                    startIcon={<Add />}
-                    onClick={() => openModal()}
+                <Button variant="contained" size="small" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                    startIcon={<Add />} onClick={() => openModal()}
                 >
                     Додати поштомат
                 </Button>
@@ -219,7 +196,7 @@ const PostomatsPage = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={handleChangePage} rowsPerPage={rowsPerPage} onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage="Рядків:" />
+                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }} labelRowsPerPage="Рядків:" />
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
@@ -229,26 +206,59 @@ const PostomatsPage = () => {
                         {currentItem.id ? 'Редагувати' : 'Новий поштомат'}
                     </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3, mt: 1 }}>
-                    <TextField label="Назва" value={currentItem.name || ''} onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })} fullWidth margin="dense" />
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, mt: 1 }}>
+                    <TextField 
+                        label="Назва" 
+                        value={currentItem.name || ''} 
+                        onChange={(e) => handleValueChange('name', e.target.value)} 
+                        fullWidth 
+                        margin="dense"
+                        error={!!fieldErrors.name}
+                        helperText={fieldErrors.name}
+                    />
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField label="Код" value={currentItem.code || ''} disabled fullWidth variant="filled" />
-                        <TextField label="Комірок" type="number" value={currentItem.cellsCount || ''} onChange={(e) => setCurrentItem({ ...currentItem, cellsCount: e.target.value })} fullWidth />
+                        <TextField 
+                            label="Код" 
+                            value={currentItem.code || ''} 
+                            disabled 
+                            fullWidth 
+                            variant="filled" 
+                            helperText="Генерується автоматично"
+                        />
+                        <TextField 
+                            label="Комірок" 
+                            type="number" 
+                            value={currentItem.cellsCount ?? ''} 
+                            onChange={(e) => handleValueChange('cellsCount', e.target.value === '' ? null : e.target.value)} 
+                            fullWidth
+                            error={!!fieldErrors.cellsCount}
+                            helperText={fieldErrors.cellsCount}
+                        />
                     </Box>
                     <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
-                        <LocationSelector selectedCityId={currentItem.cityId} onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId: cityId })} />
-                        <TextField label="Вулиця та номер" value={currentItem.address || ''} onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })} fullWidth sx={{ mt: 2 }} />
+                        <LocationSelector 
+                            selectedCityId={currentItem.cityId} 
+                            onCityChange={(cityId) => handleValueChange('cityId', cityId)} 
+                        />
+                        {fieldErrors.cityId && <FormHelperText error sx={{ ml: 1.5, mt: 0.5 }}>{fieldErrors.cityId}</FormHelperText>}
+                        
+                        <TextField 
+                            label="Вулиця та номер" 
+                            value={currentItem.address || ''} 
+                            onChange={(e) => handleValueChange('address', e.target.value)} 
+                            fullWidth 
+                            sx={{ mt: 2 }} 
+                            error={!!fieldErrors.address}
+                            helperText={fieldErrors.address}
+                        />
                     </Box>
                     <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                        <FormControlLabel control={<Checkbox checked={!!currentItem.isActive} onChange={(e) => setCurrentItem({ ...currentItem, isActive: e.target.checked })} color="success" />} label="Поштомат активний" />
+                        <FormControlLabel control={<Checkbox checked={!!currentItem.isActive} onChange={(e) => handleValueChange('isActive', e.target.checked)} color="success" />} label="Поштомат активний" />
                     </Paper>
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
-                        Скасувати
-                    </Button>
-                    <Button
-                        onClick={handleSave} variant="contained" disableElevation
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>Скасувати</Button>
+                    <Button onClick={handleSave} variant="contained" disableElevation
                         sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
                     >
                         Зберегти
@@ -257,7 +267,7 @@ const PostomatsPage = () => {
             </Dialog>
 
             <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })}>
-                <Alert severity={notification.severity} variant="filled">{notification.message}</Alert>
+                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2 }}>{notification.message}</Alert>
             </Snackbar>
         </Box>
     );
