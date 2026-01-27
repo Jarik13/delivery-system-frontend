@@ -3,7 +3,7 @@ import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     Box, Typography, Snackbar, Alert, Chip, Checkbox, FormControlLabel,
-    TablePagination, useTheme, alpha
+    TablePagination, useTheme, alpha, FormHelperText
 } from '@mui/material';
 import {
     Add, Edit, Delete, LocalShipping, SwapHoriz,
@@ -32,6 +32,7 @@ const RoutesPage = () => {
 
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
     const [originCityId, setOriginCityId] = useState(null);
     const [destCityId, setDestCityId] = useState(null);
 
@@ -52,7 +53,15 @@ const RoutesPage = () => {
         return () => clearTimeout(timer);
     }, [loadTableData]);
 
+    const handleFieldChange = (key, value) => {
+        setCurrentItem(prev => ({ ...prev, [key]: value }));
+        if (fieldErrors[key]) {
+            setFieldErrors(prev => ({ ...prev, [key]: null }));
+        }
+    };
+
     const openModal = async (item = { originBranchId: '', destinationBranchId: '', needSorting: false }) => {
+        setFieldErrors({});
         if (item.id) {
             try {
                 const oRes = await DictionaryApi.getById('branches', item.originBranchId);
@@ -69,10 +78,7 @@ const RoutesPage = () => {
     };
 
     const handleSave = async () => {
-        if (!currentItem.originBranchId || !currentItem.destinationBranchId) {
-            setNotification({ open: true, message: 'Оберіть обидва відділення', severity: 'warning' });
-            return;
-        }
+        setFieldErrors({});
         try {
             if (currentItem.id) await DictionaryApi.update('routes', currentItem.id, currentItem);
             else await DictionaryApi.create('routes', currentItem);
@@ -80,7 +86,15 @@ const RoutesPage = () => {
             loadTableData();
             setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
-            setNotification({ open: true, message: 'Помилка збереження', severity: 'error' });
+            const serverData = error.response?.data;
+            if (serverData?.validationErrors) {
+                setFieldErrors(serverData.validationErrors);
+            }
+            setNotification({ 
+                open: true, 
+                message: serverData?.message || 'Помилка збереження', 
+                severity: 'error' 
+            });
         }
     };
 
@@ -90,7 +104,13 @@ const RoutesPage = () => {
                 await DictionaryApi.delete('routes', id);
                 loadTableData();
                 setNotification({ open: true, message: 'Видалено', severity: 'success' });
-            } catch (error) { console.error(error); }
+            } catch (error) { 
+                setNotification({ 
+                    open: true, 
+                    message: error.response?.data?.message || 'Помилка видалення', 
+                    severity: 'error' 
+                });
+            }
         }
     };
 
@@ -151,7 +171,6 @@ const RoutesPage = () => {
                                                 {row.originCityName || 'Невідомо'}
                                             </Typography>
                                         </Box>
-
                                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120, px: 1 }}>
                                             <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled', mb: 0.5, letterSpacing: 1 }}>КУДИ</Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
@@ -162,7 +181,6 @@ const RoutesPage = () => {
                                                 <ArrowRightAlt sx={{ color: 'divider', fontSize: 18, ml: -0.5 }} />
                                             </Box>
                                         </Box>
-
                                         <Box sx={{ flex: 1 }}>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                                                 {row.destinationBranchName}
@@ -174,7 +192,6 @@ const RoutesPage = () => {
                                         </Box>
                                     </Box>
                                 </TableCell>
-
                                 <TableCell align="center">
                                     <Chip
                                         icon={row.needSorting ? <SwapHoriz /> : <ArrowRightAlt />}
@@ -183,15 +200,10 @@ const RoutesPage = () => {
                                         size="small" variant="outlined" sx={{ fontWeight: 600 }}
                                     />
                                 </TableCell>
-
                                 <TableCell align="right" sx={{ pr: 3 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                                        <IconButton onClick={() => openModal(row)} color="primary" size="small">
-                                            <Edit fontSize="small" />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDelete(row.id)} color="error" size="small">
-                                            <Delete fontSize="small" />
-                                        </IconButton>
+                                        <IconButton onClick={() => openModal(row)} color="primary" size="small"><Edit fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(row.id)} color="error" size="small"><Delete fontSize="small" /></IconButton>
                                     </Box>
                                 </TableCell>
                             </TableRow>
@@ -214,23 +226,34 @@ const RoutesPage = () => {
                             <RouteBranchSelector
                                 title="Точка відправлення" icon={TripOrigin} color="primary.main"
                                 cityId={originCityId} branchId={currentItem.originBranchId}
-                                onCityChange={(id) => { setOriginCityId(id); setCurrentItem(prev => ({ ...prev, originBranchId: '' })); }}
-                                onBranchChange={(id) => setCurrentItem(prev => ({ ...prev, originBranchId: id }))}
+                                onCityChange={(id) => { setOriginCityId(id); handleFieldChange('originBranchId', ''); }}
+                                onBranchChange={(id) => handleFieldChange('originBranchId', id)}
+                                error={!!fieldErrors.originBranchId}
                             />
+                            {fieldErrors.originBranchId && (
+                                <FormHelperText error sx={{ ml: 2 }}>{fieldErrors.originBranchId}</FormHelperText>
+                            )}
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <RouteBranchSelector
                                 title="Точка призначення" icon={LocationOn} color="success.main"
                                 cityId={destCityId} branchId={currentItem.destinationBranchId}
-                                onCityChange={(id) => { setDestCityId(id); setCurrentItem(prev => ({ ...prev, destinationBranchId: '' })); }}
-                                onBranchChange={(id) => setCurrentItem(prev => ({ ...prev, destinationBranchId: id }))}
+                                onCityChange={(id) => { setDestCityId(id); handleFieldChange('destinationBranchId', ''); }}
+                                onBranchChange={(id) => handleFieldChange('destinationBranchId', id)}
+                                error={!!fieldErrors.destinationBranchId}
                             />
+                            {fieldErrors.destinationBranchId && (
+                                <FormHelperText error sx={{ ml: 2 }}>{fieldErrors.destinationBranchId}</FormHelperText>
+                            )}
                         </Box>
                     </Box>
                     <Box sx={{ mt: 3 }}>
-                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', bgcolor: 'transparent', borderColor: '#e0e0e0' }}>
+                        <Paper variant="outlined" sx={{ 
+                            p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', 
+                            bgcolor: 'transparent', borderColor: fieldErrors.destinationBranchId ? 'error.main' : '#e0e0e0' 
+                        }}>
                             <FormControlLabel
-                                control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => setCurrentItem(p => ({ ...p, needSorting: e.target.checked }))} color="warning" />}
+                                control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
                                 label={<Typography fontWeight={500}>Маршрут потребує додаткового сортування на терміналі</Typography>}
                                 sx={{ width: '100%', ml: 0 }}
                             />
@@ -238,11 +261,8 @@ const RoutesPage = () => {
                     </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
-                        Скасувати
-                    </Button>
-                    <Button
-                        onClick={handleSave} variant="contained" disableElevation
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>Скасувати</Button>
+                    <Button onClick={handleSave} variant="contained" disableElevation
                         sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
                     >
                         Зберегти
