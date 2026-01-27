@@ -223,8 +223,13 @@ const PostomatsPage = () => {
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ borderBottom: '1px solid #eee' }}><AllInbox color="primary" /> {currentItem.id ? 'Редагувати' : 'Новий поштомат'}</DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
+                    <AllInbox sx={{ color: mainColor }} />
+                    <Typography variant="h6" fontWeight="bold">
+                        {currentItem.id ? 'Редагувати' : 'Новий поштомат'}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3, mt: 1 }}>
                     <TextField label="Назва" value={currentItem.name || ''} onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })} fullWidth margin="dense" />
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <TextField label="Код" value={currentItem.code || ''} disabled fullWidth variant="filled" />

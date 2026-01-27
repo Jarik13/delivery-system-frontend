@@ -155,8 +155,11 @@ const GenericTable = ({ endpoint, title, columns = DEFAULT_COLUMNS }) => {
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ borderBottom: '1px solid #eee', mb: 2 }}>
-                    {currentItem.id ? 'Редагувати запис' : 'Створити новий запис'}
+                <DialogTitle sx={{ borderBottom: '1px solid #eee', mb: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    {React.cloneElement(Icon, { sx: { color: mainColor } })}
+                    <Typography variant="h6" fontWeight="bold">
+                        {currentItem.id ? 'Редагувати запис' : 'Створити запис'}
+                    </Typography>
                 </DialogTitle>
                 <DialogContent>
                     {columns.map((col, index) => (

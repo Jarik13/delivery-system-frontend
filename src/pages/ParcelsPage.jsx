@@ -249,11 +249,13 @@ const ParcelsPage = () => {
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}>
-                    <Inventory color="secondary" />
-                    <Typography variant="h6">{currentItem.id ? 'Редагувати посилку' : 'Нова посилка'}</Typography>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
+                    <Inventory sx={{ color: mainColor }} />
+                    <Typography variant="h6" fontWeight="bold">
+                        {currentItem.id ? 'Редагувати параметри' : 'Нова посилка'}
+                    </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3 }}>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, mt: 1 }}>
                     <FormControl fullWidth size="small">
                         <InputLabel>Тип посилки</InputLabel>
                         <Select

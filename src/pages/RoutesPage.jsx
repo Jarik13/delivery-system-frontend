@@ -202,11 +202,14 @@ const RoutesPage = () => {
             </TableContainer>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 4, maxWidth: '1050px', width: '100%' } }}>
-                <DialogTitle sx={{ borderBottom: '1px solid #eee', fontWeight: 'bold', py: 2 }}>
-                    {currentItem.id ? 'Редагувати магістральний маршрут' : 'Новий маршрут'}
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
+                    <LocalShipping sx={{ color: mainColor }} />
+                    <Typography variant="h6" fontWeight="bold">
+                        {currentItem.id ? 'Редагувати магістральний маршрут' : 'Новий маршрут'}
+                    </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ p: 3, overflowX: 'hidden' }}>
-                    <Box sx={{ display: 'flex', mt: 3, gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
+                <DialogContent sx={{ p: 3, overflowX: 'hidden', mt: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <RouteBranchSelector
                                 title="Точка відправлення" icon={TripOrigin} color="primary.main"

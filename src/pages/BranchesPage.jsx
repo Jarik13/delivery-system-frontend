@@ -189,8 +189,13 @@ const BranchesPage = () => {
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid #eee' }}><Apartment color="primary" /><Typography variant="h6">{currentItem.id ? 'Редагувати' : 'Нове відділення'}</Typography></DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
+                    <Apartment sx={{ color: mainColor }} />
+                    <Typography variant="h6" fontWeight="bold">
+                        {currentItem.id ? 'Редагувати' : 'Нове відділення'}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3, mt: 1 }}>
                     <TextField label="Назва" fullWidth value={currentItem.name || ''} onChange={(e) => setCurrentItem({ ...currentItem, name: e.target.value })} margin="dense" />
                     <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>Локація</Typography>
