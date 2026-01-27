@@ -9,9 +9,13 @@ import { Add, Edit, Delete, CheckCircle, Cancel, AllInbox, Place, GridView } fro
 import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 import DataFilters from '../components/DataFilters';
+import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
 const PostomatsPage = () => {
     const theme = useTheme();
+    const groupName = ITEM_GROUP_MAP['postomats'];
+    const mainColor = GROUP_COLORS[groupName] || GROUP_COLORS.default;
+
     const [postomats, setPostomats] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -129,15 +133,37 @@ const PostomatsPage = () => {
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
-            <Paper elevation={0} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+            <Paper elevation={0} sx={{ 
+                p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                color: 'white', 
+                borderRadius: 3, 
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.3)}` 
+            }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}><AllInbox fontSize="medium" color="inherit" /></Box>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
+                        <AllInbox fontSize="medium" color="inherit" />
+                    </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Поштомати</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>Мережа автоматизованих терміналів</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
+                            Мережа автоматизованих терміналів
+                        </Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" size="small" sx={{ bgcolor: 'white', color: '#f57c00', fontWeight: 'bold', '&:hover': { bgcolor: '#fff3e0' } }} startIcon={<Add />} onClick={() => openModal()}>Додати поштомат</Button>
+                <Button 
+                    variant="contained" size="small"
+                    sx={{ 
+                        bgcolor: 'white', 
+                        color: mainColor,
+                        fontWeight: 'bold', 
+                        '&:hover': { bgcolor: '#f5f5f5' } 
+                    }}
+                    startIcon={<Add />} 
+                    onClick={() => openModal()}
+                >
+                    Додати поштомат
+                </Button>
             </Paper>
 
             <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />

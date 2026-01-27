@@ -12,9 +12,13 @@ import {
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import RouteBranchSelector from '../components/RouteBranchSelector';
+import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
 const RoutesPage = () => {
     const theme = useTheme();
+    const groupName = ITEM_GROUP_MAP['routes'];
+    const mainColor = GROUP_COLORS[groupName] || GROUP_COLORS.default;
+
     const [routes, setRoutes] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -23,7 +27,7 @@ const RoutesPage = () => {
     const [filters, setFilters] = useState({
         originBranchName: '',
         destinationBranchName: '',
-        needSorting: '' 
+        needSorting: ''
     });
 
     const [open, setOpen] = useState(false);
@@ -92,28 +96,36 @@ const RoutesPage = () => {
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
-            <Paper elevation={0} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', color: 'white', borderRadius: 3 }}>
+            <Paper elevation={0} sx={{
+                p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                color: 'white', borderRadius: 3,
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`
+            }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Map fontSize="medium" color="inherit" />
-                    <Box>
-                        <Typography variant="h6" fontWeight="bold">Магістральні маршрути</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8, display: 'block' }}>Управління логістичними ланцюжками</Typography>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
+                        <Map fontSize="medium" color="inherit" />
                     </Box>
+                    <Typography variant="h6" fontWeight="bold">Магістральні маршрути</Typography>
                 </Box>
-                <Button variant="contained" size="small" sx={{ bgcolor: 'white', color: '#1565c0', fontWeight: 'bold' }} startIcon={<Add />} onClick={() => openModal()}>
+                <Button
+                    variant="contained" size="small"
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                    startIcon={<Add />} onClick={() => openModal()}
+                >
                     Створити маршрут
                 </Button>
             </Paper>
 
-            <DataFilters 
-                filters={filters} 
-                onChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(0); }} 
-                onClear={() => setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' })} 
+            <DataFilters
+                filters={filters}
+                onChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(0); }}
+                onClear={() => setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' })}
                 fields={[
                     { name: 'originBranchName', label: 'Звідки (назва)', type: 'text' },
                     { name: 'destinationBranchName', label: 'Куди (назва)', type: 'text' },
                     { name: 'needSorting', label: 'Тип логістики', type: 'select', options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] }
-                ]} 
+                ]}
             />
 
             <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e0e0e0' }}>
@@ -162,16 +174,16 @@ const RoutesPage = () => {
                                         </Box>
                                     </Box>
                                 </TableCell>
-                                
+
                                 <TableCell align="center">
-                                    <Chip 
-                                        icon={row.needSorting ? <SwapHoriz /> : <ArrowRightAlt />} 
-                                        label={row.needSorting ? "Сортування" : "Прямий"} 
-                                        color={row.needSorting ? "warning" : "success"} 
+                                    <Chip
+                                        icon={row.needSorting ? <SwapHoriz /> : <ArrowRightAlt />}
+                                        label={row.needSorting ? "Сортування" : "Прямий"}
+                                        color={row.needSorting ? "warning" : "success"}
                                         size="small" variant="outlined" sx={{ fontWeight: 600 }}
                                     />
                                 </TableCell>
-                                
+
                                 <TableCell align="right" sx={{ pr: 3 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                                         <IconButton onClick={() => openModal(row)} color="primary" size="small">
@@ -196,7 +208,7 @@ const RoutesPage = () => {
                 <DialogContent sx={{ p: 3, overflowX: 'hidden' }}>
                     <Box sx={{ display: 'flex', mt: 3, gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <RouteBranchSelector 
+                            <RouteBranchSelector
                                 title="Точка відправлення" icon={TripOrigin} color="primary.main"
                                 cityId={originCityId} branchId={currentItem.originBranchId}
                                 onCityChange={(id) => { setOriginCityId(id); setCurrentItem(prev => ({ ...prev, originBranchId: '' })); }}
@@ -204,7 +216,7 @@ const RoutesPage = () => {
                             />
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <RouteBranchSelector 
+                            <RouteBranchSelector
                                 title="Точка призначення" icon={LocationOn} color="success.main"
                                 cityId={destCityId} branchId={currentItem.destinationBranchId}
                                 onCityChange={(id) => { setDestCityId(id); setCurrentItem(prev => ({ ...prev, destinationBranchId: '' })); }}
@@ -214,9 +226,9 @@ const RoutesPage = () => {
                     </Box>
                     <Box sx={{ mt: 3 }}>
                         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', bgcolor: 'transparent', borderColor: '#e0e0e0' }}>
-                            <FormControlLabel 
-                                control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => setCurrentItem(p => ({ ...p, needSorting: e.target.checked }))} color="warning" />} 
-                                label={<Typography fontWeight={500}>Маршрут потребує додаткового сортування на терміналі</Typography>} 
+                            <FormControlLabel
+                                control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => setCurrentItem(p => ({ ...p, needSorting: e.target.checked }))} color="warning" />}
+                                label={<Typography fontWeight={500}>Маршрут потребує додаткового сортування на терміналі</Typography>}
                                 sx={{ width: '100%', ml: 0 }}
                             />
                         </Paper>

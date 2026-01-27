@@ -9,9 +9,13 @@ import { Add, Edit, Delete, Apartment, Place, Store } from '@mui/icons-material'
 import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 import DataFilters from '../components/DataFilters';
+import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
 const BranchesPage = () => {
     const theme = useTheme();
+    const groupName = ITEM_GROUP_MAP['branches'];
+    const mainColor = GROUP_COLORS[groupName] || GROUP_COLORS.default;
+
     const [branches, setBranches] = useState([]);
     const [branchTypes, setBranchTypes] = useState([]);
 
@@ -119,17 +123,25 @@ const BranchesPage = () => {
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
-            <Paper elevation={0} sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)', color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+            <Paper elevation={0} sx={{
+                p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                color: 'white', borderRadius: 3,
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`
+            }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
                         <Apartment fontSize="medium" color="inherit" />
                     </Box>
-                    <Box>
-                        <Typography variant="h6" fontWeight="bold">Відділення</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>Пункти прийому та видачі вантажів</Typography>
-                    </Box>
+                    <Typography variant="h6" fontWeight="bold">Відділення</Typography>
                 </Box>
-                <Button variant="contained" size="small" sx={{ bgcolor: 'white', color: '#2e7d32', fontWeight: 'bold', '&:hover': { bgcolor: '#f1f8e9' } }} startIcon={<Add />} onClick={() => openModal()}>Додати відділення</Button>
+                <Button
+                    variant="contained" size="small"
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                    startIcon={<Add />} onClick={() => openModal()}
+                >
+                    Додати відділення
+                </Button>
             </Paper>
 
             <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />

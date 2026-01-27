@@ -6,16 +6,20 @@ import {
     useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete
 } from '@mui/material';
 import {
-    Add, Edit, Delete, Inventory, Balance, Sell, 
+    Add, Edit, Delete, Inventory, Balance, Sell,
     Description, Category, AcUnit, Settings
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
+import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
 const ParcelsPage = () => {
     const theme = useTheme();
+    const groupName = ITEM_GROUP_MAP['parcels'];
+    const mainColor = GROUP_COLORS[groupName] || GROUP_COLORS.default;
+
     const [parcels, setParcels] = useState([]);
-    
+
     const [parcelTypes, setParcelTypes] = useState([]);
     const [storageConditions, setStorageConditions] = useState([]);
 
@@ -115,12 +119,12 @@ const ParcelsPage = () => {
         }
     };
 
-    const openModal = (item = { 
-        declaredValue: 0, 
-        actualWeight: 0, 
-        contentDescription: '', 
-        parcelTypeId: '', 
-        storageConditionIds: [] 
+    const openModal = (item = {
+        declaredValue: 0,
+        actualWeight: 0,
+        contentDescription: '',
+        parcelTypeId: '',
+        storageConditionIds: []
     }) => {
         setCurrentItem(item);
         setOpen(true);
@@ -129,24 +133,26 @@ const ParcelsPage = () => {
     const filterFields = [
         { name: 'name', label: 'Опис вмісту', type: 'text', md: 2.5 },
         { name: 'parcelTypeId', label: 'Тип посилки', type: 'select', options: parcelTypes, md: 2 },
-        { 
-            label: 'Вага (кг)', type: 'range', 
-            minName: 'weightMin', maxName: 'weightMax', 
-            min: 0, max: 100, md: 3.5 
+        {
+            label: 'Вага (кг)', type: 'range',
+            minName: 'weightMin', maxName: 'weightMax',
+            min: 0, max: 100, md: 3.5
         },
-        { 
-            label: 'Вартість (грн)', type: 'range', 
-            minName: 'declaredValueMin', maxName: 'declaredValueMax', 
-            min: 0, max: 50000, md: 4 
+        {
+            label: 'Вартість (грн)', type: 'range',
+            minName: 'declaredValueMin', maxName: 'declaredValueMax',
+            min: 0, max: 50000, md: 4
         }
     ];
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
-            <Paper elevation={0} sx={{ 
+            <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)',
-                color: 'white', borderRadius: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                color: 'white',
+                borderRadius: 3,
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
@@ -154,14 +160,12 @@ const ParcelsPage = () => {
                     </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Керування посилками</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
-                            Фізичні параметри та умови зберігання
-                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>Фізичні параметри та умови зберігання</Typography>
                     </Box>
                 </Box>
-                <Button 
+                <Button
                     variant="contained" size="small"
-                    sx={{ bgcolor: 'white', color: '#7b1fa2', fontWeight: 'bold', '&:hover': { bgcolor: '#f3e5f5' } }}
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
                     startIcon={<Add />} onClick={() => openModal()}
                 >
                     Додати посилку
@@ -186,11 +190,11 @@ const ParcelsPage = () => {
                             {parcels.map((row) => (
                                 <TableRow key={row.id} hover>
                                     <TableCell sx={{ pl: 3 }}>
-                                        <Chip 
-                                            label={row.parcelTypeName} 
-                                            size="small" 
+                                        <Chip
+                                            label={row.parcelTypeName}
+                                            size="small"
                                             variant="outlined"
-                                            icon={<Category style={{fontSize: 14}}/>}
+                                            icon={<Category style={{ fontSize: 14 }} />}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -217,11 +221,11 @@ const ParcelsPage = () => {
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                             {row.storageConditionNames?.map((name, index) => (
-                                                <Chip 
-                                                    key={index} 
-                                                    label={name} 
-                                                    size="small" 
-                                                    sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(theme.palette.info.main, 0.1) }} 
+                                                <Chip
+                                                    key={index}
+                                                    label={name}
+                                                    size="small"
+                                                    sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(theme.palette.info.main, 0.1) }}
                                                 />
                                             )) || '—'}
                                         </Box>
@@ -237,9 +241,9 @@ const ParcelsPage = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
-                <TablePagination 
-                    component="div" count={totalElements} page={page} 
-                    onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} 
+                <TablePagination
+                    component="div" count={totalElements} page={page}
+                    onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
                 />
             </Paper>
@@ -250,7 +254,6 @@ const ParcelsPage = () => {
                     <Typography variant="h6">{currentItem.id ? 'Редагувати посилку' : 'Нова посилка'}</Typography>
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3 }}>
-                    
                     <FormControl fullWidth size="small">
                         <InputLabel>Тип посилки</InputLabel>
                         <Select
@@ -263,22 +266,22 @@ const ParcelsPage = () => {
                     </FormControl>
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField 
+                        <TextField
                             label="Вага (кг)" type="number" fullWidth size="small"
-                            value={currentItem.actualWeight || ''} 
-                            onChange={(e) => setCurrentItem({...currentItem, actualWeight: e.target.value})} 
+                            value={currentItem.actualWeight || ''}
+                            onChange={(e) => setCurrentItem({ ...currentItem, actualWeight: e.target.value })}
                         />
-                        <TextField 
+                        <TextField
                             label="Вартість (грн)" type="number" fullWidth size="small"
-                            value={currentItem.declaredValue || ''} 
-                            onChange={(e) => setCurrentItem({...currentItem, declaredValue: e.target.value})} 
+                            value={currentItem.declaredValue || ''}
+                            onChange={(e) => setCurrentItem({ ...currentItem, declaredValue: e.target.value })}
                         />
                     </Box>
 
-                    <TextField 
+                    <TextField
                         label="Опис вмісту" multiline rows={2} fullWidth size="small"
-                        value={currentItem.contentDescription || ''} 
-                        onChange={(e) => setCurrentItem({...currentItem, contentDescription: e.target.value})} 
+                        value={currentItem.contentDescription || ''}
+                        onChange={(e) => setCurrentItem({ ...currentItem, contentDescription: e.target.value })}
                     />
 
                     <Autocomplete
@@ -302,7 +305,6 @@ const ParcelsPage = () => {
                             ))
                         }
                     />
-
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
                     <Button onClick={() => setOpen(false)}>Скасувати</Button>
