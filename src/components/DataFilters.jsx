@@ -9,12 +9,17 @@ const DataFilters = ({ filters, onChange, onClear, fields }) => {
     
     const hasActiveFilters = Object.keys(filters).some(key => {
         const val = filters[key];
-        if (key === 'cellsCountMin' && val === 0) return false;
-        if (key === 'cellsCountMax' && val === 100) return false;
-        return val !== '' && val !== null;
+        if ((key.includes('Min') && val === 0) || (key.includes('Max') && val === 100)) return false;
+        return val !== '' && val !== null && val !== undefined;
     });
 
-    const defaultMd = fields.length <= 3 ? 4 : (fields.length === 4 ? 3 : 2);
+    const getMdValue = (field) => {
+        if (field.md) return field.md;
+        if (field.type === 'range') return 4;
+        if (fields.length <= 3) return 4;
+        if (fields.length === 4) return 3;
+        return 2;
+    };
 
     return (
         <Paper 
@@ -50,24 +55,28 @@ const DataFilters = ({ filters, onChange, onClear, fields }) => {
                     <Grid container spacing={2} alignItems="flex-end">
                         {fields.map((field) => {
                             const isRange = field.type === 'range';
-                            const mdValue = field.md || (isRange ? 4 : defaultMd);
+                            const mdValue = getMdValue(field);
 
                             return (
-                                <Grid item xs={12} sm={6} md={mdValue} key={field.name || field.label}>
+                                <Grid item xs={12} sm={6} md={mdValue} key={field.name || field.label} sx={{ flexGrow: 1 }}>
                                     {field.type === 'select' ? (
                                         <TextField
                                             select fullWidth label={field.label} value={filters[field.name] || ''}
                                             onChange={(e) => onChange(field.name, e.target.value)}
                                             size="small" variant="outlined"
                                             sx={{ 
-                                                minWidth: '150px',
-                                                '& .MuiInputLabel-root': { whiteSpace: 'nowrap' } 
+                                                minWidth: '160px',
+                                                '& .MuiInputLabel-root': { 
+                                                    whiteSpace: 'nowrap',
+                                                    maxWidth: '100%',
+                                                    overflow: 'visible'
+                                                } 
                                             }}
                                             InputProps={{ sx: { borderRadius: 2 } }}
                                         >
                                             <MenuItem value=""><em>Всі</em></MenuItem>
                                             {field.options?.map((opt) => (
-                                                <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                                                <MenuItem key={opt.id} value={opt.id}>{opt.name || opt.label}</MenuItem>
                                             ))}
                                         </TextField>
                                     ) : isRange ? (
