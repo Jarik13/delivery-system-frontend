@@ -3,11 +3,11 @@ import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, Chip, Tooltip, TablePagination,
-    useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete
+    useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete, FormHelperText
 } from '@mui/material';
 import {
     Add, Edit, Delete, Inventory, Balance, Sell,
-    Description, Category, AcUnit, Settings
+    Category
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -19,7 +19,6 @@ const ParcelsPage = () => {
     const mainColor = GROUP_COLORS[groupName] || GROUP_COLORS.default;
 
     const [parcels, setParcels] = useState([]);
-
     const [parcelTypes, setParcelTypes] = useState([]);
     const [storageConditions, setStorageConditions] = useState([]);
 
@@ -38,6 +37,7 @@ const ParcelsPage = () => {
 
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
+    const [fieldErrors, setFieldErrors] = useState({});
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
@@ -89,10 +89,7 @@ const ParcelsPage = () => {
     };
 
     const handleSave = async () => {
-        if (!currentItem.parcelTypeId || !currentItem.actualWeight) {
-            setNotification({ open: true, message: 'Заповніть обов\'язкові поля', severity: 'warning' });
-            return;
-        }
+        setFieldErrors({});
         try {
             if (currentItem.id) {
                 await DictionaryApi.update('parcels', currentItem.id, currentItem);
@@ -103,7 +100,17 @@ const ParcelsPage = () => {
             loadTableData();
             setNotification({ open: true, message: 'Дані посилки збережено', severity: 'success' });
         } catch (error) {
-            setNotification({ open: true, message: 'Помилка збереження', severity: 'error' });
+            const serverData = error.response?.data;
+            
+            if (serverData?.validationErrors) {
+                setFieldErrors(serverData.validationErrors);
+            }
+
+            setNotification({ 
+                open: true, 
+                message: serverData?.message || 'Помилка збереження', 
+                severity: 'error' 
+            });
         }
     };
 
@@ -112,20 +119,25 @@ const ParcelsPage = () => {
             try {
                 await DictionaryApi.delete('parcels', id);
                 loadTableData();
-                setNotification({ open: true, message: 'Видалено', severity: 'success' });
+                setNotification({ open: true, message: 'Видалено успішно', severity: 'success' });
             } catch (error) {
-                setNotification({ open: true, message: 'Помилка видалення', severity: 'error' });
+                setNotification({ 
+                    open: true, 
+                    message: error.response?.data?.message || 'Помилка видалення', 
+                    severity: 'error' 
+                });
             }
         }
     };
 
     const openModal = (item = {
-        declaredValue: 0,
-        actualWeight: 0,
+        declaredValue: '',
+        actualWeight: '',
         contentDescription: '',
         parcelTypeId: '',
         storageConditionIds: []
     }) => {
+        setFieldErrors({});
         setCurrentItem(item);
         setOpen(true);
     };
@@ -150,8 +162,7 @@ const ParcelsPage = () => {
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white',
-                borderRadius: 3,
+                color: 'white', borderRadius: 3,
                 boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -256,57 +267,85 @@ const ParcelsPage = () => {
                     </Typography>
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, mt: 1 }}>
-                    <FormControl fullWidth size="small">
+                    <FormControl fullWidth size="small" error={!!fieldErrors.parcelTypeId}>
                         <InputLabel>Тип посилки</InputLabel>
                         <Select
                             value={currentItem.parcelTypeId || ''}
                             label="Тип посилки"
-                            onChange={(e) => setCurrentItem({ ...currentItem, parcelTypeId: e.target.value })}
+                            onChange={(e) => {
+                                setCurrentItem({ ...currentItem, parcelTypeId: e.target.value });
+                                if (fieldErrors.parcelTypeId) setFieldErrors({...fieldErrors, parcelTypeId: null});
+                            }}
                         >
                             {parcelTypes.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
                         </Select>
+                        {fieldErrors.parcelTypeId && <FormHelperText>{fieldErrors.parcelTypeId}</FormHelperText>}
                     </FormControl>
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <TextField
                             label="Вага (кг)" type="number" fullWidth size="small"
                             value={currentItem.actualWeight || ''}
-                            onChange={(e) => setCurrentItem({ ...currentItem, actualWeight: e.target.value })}
+                            onChange={(e) => {
+                                setCurrentItem({ ...currentItem, actualWeight: e.target.value });
+                                if (fieldErrors.actualWeight) setFieldErrors({...fieldErrors, actualWeight: null});
+                            }}
+                            error={!!fieldErrors.actualWeight}
+                            helperText={fieldErrors.actualWeight}
                         />
                         <TextField
                             label="Вартість (грн)" type="number" fullWidth size="small"
                             value={currentItem.declaredValue || ''}
-                            onChange={(e) => setCurrentItem({ ...currentItem, declaredValue: e.target.value })}
+                            onChange={(e) => {
+                                setCurrentItem({ ...currentItem, declaredValue: e.target.value });
+                                if (fieldErrors.declaredValue) setFieldErrors({...fieldErrors, declaredValue: null});
+                            }}
+                            error={!!fieldErrors.declaredValue}
+                            helperText={fieldErrors.declaredValue}
                         />
                     </Box>
 
                     <TextField
                         label="Опис вмісту" multiline rows={2} fullWidth size="small"
                         value={currentItem.contentDescription || ''}
-                        onChange={(e) => setCurrentItem({ ...currentItem, contentDescription: e.target.value })}
+                        onChange={(e) => {
+                            setCurrentItem({ ...currentItem, contentDescription: e.target.value });
+                            if (fieldErrors.contentDescription) setFieldErrors({...fieldErrors, contentDescription: null});
+                        }}
+                        error={!!fieldErrors.contentDescription}
+                        helperText={fieldErrors.contentDescription}
                     />
 
-                    <Autocomplete
-                        multiple
-                        size="small"
-                        options={storageConditions}
-                        getOptionLabel={(option) => option.name}
-                        value={storageConditions.filter(sc => currentItem.storageConditionIds?.includes(sc.id))}
-                        onChange={(event, newValue) => {
-                            setCurrentItem({
-                                ...currentItem,
-                                storageConditionIds: newValue.map(v => v.id)
-                            });
-                        }}
-                        renderInput={(params) => (
-                            <TextField {...params} label="Умови зберігання" placeholder="Оберіть вимоги..." />
-                        )}
-                        renderTags={(value, getTagProps) =>
-                            value.map((option, index) => (
-                                <Chip label={option.name} {...getTagProps({ index })} size="small" color="info" variant="outlined" />
-                            ))
-                        }
-                    />
+                    <Box>
+                        <Autocomplete
+                            multiple
+                            size="small"
+                            options={storageConditions}
+                            getOptionLabel={(option) => option.name}
+                            value={storageConditions.filter(sc => currentItem.storageConditionIds?.includes(sc.id))}
+                            onChange={(event, newValue) => {
+                                setCurrentItem({
+                                    ...currentItem,
+                                    storageConditionIds: newValue.map(v => v.id)
+                                });
+                                if (fieldErrors.storageConditionIds) setFieldErrors({...fieldErrors, storageConditionIds: null});
+                            }}
+                            renderInput={(params) => (
+                                <TextField 
+                                    {...params} 
+                                    label="Умови зберігання" 
+                                    placeholder="Оберіть вимоги..." 
+                                    error={!!fieldErrors.storageConditionIds}
+                                />
+                            )}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => (
+                                    <Chip label={option.name} {...getTagProps({ index })} size="small" color="info" variant="outlined" />
+                                ))
+                            }
+                        />
+                        {fieldErrors.storageConditionIds && <FormHelperText error>{fieldErrors.storageConditionIds}</FormHelperText>}
+                    </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
                     <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
