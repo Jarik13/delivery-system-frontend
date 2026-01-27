@@ -115,17 +115,17 @@ const PostomatsPage = () => {
         { name: 'name', label: 'Назва', type: 'text', md: 2 },
         { name: 'code', label: 'Код', type: 'text', md: 1.5 },
         { name: 'address', label: 'Адреса', type: 'text', md: 2.5 },
-        { 
-            name: 'isActive', label: 'Статус', type: 'select', 
+        {
+            name: 'isActive', label: 'Статус', type: 'select',
             options: [{ id: 'true', name: 'Активний' }, { id: 'false', name: 'Неактивний' }],
             md: 2
         },
-        { 
-            label: 'Комірок', 
-            type: 'range', 
-            minName: 'cellsCountMin', 
+        {
+            label: 'Комірок',
+            type: 'range',
+            minName: 'cellsCountMin',
             maxName: 'cellsCountMax',
-            min: 0, 
+            min: 0,
             max: 200,
             md: 4
         }
@@ -133,12 +133,12 @@ const PostomatsPage = () => {
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
-            <Paper elevation={0} sx={{ 
+            <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white', 
-                borderRadius: 3, 
-                boxShadow: `0 4px 20px ${alpha(mainColor, 0.3)}` 
+                color: 'white',
+                borderRadius: 3,
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.3)}`
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
@@ -151,15 +151,15 @@ const PostomatsPage = () => {
                         </Typography>
                     </Box>
                 </Box>
-                <Button 
+                <Button
                     variant="contained" size="small"
-                    sx={{ 
-                        bgcolor: 'white', 
+                    sx={{
+                        bgcolor: 'white',
                         color: mainColor,
-                        fontWeight: 'bold', 
-                        '&:hover': { bgcolor: '#f5f5f5' } 
+                        fontWeight: 'bold',
+                        '&:hover': { bgcolor: '#f5f5f5' }
                     }}
-                    startIcon={<Add />} 
+                    startIcon={<Add />}
                     onClick={() => openModal()}
                 >
                     Додати поштомат
@@ -203,9 +203,9 @@ const PostomatsPage = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell align="center">
-                                        {row.isActive ? 
-                                            <Chip icon={<CheckCircle style={{fontSize: 14}}/>} label="Активний" size="small" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark, border: '1px solid', borderColor: alpha(theme.palette.success.main, 0.2), height: 24 }} /> : 
-                                            <Chip icon={<Cancel style={{fontSize: 14}}/>} label="Неактивний" size="small" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark, border: '1px solid', borderColor: alpha(theme.palette.error.main, 0.2), height: 24 }} />
+                                        {row.isActive ?
+                                            <Chip icon={<CheckCircle style={{ fontSize: 14 }} />} label="Активний" size="small" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark, border: '1px solid', borderColor: alpha(theme.palette.success.main, 0.2), height: 24 }} /> :
+                                            <Chip icon={<Cancel style={{ fontSize: 14 }} />} label="Неактивний" size="small" sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark, border: '1px solid', borderColor: alpha(theme.palette.error.main, 0.2), height: 24 }} />
                                         }
                                     </TableCell>
                                     <TableCell align="right" sx={{ pr: 3 }}>
@@ -238,9 +238,16 @@ const PostomatsPage = () => {
                         <FormControlLabel control={<Checkbox checked={!!currentItem.isActive} onChange={(e) => setCurrentItem({ ...currentItem, isActive: e.target.checked })} color="success" />} label="Поштомат активний" />
                     </Paper>
                 </DialogContent>
-                <DialogActions sx={{ p: 2.5 }}>
-                    <Button onClick={() => setOpen(false)}>Скасувати</Button>
-                    <Button onClick={handleSave} variant="contained">Зберегти</Button>
+                <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
+                        Скасувати
+                    </Button>
+                    <Button
+                        onClick={handleSave} variant="contained" disableElevation
+                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
+                    >
+                        Зберегти
+                    </Button>
                 </DialogActions>
             </Dialog>
 

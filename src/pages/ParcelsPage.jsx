@@ -307,8 +307,15 @@ const ParcelsPage = () => {
                     />
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)}>Скасувати</Button>
-                    <Button onClick={handleSave} variant="contained" color="secondary" disableElevation>Зберегти</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
+                        Скасувати
+                    </Button>
+                    <Button
+                        onClick={handleSave} variant="contained" disableElevation
+                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
+                    >
+                        Зберегти
+                    </Button>
                 </DialogActions>
             </Dialog>
 
