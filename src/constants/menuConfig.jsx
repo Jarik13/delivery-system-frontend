@@ -12,84 +12,99 @@ import {
     TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage
 } from '@mui/icons-material';
 
-// 1. КОЛЬОРИ ГРУП
+export const GROUPS = {
+    LOGISTICS: "Керування логістикою",
+    NETWORK: "Мережа доставки",
+    FLEET: "Логістика та Автопарк",
+    PACKAGING: "Вантажі та Пакування",
+    FINANCE: "Організація та Фінанси"
+};
+
 export const GROUP_COLORS = {
-    "Керування логістикою": '#673ab7', // Додано колір для нової групи
-    "Мережа доставки": '#2196f3',
-    "Відділення": '#4caf50',
-    "Поштомати": '#ff9800',
-    "Логістика та Автопарк": '#f44336',
-    "Вантажі та Пакування": '#9c27b0',
-    "Організація та Фінанси": '#009688',
+    [GROUPS.LOGISTICS]: '#673ab7',
+    [GROUPS.NETWORK]: '#2196f3',
+    [GROUPS.FLEET]: '#f44336',
+    [GROUPS.PACKAGING]: '#9c27b0',
+    [GROUPS.FINANCE]: '#009688',
     "default": '#757575'
 };
 
-// 2. ІКОНКИ ГРУП
 export const groupIcons = {
-    "Керування логістикою": <Inventory />, // Додано іконку для заголовка групи
-    "Мережа доставки": <Business />,
-    "Відділення": <Apartment />,
-    "Поштомати": <LocalPostOffice />,
-    "Логістика та Автопарк": <LocalShipping />,
-    "Вантажі та Пакування": <Inventory />,
-    "Організація та Фінанси": <AttachMoney />
+    [GROUPS.LOGISTICS]: <Inventory />,
+    [GROUPS.NETWORK]: <Business />,
+    [GROUPS.FLEET]: <LocalShipping />,
+    [GROUPS.PACKAGING]: <Inbox />,
+    [GROUPS.FINANCE]: <AttachMoney />
 };
 
-// 3. ІКОНКИ ПУНКТІВ МЕНЮ
-export const itemIcons = {
-    // ========== КЕРУВАННЯ ЛОГІСТИКОЮ ==========
-    "parcels": <Inventory />, // Додано іконку для пункту "Посилки"
 
-    // ========== МЕРЕЖА ДОСТАВКИ ==========
+export const ITEM_GROUP_MAP = {
+    "parcels": GROUPS.LOGISTICS,
+
+    "branches": GROUPS.NETWORK,
+    "postomats": GROUPS.NETWORK,
+    "regions": GROUPS.NETWORK,
+    "districts": GROUPS.NETWORK,
+    "cities": GROUPS.NETWORK,
+    "streets": GROUPS.NETWORK,
+    "address-houses": GROUPS.NETWORK,
+    "delivery-points": GROUPS.NETWORK,
+
+    "routes": GROUPS.FLEET,
+    "fleet-brands": GROUPS.FLEET,
+    "fleet-body-types": GROUPS.FLEET,
+    "fleet-fuel-types": GROUPS.FLEET,
+    "fleet-transmission-types": GROUPS.FLEET,
+    "fleet-drive-types": GROUPS.FLEET,
+    "vehicle-activity-statuses": GROUPS.FLEET,
+    "fleets": GROUPS.FLEET,
+    "vehicles": GROUPS.FLEET,
+    "drivers": GROUPS.FLEET,
+    "trips": GROUPS.FLEET,
+    "trip-statuses": GROUPS.FLEET,
+
+    "box-types": GROUPS.PACKAGING,
+    "parcel-types": GROUPS.PACKAGING,
+    "shipment-types": GROUPS.PACKAGING,
+    "shipment-statuses": GROUPS.PACKAGING,
+    "storage-conditions": GROUPS.PACKAGING,
+    "return-reasons": GROUPS.PACKAGING,
+    "box-variants": GROUPS.PACKAGING,
+
+    "branch-types": GROUPS.FINANCE,
+    "payment-types": GROUPS.FINANCE,
+    "trip-statuses-fin": GROUPS.FINANCE,
+    "clients": GROUPS.FINANCE,
+    "employees": GROUPS.FINANCE,
+    "payments": GROUPS.FINANCE
+};
+
+// --- 5. ІКОНКИ ПУНКТІВ МЕНЮ ---
+export const itemIcons = {
+    "parcels": <Inventory />,
     "regions": <Public />,
     "districts": <Place />,
     "cities": <LocationCity />,
     "streets": <AltRoute />,
     "address-houses": <Home />,
-
-    // ========== ВІДДІЛЕННЯ ==========
     "branches": <Apartment />,
     "branch-types": <LocalConvenienceStore />,
-    "work-schedules": <Schedule />,
-    "work-time-intervals": <AccessTime />,
-    "delivery-points": <LocationOn />,
-
-    // ========== ПОШТОМАТИ ==========
     "postomats": <AllInbox />,
-
-    // ========== ВАНТАЖІ ТА ПАКУВАННЯ ==========
     "shipments": <LocalShipping />,
     "parcel-types": <Category />,
     "box-types": <Inbox />,
-    "box-variants": <Storage />,
-    "shipment-types": <Category />,
-    "shipment-statuses": <TrackChanges />,
     "storage-conditions": <AcUnit />,
-    "returns": <AssignmentReturned />,
     "return-reasons": <HelpOutline />,
-
-    // ========== ЛОГІСТИКА ТА АВТОПАРК ==========
     "routes": <AltRoute />,
-    "fleets": <DirectionsCarFilled />,
-    "vehicles": <DirectionsCarOutlined />,
     "fleet-brands": <DirectionsCar />,
     "fleet-body-types": <AirportShuttle />,
     "fleet-fuel-types": <EvStation />,
     "fleet-transmission-types": <SettingsInputComponent />,
     "fleet-drive-types": <SettingsEthernet />,
     "vehicle-activity-statuses": <BuildCircle />,
-    "drivers": <AirlineSeatReclineNormal />,
-    "trips": <DirectionsBus />,
     "trip-statuses": <TripOrigin />,
-
-    // ========== ОРГАНІЗАЦІЯ ТА ФІНАНСИ ==========
+    "payment-types": <LocalAtm />,
     "clients": <People />,
     "employees": <Badge />,
-    "couriers": <DeliveryDining />,
-    "payment-types": <LocalAtm />,
-    "payments": <Payments />,
-    "waybills": <Assignment />,
-    "route-lists": <ListAlt />,
-    "route-list-statuses": <ChecklistRtl />,
-    "days-of-week": <Event />
+    "payments": <Payments />
 };
