@@ -3,11 +3,10 @@ import {
     Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, Chip, TablePagination,
     useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete,
-    Grid, Card, CardContent, Divider, FormHelperText
+    Grid, Card, CardContent, Divider, FormHelperText, Tooltip
 } from '@mui/material';
 import {
-    Add, Edit, Delete, Inventory, Balance, Sell,
-    Category
+    Add, Edit, Delete, Inventory, Balance, Sell, Category
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -23,16 +22,16 @@ const ParcelsPage = () => {
     const [storageConditions, setStorageConditions] = useState([]);
 
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(20);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
 
     const [filters, setFilters] = useState({
         name: '',
         parcelTypeId: '',
         weightMin: 0,
-        weightMax: 50,
+        weightMax: 100,
         declaredValueMin: 0,
-        declaredValueMax: 10000
+        declaredValueMax: 50000
     });
 
     const [open, setOpen] = useState(false);
@@ -81,9 +80,9 @@ const ParcelsPage = () => {
             name: '',
             parcelTypeId: '',
             weightMin: 0,
-            weightMax: 50,
+            weightMax: 100,
             declaredValueMin: 0,
-            declaredValueMax: 10000
+            declaredValueMax: 50000
         });
         setPage(0);
     };
@@ -98,19 +97,11 @@ const ParcelsPage = () => {
             }
             setOpen(false);
             loadTableData();
-            setNotification({ open: true, message: 'Збережено', severity: 'success' });
+            setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
             const serverData = error.response?.data;
-            
-            if (serverData?.validationErrors) {
-                setFieldErrors(serverData.validationErrors);
-            }
-
-            setNotification({ 
-                open: true, 
-                message: serverData?.message || 'Помилка збереження', 
-                severity: 'error' 
-            });
+            if (serverData?.validationErrors) setFieldErrors(serverData.validationErrors);
+            setNotification({ open: true, message: serverData?.message || 'Помилка збереження', severity: 'error' });
         }
     };
 
@@ -121,22 +112,12 @@ const ParcelsPage = () => {
                 loadTableData();
                 setNotification({ open: true, message: 'Видалено успішно', severity: 'success' });
             } catch (error) {
-                setNotification({ 
-                    open: true, 
-                    message: error.response?.data?.message || 'Помилка видалення', 
-                    severity: 'error' 
-                });
+                setNotification({ open: true, message: error.response?.data?.message || 'Помилка видалення', severity: 'error' });
             }
         }
     };
 
-    const openModal = (item = {
-        declaredValue: '',
-        actualWeight: '',
-        contentDescription: '',
-        parcelTypeId: '',
-        storageConditionIds: []
-    }) => {
+    const openModal = (item = { declaredValue: '', actualWeight: '', contentDescription: '', parcelTypeId: '', storageConditionIds: [] }) => {
         setFieldErrors({});
         setCurrentItem(item);
         setOpen(true);
@@ -145,20 +126,12 @@ const ParcelsPage = () => {
     const filterFields = [
         { name: 'name', label: 'Опис вмісту', type: 'text', md: 2.5 },
         { name: 'parcelTypeId', label: 'Тип посилки', type: 'select', options: parcelTypes, md: 2 },
-        {
-            label: 'Вага (кг)', type: 'range',
-            minName: 'weightMin', maxName: 'weightMax',
-            min: 0, max: 100, md: 3.5
-        },
-        {
-            label: 'Вартість (грн)', type: 'range',
-            minName: 'declaredValueMin', maxName: 'declaredValueMax',
-            min: 0, max: 50000, md: 4
-        }
+        { label: 'Вага (кг)', type: 'range', minName: 'weightMin', maxName: 'weightMax', min: 0, max: 100, md: 3.5 },
+        { label: 'Вартість (грн)', type: 'range', minName: 'declaredValueMin', maxName: 'declaredValueMax', min: 0, max: 50000, md: 4 }
     ];
 
     return (
-        <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
+        <Box sx={{ p: 2, pt: 0, width: '100%' }}>
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
@@ -170,7 +143,7 @@ const ParcelsPage = () => {
                         <Inventory fontSize="medium" color="inherit" />
                     </Box>
                     <Box>
-                        <Typography variant="h6" fontWeight="bold">Керування посилками</Typography>
+                        <Typography variant="h6" fontWeight="bold">Посилки</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>Фізичні параметри та умови зберігання</Typography>
                     </Box>
                 </Box>
@@ -185,106 +158,113 @@ const ParcelsPage = () => {
 
             <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />
 
-            <Grid container spacing={3}>
+            <Grid
+                container
+                spacing={3}
+                sx={{
+                    width: '100%',
+                    m: 0,
+                    display: 'flex',
+                    flexWrap: 'wrap'
+                }}
+            >
                 {parcels.map((parcel) => (
-                    <Grid item xs={12} sm={6} md={4} lg={3} key={parcel.id}>
-                        <Card sx={{ 
-                            borderRadius: 4, 
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    <Grid
+                        item
+                        key={parcel.id}
+                        xs={12}
+                        sm={6}
+                        md={4}
+                        lg={3}
+                        xl={2.4}
+                        sx={{
+                            display: 'flex',
+                            flexGrow: 1
+                        }}
+                    >
+                        <Card sx={{
+                            width: '100%',
+                            borderRadius: 4,
+                            transition: 'all 0.3s ease',
                             border: '1px solid',
                             borderColor: 'divider',
-                            '&:hover': { 
-                                transform: 'translateY(-5px)', 
-                                boxShadow: '0 12px 24px rgba(0,0,0,0.1)',
-                                borderColor: theme.palette.secondary.light
+                            display: 'flex',
+                            flexDirection: 'column',
+                            '&:hover': {
+                                transform: 'translateY(-5px)',
+                                boxShadow: `0 12px 24px ${alpha(mainColor, 0.15)}`,
+                                borderColor: mainColor
                             }
                         }} elevation={0}>
-                            <CardContent sx={{ p: 2.5 }}>
+                            <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                    <Chip 
-                                        label={parcel.parcelTypeName} 
-                                        size="small" 
-                                        color="secondary" 
-                                        variant="soft"
-                                        sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark }}
+                                    <Chip
+                                        label={parcel.parcelTypeName}
+                                        size="small"
+                                        sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor, borderRadius: 1.5 }}
                                     />
                                     <Box>
-                                        <IconButton size="small" onClick={() => openModal(parcel)} sx={{ color: 'primary.main' }}>
-                                            <Edit fontSize="small" />
-                                        </IconButton>
-                                        <IconButton size="small" onClick={() => handleDelete(parcel.id)} sx={{ color: 'error.main' }}>
-                                            <Delete fontSize="small" />
-                                        </IconButton>
+                                        <IconButton size="small" onClick={() => openModal(parcel)} color="primary"><Edit fontSize="small" /></IconButton>
+                                        <IconButton size="small" onClick={() => handleDelete(parcel.id)} color="error"><Delete fontSize="small" /></IconButton>
                                     </Box>
                                 </Box>
 
-                                <Typography variant="body1" fontWeight="600" gutterBottom noWrap title={parcel.contentDescription}>
+                                <Typography variant="h6" fontWeight="700" sx={{ mb: 1, minHeight: '3.5rem', lineHeight: 1.2 }}>
                                     {parcel.contentDescription || 'Без опису'}
                                 </Typography>
 
-                                <Divider sx={{ my: 1.5, opacity: 0.6 }} />
+                                <Divider sx={{ my: 1.5, opacity: 0.5 }} />
 
-                                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                                    <Box sx={{ flex: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                    <Box>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                             <Balance sx={{ fontSize: 14 }} /> Вага
                                         </Typography>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-                                            <Tooltip title="Вага">
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Balance fontSize="small" color="action" />
-                                                    <Typography variant="body2" fontWeight="bold">{row.actualWeight} кг</Typography>
-                                                </Box>
-                                            </Tooltip>
-                                            <Tooltip title="Оголошена вартість">
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <Sell fontSize="small" color="success" />
-                                                    <Typography variant="body2" fontWeight="bold">{row.declaredValue} грн</Typography>
-                                                </Box>
-                                            </Tooltip>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {row.storageConditionNames?.map((name, index) => (
-                                                <Chip
-                                                    key={index}
-                                                    label={name}
-                                                    size="small"
-                                                    sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(theme.palette.info.main, 0.1) }}
-                                                />
-                                            )) || '—'}
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="right" sx={{ pr: 3 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                            <IconButton size="small" onClick={() => openModal(row)} color="primary"><Edit fontSize="small" /></IconButton>
-                                            <IconButton size="small" onClick={() => handleDelete(row.id)} color="error"><Delete fontSize="small" /></IconButton>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                                        <Typography variant="body1" fontWeight="700">{parcel.actualWeight} кг</Typography>
+                                    </Box>
+                                    <Box sx={{ textAlign: 'right' }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+                                            <Sell sx={{ fontSize: 14 }} /> Вартість
+                                        </Typography>
+                                        <Typography variant="body1" fontWeight="700" color="success.main">{parcel.declaredValue} грн</Typography>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ mt: 'auto' }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
+                                        Умови зберігання:
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {parcel.storageConditionNames?.length > 0 ? (
+                                            parcel.storageConditionNames.map((name, idx) => (
+                                                <Chip key={idx} label={name} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                            ))
+                                        ) : <Typography variant="caption" color="text.disabled">—</Typography>}
+                                    </Box>
+                                </Box>
+                            </CardContent>
+                        </Card>
+                    </Grid>
+                ))}
+            </Grid>
+
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', bgcolor: 'white', borderRadius: 2, p: 1 }}>
                 <TablePagination
                     component="div" count={totalElements} page={page}
                     onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-                    labelRowsPerPage="Карток на сторінці:"
+                    labelRowsPerPage="Посилок:"
                 />
             </Box>
 
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
+            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 4 } }}>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
                     <Inventory sx={{ color: mainColor }} />
                     <Typography variant="h6" fontWeight="bold">
                         {currentItem.id ? 'Редагувати параметри' : 'Нова посилка'}
                     </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, mt: 1 }}>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3, mt: 1 }}>
                     <FormControl fullWidth size="small" error={!!fieldErrors.parcelTypeId}>
                         <InputLabel>Тип посилки</InputLabel>
                         <Select
@@ -292,7 +272,7 @@ const ParcelsPage = () => {
                             label="Тип посилки"
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, parcelTypeId: e.target.value });
-                                if (fieldErrors.parcelTypeId) setFieldErrors({...fieldErrors, parcelTypeId: null});
+                                if (fieldErrors.parcelTypeId) setFieldErrors({ ...fieldErrors, parcelTypeId: null });
                             }}
                         >
                             {parcelTypes.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
@@ -306,7 +286,7 @@ const ParcelsPage = () => {
                             value={currentItem.actualWeight || ''}
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, actualWeight: e.target.value });
-                                if (fieldErrors.actualWeight) setFieldErrors({...fieldErrors, actualWeight: null});
+                                if (fieldErrors.actualWeight) setFieldErrors({ ...fieldErrors, actualWeight: null });
                             }}
                             error={!!fieldErrors.actualWeight}
                             helperText={fieldErrors.actualWeight}
@@ -316,7 +296,7 @@ const ParcelsPage = () => {
                             value={currentItem.declaredValue || ''}
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, declaredValue: e.target.value });
-                                if (fieldErrors.declaredValue) setFieldErrors({...fieldErrors, declaredValue: null});
+                                if (fieldErrors.declaredValue) setFieldErrors({ ...fieldErrors, declaredValue: null });
                             }}
                             error={!!fieldErrors.declaredValue}
                             helperText={fieldErrors.declaredValue}
@@ -328,7 +308,7 @@ const ParcelsPage = () => {
                         value={currentItem.contentDescription || ''}
                         onChange={(e) => {
                             setCurrentItem({ ...currentItem, contentDescription: e.target.value });
-                            if (fieldErrors.contentDescription) setFieldErrors({...fieldErrors, contentDescription: null});
+                            if (fieldErrors.contentDescription) setFieldErrors({ ...fieldErrors, contentDescription: null });
                         }}
                         error={!!fieldErrors.contentDescription}
                         helperText={fieldErrors.contentDescription}
@@ -336,25 +316,16 @@ const ParcelsPage = () => {
 
                     <Box>
                         <Autocomplete
-                            multiple
-                            size="small"
+                            multiple size="small"
                             options={storageConditions}
                             getOptionLabel={(option) => option.name}
                             value={storageConditions.filter(sc => currentItem.storageConditionIds?.includes(sc.id))}
                             onChange={(event, newValue) => {
-                                setCurrentItem({
-                                    ...currentItem,
-                                    storageConditionIds: newValue.map(v => v.id)
-                                });
-                                if (fieldErrors.storageConditionIds) setFieldErrors({...fieldErrors, storageConditionIds: null});
+                                setCurrentItem({ ...currentItem, storageConditionIds: newValue.map(v => v.id) });
+                                if (fieldErrors.storageConditionIds) setFieldErrors({ ...fieldErrors, storageConditionIds: null });
                             }}
                             renderInput={(params) => (
-                                <TextField 
-                                    {...params} 
-                                    label="Умови зберігання" 
-                                    placeholder="Оберіть вимоги..." 
-                                    error={!!fieldErrors.storageConditionIds}
-                                />
+                                <TextField {...params} label="Умови зберігання" error={!!fieldErrors.storageConditionIds} />
                             )}
                             renderTags={(value, getTagProps) =>
                                 value.map((option, index) => (
@@ -362,13 +333,11 @@ const ParcelsPage = () => {
                                 ))
                             }
                         />
-                        {fieldErrors.storageConditionIds && <FormHelperText error>{fieldErrors.storageConditionIds}</FormHelperText>}
+                        {fieldErrors.storageConditionIds && <FormHelperText error sx={{ ml: 1.5 }}>{fieldErrors.storageConditionIds}</FormHelperText>}
                     </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
-                        Скасувати
-                    </Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>Скасувати</Button>
                     <Button
                         onClick={handleSave} variant="contained" disableElevation
                         sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
