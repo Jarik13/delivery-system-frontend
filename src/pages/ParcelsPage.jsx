@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-    TextField, Box, Typography, Snackbar, Alert, Chip, Tooltip, TablePagination,
-    useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete, FormHelperText
+    Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+    TextField, Box, Typography, Snackbar, Alert, Chip, TablePagination,
+    useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete,
+    Grid, Card, CardContent, Divider, FormHelperText
 } from '@mui/material';
 import {
     Add, Edit, Delete, Inventory, Balance, Sell,
@@ -23,7 +23,7 @@ const ParcelsPage = () => {
     const [storageConditions, setStorageConditions] = useState([]);
 
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [rowsPerPage, setRowsPerPage] = useState(20);
     const [totalElements, setTotalElements] = useState(0);
 
     const [filters, setFilters] = useState({
@@ -98,7 +98,7 @@ const ParcelsPage = () => {
             }
             setOpen(false);
             loadTableData();
-            setNotification({ open: true, message: 'Дані посилки збережено', severity: 'success' });
+            setNotification({ open: true, message: 'Збережено', severity: 'success' });
         } catch (error) {
             const serverData = error.response?.data;
             
@@ -166,7 +166,7 @@ const ParcelsPage = () => {
                 boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
                         <Inventory fontSize="medium" color="inherit" />
                     </Box>
                     <Box>
@@ -185,32 +185,49 @@ const ParcelsPage = () => {
 
             <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />
 
-            <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e0e0e0' }} elevation={0}>
-                <TableContainer>
-                    <Table sx={{ minWidth: 1000 }}>
-                        <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8f9fa' }}>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary', pl: 3 }}>ТИП</TableCell>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>ОПИС ВМІСТУ</TableCell>
-                                <TableCell align="center" sx={{ fontWeight: 600, color: 'text.secondary' }}>ПАРАМЕТРИ</TableCell>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>УМОВИ ЗБЕРІГАННЯ</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', pr: 3 }}>ДІЇ</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {parcels.map((row) => (
-                                <TableRow key={row.id} hover>
-                                    <TableCell sx={{ pl: 3 }}>
-                                        <Chip
-                                            label={row.parcelTypeName}
-                                            size="small"
-                                            variant="outlined"
-                                            icon={<Category style={{ fontSize: 14 }} />}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                            {row.contentDescription || '—'}
+            <Grid container spacing={3}>
+                {parcels.map((parcel) => (
+                    <Grid item xs={12} sm={6} md={4} lg={3} key={parcel.id}>
+                        <Card sx={{ 
+                            borderRadius: 4, 
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            '&:hover': { 
+                                transform: 'translateY(-5px)', 
+                                boxShadow: '0 12px 24px rgba(0,0,0,0.1)',
+                                borderColor: theme.palette.secondary.light
+                            }
+                        }} elevation={0}>
+                            <CardContent sx={{ p: 2.5 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                    <Chip 
+                                        label={parcel.parcelTypeName} 
+                                        size="small" 
+                                        color="secondary" 
+                                        variant="soft"
+                                        sx={{ fontWeight: 700, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark }}
+                                    />
+                                    <Box>
+                                        <IconButton size="small" onClick={() => openModal(parcel)} sx={{ color: 'primary.main' }}>
+                                            <Edit fontSize="small" />
+                                        </IconButton>
+                                        <IconButton size="small" onClick={() => handleDelete(parcel.id)} sx={{ color: 'error.main' }}>
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+
+                                <Typography variant="body1" fontWeight="600" gutterBottom noWrap title={parcel.contentDescription}>
+                                    {parcel.contentDescription || 'Без опису'}
+                                </Typography>
+
+                                <Divider sx={{ my: 1.5, opacity: 0.6 }} />
+
+                                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Balance sx={{ fontSize: 14 }} /> Вага
                                         </Typography>
                                     </TableCell>
                                     <TableCell align="center">
@@ -256,8 +273,9 @@ const ParcelsPage = () => {
                     component="div" count={totalElements} page={page}
                     onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                    labelRowsPerPage="Карток на сторінці:"
                 />
-            </Paper>
+            </Box>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
@@ -361,7 +379,7 @@ const ParcelsPage = () => {
             </Dialog>
 
             <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })}>
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2 }}>{notification.message}</Alert>
+                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>{notification.message}</Alert>
             </Snackbar>
         </Box>
     );
