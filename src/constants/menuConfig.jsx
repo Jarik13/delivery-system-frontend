@@ -40,6 +40,7 @@ export const groupIcons = {
 
 export const ITEM_GROUP_MAP = {
     "parcels": GROUPS.LOGISTICS,
+    "shipments": GROUPS.LOGISTICS,
 
     "branches": GROUPS.NETWORK,
     "postomats": GROUPS.NETWORK,
