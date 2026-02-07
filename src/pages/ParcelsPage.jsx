@@ -54,10 +54,10 @@ const ParcelsPage = () => {
                     DictionaryApi.getAll('storage-conditions', 0, 100),
                     DictionaryApi.getStatistics('parcels')
                 ]);
-                
+
                 setParcelTypes(typesRes.data.content || []);
                 setStorageConditions(conditionsRes.data.content || []);
-                
+
                 const stats = statsRes.data;
                 setStatistics({
                     minWeight: stats.minWeight || 0,
@@ -65,7 +65,7 @@ const ParcelsPage = () => {
                     minDeclaredValue: stats.minDeclaredValue || 0,
                     maxDeclaredValue: stats.maxDeclaredValue || 50000
                 });
-                
+
                 setFilters(prev => ({
                     ...prev,
                     weightMin: stats.minWeight || 0,
@@ -75,10 +75,10 @@ const ParcelsPage = () => {
                 }));
             } catch (error) {
                 console.error("Помилка завантаження даних", error);
-                setNotification({ 
-                    open: true, 
-                    message: 'Помилка завантаження початкових даних', 
-                    severity: 'error' 
+                setNotification({
+                    open: true,
+                    message: 'Помилка завантаження початкових даних',
+                    severity: 'error'
                 });
             }
         };
@@ -156,23 +156,23 @@ const ParcelsPage = () => {
     const filterFields = [
         { name: 'name', label: 'Опис вмісту', type: 'text', md: 2.5 },
         { name: 'parcelTypeId', label: 'Тип посилки', type: 'select', options: parcelTypes, md: 2 },
-        { 
-            label: 'Вага (кг)', 
-            type: 'range', 
-            minName: 'weightMin', 
-            maxName: 'weightMax', 
-            min: statistics.minWeight, 
-            max: statistics.maxWeight, 
-            md: 3.5 
+        {
+            label: 'Вага (кг)',
+            type: 'range',
+            minName: 'weightMin',
+            maxName: 'weightMax',
+            min: statistics.minWeight,
+            max: statistics.maxWeight,
+            md: 3.5
         },
-        { 
-            label: 'Вартість (грн)', 
-            type: 'range', 
-            minName: 'declaredValueMin', 
-            maxName: 'declaredValueMax', 
-            min: statistics.minDeclaredValue, 
-            max: statistics.maxDeclaredValue, 
-            md: 4 
+        {
+            label: 'Вартість (грн)',
+            type: 'range',
+            minName: 'declaredValueMin',
+            maxName: 'declaredValueMax',
+            min: statistics.minDeclaredValue,
+            max: statistics.maxDeclaredValue,
+            md: 4
         }
     ];
 
@@ -310,10 +310,11 @@ const ParcelsPage = () => {
                         {currentItem.id ? 'Редагувати параметри' : 'Нова посилка'}
                     </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3, mt: 1 }}>
-                    <FormControl fullWidth size="small" error={!!fieldErrors.parcelTypeId}>
-                        <InputLabel>Тип посилки</InputLabel>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+                    <FormControl fullWidth error={!!fieldErrors.parcelTypeId} sx={{ mt: 1.5 }}>
+                        <InputLabel id="parcel-type-label">Тип посилки</InputLabel>
                         <Select
+                            labelId="parcel-type-label"
                             value={currentItem.parcelTypeId || ''}
                             label="Тип посилки"
                             onChange={(e) => {
@@ -328,7 +329,10 @@ const ParcelsPage = () => {
 
                     <Box sx={{ display: 'flex', gap: 2 }}>
                         <TextField
-                            label="Вага (кг)" type="number" fullWidth size="small"
+                            label="Вага (кг)"
+                            type="number"
+                            fullWidth
+                            margin="dense"
                             value={currentItem.actualWeight || ''}
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, actualWeight: e.target.value });
@@ -338,7 +342,10 @@ const ParcelsPage = () => {
                             helperText={fieldErrors.actualWeight}
                         />
                         <TextField
-                            label="Вартість (грн)" type="number" fullWidth size="small"
+                            label="Вартість (грн)"
+                            type="number"
+                            fullWidth
+                            margin="dense"
                             value={currentItem.declaredValue || ''}
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, declaredValue: e.target.value });
@@ -350,7 +357,11 @@ const ParcelsPage = () => {
                     </Box>
 
                     <TextField
-                        label="Опис вмісту" multiline rows={2} fullWidth size="small"
+                        label="Опис вмісту"
+                        multiline
+                        rows={2}
+                        fullWidth
+                        margin="dense"
                         value={currentItem.contentDescription || ''}
                         onChange={(e) => {
                             setCurrentItem({ ...currentItem, contentDescription: e.target.value });
@@ -362,7 +373,7 @@ const ParcelsPage = () => {
 
                     <Box>
                         <Autocomplete
-                            multiple size="small"
+                            multiple
                             options={storageConditions}
                             getOptionLabel={(option) => option.name}
                             value={storageConditions.filter(sc => currentItem.storageConditionIds?.includes(sc.id))}
@@ -371,11 +382,16 @@ const ParcelsPage = () => {
                                 if (fieldErrors.storageConditionIds) setFieldErrors({ ...fieldErrors, storageConditionIds: null });
                             }}
                             renderInput={(params) => (
-                                <TextField {...params} label="Умови зберігання" error={!!fieldErrors.storageConditionIds} />
+                                <TextField
+                                    {...params}
+                                    label="Умови зберігання"
+                                    error={!!fieldErrors.storageConditionIds}
+                                    margin="dense"
+                                />
                             )}
                             renderTags={(value, getTagProps) =>
                                 value.map((option, index) => (
-                                    <Chip label={option.name} {...getTagProps({ index })} size="small" color="info" variant="outlined" />
+                                    <Chip key={index} label={option.name} {...getTagProps({ index })} size="small" color="info" variant="outlined" />
                                 ))
                             }
                         />
