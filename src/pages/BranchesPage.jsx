@@ -18,7 +18,7 @@ const BranchesPage = () => {
 
     const [branches, setBranches] = useState([]);
     const [branchTypes, setBranchTypes] = useState([]);
-    
+
     const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null);
     const [currentSchedule, setCurrentSchedule] = useState([]);
     const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -38,10 +38,10 @@ const BranchesPage = () => {
         setLoadingSchedule(true);
         try {
             const res = await DictionaryApi.getByParam('work-schedules/branchId', 'branchId', branchId);
-            
+
             const scheduleData = res.data.content || res.data;
             const sortedData = [...scheduleData].sort((a, b) => a.dayOfWeekId - b.dayOfWeekId);
-            
+
             setCurrentSchedule(sortedData);
         } catch (error) {
             console.error("Помилка завантаження графіку", error);
@@ -181,12 +181,12 @@ const BranchesPage = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell><Typography variant="body2">{row.address}</Typography></TableCell>
-                                    
+
                                     <TableCell>
                                         <Tooltip title="Переглянути графік">
-                                            <IconButton 
-                                                size="small" 
-                                                color="primary" 
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
                                                 onClick={(e) => handleShowSchedule(e, row.id)}
                                                 sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}
                                             >
@@ -234,8 +234,8 @@ const BranchesPage = () => {
                         <List size="small" disablePadding>
                             {currentSchedule.map((s) => (
                                 <ListItem key={s.id} sx={{ px: 0, py: 0.5 }}>
-                                    <ListItemText 
-                                        primary={s.dayOfWeekName} 
+                                    <ListItemText
+                                        primary={s.dayOfWeekName}
                                         secondary={s.startTime && s.endTime ? `${s.startTime.substring(0, 5)} - ${s.endTime.substring(0, 5)}` : "Вихідний"}
                                         primaryTypographyProps={{ variant: 'caption', fontWeight: 'bold' }}
                                         secondaryTypographyProps={{ variant: 'caption', color: 'primary' }}
@@ -253,54 +253,77 @@ const BranchesPage = () => {
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
                     <Apartment sx={{ color: mainColor }} />
-                    <Typography variant="h6" fontWeight="bold">{currentItem.id ? 'Редагувати' : 'Нове відділення'}</Typography>
+                    <Typography variant="h6" fontWeight="bold">
+                        {currentItem.id ? 'Редагувати' : 'Нове відділення'}
+                    </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3 }}>
-                    <TextField 
-                        label="Назва" 
-                        fullWidth 
-                        value={currentItem.name || ''} 
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, mt: 1 }}>
+                    <TextField
+                        label="Назва"
+                        fullWidth
+                        value={currentItem.name || ''}
                         onChange={(e) => {
                             setCurrentItem({ ...currentItem, name: e.target.value });
-                            if (fieldErrors.name) setFieldErrors({...fieldErrors, name: null});
-                        }} 
-                        error={!!fieldErrors.name} 
+                            if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: null });
+                        }}
+                        margin="dense"
+                        error={!!fieldErrors.name}
                         helperText={fieldErrors.name}
-                        InputLabelProps={{ shrink: true }}
                     />
-                    
+
                     <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>Локація</Typography>
-                        <LocationSelector selectedCityId={currentItem.cityId} onCityChange={(cityId) => setCurrentItem({ ...currentItem, cityId })} error={!!fieldErrors.cityId} />
-                        <TextField 
-                            label="Вулиця та номер будинку" 
-                            fullWidth 
-                            value={currentItem.address || ''} 
-                            onChange={(e) => setCurrentItem({ ...currentItem, address: e.target.value })} 
-                            sx={{ mt: 2 }} 
-                            error={!!fieldErrors.address} 
-                            helperText={fieldErrors.address} 
-                            InputLabelProps={{ shrink: true }}
+                        <LocationSelector
+                            selectedCityId={currentItem.cityId}
+                            onCityChange={(cityId) => {
+                                setCurrentItem({ ...currentItem, cityId });
+                                if (fieldErrors.cityId) setFieldErrors({ ...fieldErrors, cityId: null });
+                            }}
+                            error={!!fieldErrors.cityId}
+                        />
+                        {fieldErrors.cityId && <FormHelperText error sx={{ ml: 2 }}>{fieldErrors.cityId}</FormHelperText>}
+
+                        <TextField
+                            label="Вулиця та номер будинку"
+                            fullWidth
+                            value={currentItem.address || ''}
+                            onChange={(e) => {
+                                setCurrentItem({ ...currentItem, address: e.target.value });
+                                if (fieldErrors.address) setFieldErrors({ ...fieldErrors, address: null });
+                            }}
+                            sx={{ mt: 2 }}
+                            error={!!fieldErrors.address}
+                            helperText={fieldErrors.address}
                         />
                     </Box>
 
                     <FormControl fullWidth error={!!fieldErrors.branchTypeId}>
-                        <InputLabel id="branch-type-label" shrink>Тип відділення</InputLabel>
-                        <Select 
+                        <InputLabel id="branch-type-label">Тип відділення</InputLabel>
+                        <Select
                             labelId="branch-type-label"
-                            value={currentItem.branchTypeId || ''} 
-                            label="Тип відділення" 
-                            notched={true}
-                            onChange={(e) => setCurrentItem({ ...currentItem, branchTypeId: e.target.value })}
+                            value={currentItem.branchTypeId || ''}
+                            label="Тип відділення"
+                            onChange={(e) => {
+                                setCurrentItem({ ...currentItem, branchTypeId: e.target.value });
+                                if (fieldErrors.branchTypeId) setFieldErrors({ ...fieldErrors, branchTypeId: null });
+                            }}
                         >
                             {branchTypes.map(type => (<MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>))}
                         </Select>
                         {fieldErrors.branchTypeId && <FormHelperText>{fieldErrors.branchTypeId}</FormHelperText>}
                     </FormControl>
                 </DialogContent>
+
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Скасувати</Button>
-                    <Button onClick={handleSave} variant="contained" sx={{ bgcolor: mainColor }}>Зберегти</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>
+                        Скасувати
+                    </Button>
+                    <Button
+                        onClick={handleSave} variant="contained" disableElevation
+                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
+                    >
+                        Зберегти
+                    </Button>
                 </DialogActions>
             </Dialog>
 
