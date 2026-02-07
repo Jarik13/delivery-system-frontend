@@ -1,208 +1,232 @@
 import React, { useState } from 'react';
 import {
-    Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions,
-    TextField, Box, Typography, Chip, Grid, Divider,
-    Stepper, Step, StepLabel, Checkbox, FormControlLabel, Autocomplete,
-    InputAdornment, alpha, MenuItem, Select, FormControl, InputLabel,
-    Card, CardContent, IconButton, StepConnector, stepConnectorClasses, styled
+    Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+    TextField, Box, Typography, Chip, Grid, Card, CardContent, Divider,
+    Stepper, Step, StepLabel, Autocomplete, InputAdornment, alpha, 
+    MenuItem, Select, FormControl, InputLabel, useTheme, Checkbox, FormControlLabel
 } from '@mui/material';
 import {
-    Add, LocalShipping, Receipt, Inventory2, 
-    People, AttachMoney, ChevronRight, ChevronLeft, Save,
-    Scale, ConfirmationNumber, LocalAtm, Description,
-    LocationOn, Security, InfoOutlined
+    Add, Edit, Delete, LocalShipping, ConfirmationNumber, 
+    CalendarToday, TripOrigin, LocationOn, Inventory2, 
+    AttachMoney, Scale, Receipt, ChevronRight, ChevronLeft, Save
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- СТИЛІЗОВАНИЙ STEPPER (ЯК У PREMIUM APPS) ---
-const QontoConnector = styled(StepConnector)(({ theme }) => ({
-    [`&.${stepConnectorClasses.alternativeLabel}`]: { top: 10, left: 'calc(-50% + 16px)', right: 'calc(50% + 16px)' },
-    [`& .${stepConnectorClasses.line}`]: { borderColor: '#eaeaf0', borderTopWidth: 3, borderRadius: 1 },
-}));
-
-// --- ХАРДКОДНІ ДАНІ ---
+// --- МАКЕТНІ ДАНІ ДЛЯ СПИСКУ ---
 const MOCK_SHIPMENTS = [
     {
-        id: 1, trackingNumber: "TTN-240501", createdAt: "2024-05-01T12:00:00",
-        parcelDescription: "iPhone 15 Pro Max, 256GB", actualWeight: 0.5, declaredValue: 55000,
-        totalPrice: 150.00, senderFullName: "Олександр Коваль", recipientFullName: "Вікторія Шпак",
-        shipmentTypeName: "Express", shipmentStatusName: "В дорозі"
+        id: 1, 
+        trackingNumber: "UA-9876543210", 
+        createdAt: "2024-02-07T10:30:00",
+        parcelDescription: "Кавомашина DeLonghi (крихке)",
+        actualWeight: 8.4, 
+        totalPrice: 285,
+        fromLocation: "Київ, Відділення №1",
+        toLocation: "Львів, Відділення №24",
+        senderFullName: "Олександр Коваль",
+        recipientFullName: "Вікторія Шпак",
+        shipmentTypeName: "Експрес",
+        shipmentStatusName: "В дорозі"
+    },
+    {
+        id: 2, 
+        trackingNumber: "UA-1122334455", 
+        createdAt: "2024-02-08T14:20:00",
+        parcelDescription: "Набір документів А4",
+        actualWeight: 0.5, 
+        totalPrice: 95,
+        fromLocation: "Одеса, Поштомат №102",
+        toLocation: "Дніпро, Відділення №3",
+        senderFullName: "Сидоренко Ганна",
+        recipientFullName: "Мельник Олег",
+        shipmentTypeName: "Стандарт",
+        shipmentStatusName: "Доставлено"
     }
 ];
 
+const steps = ['Вантаж', 'Фінанси', 'Логістика'];
+
 const ShipmentsPage = () => {
-    const mainColor = '#673ab7';
+    const theme = useTheme();
+    const mainColor = '#673ab7'; // Logistics Purple
+
+    // Стейт списку та діалогу
     const [open, setOpen] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
+    const [direction, setDirection] = useState(0);
+    const [shipments] = useState(MOCK_SHIPMENTS);
 
+    // Стейт форми (повна структура сутностей)
     const [formData, setFormData] = useState({
-        parcel: { declaredValue: '', actualWeight: '', contentDescription: '', parcelTypeId: '', storageConditionIds: [] },
-        price: { delivery: 0, weight: 0, distance: 0, boxVariant: 0, specialPackaging: 0, insuranceFee: 0, total: 0 },
-        isSenderPay: true, isPartiallyPaid: false, senderId: '', recipientId: '', shipmentTypeId: '', shipmentStatusId: 1
+        parcel: { contentDescription: '', actualWeight: '', declaredValue: '', parcelTypeId: '' },
+        price: { delivery: 0, weight: 0, distance: 0, insuranceFee: 0, total: 0 },
+        isSenderPay: true,
+        isPartiallyPaid: false,
+        senderId: null,
+        recipientId: null,
+        shipmentTypeId: '',
+        shipmentStatusId: 1
     });
 
-    const updatePrice = (field, val) => {
+    // --- ОБРОБНИКИ КНОПОК ---
+    const handleNext = () => {
+        setDirection(1);
+        setActiveStep((prev) => prev + 1);
+    };
+
+    const handleBack = () => {
+        setDirection(-1);
+        setActiveStep((prev) => prev - 1);
+    };
+
+    const handleOpen = () => {
+        setFormData({
+            parcel: { contentDescription: '', actualWeight: '', declaredValue: '', parcelTypeId: '' },
+            price: { delivery: 0, weight: 0, distance: 0, insuranceFee: 0, total: 0 },
+            isSenderPay: true, isPartiallyPaid: false, senderId: null, recipientId: null, shipmentTypeId: '', shipmentStatusId: 1
+        });
+        setActiveStep(0);
+        setOpen(true);
+    };
+
+    const handlePriceChange = (field, val) => {
         const p = { ...formData.price, [field]: parseFloat(val) || 0 };
-        const total = p.delivery + p.weight + p.distance + p.boxVariant + p.specialPackaging + p.insuranceFee;
+        const total = p.delivery + p.weight + p.distance + p.insuranceFee;
         setFormData({ ...formData, price: { ...p, total } });
     };
 
-    const renderStep = (step) => {
-        const variants = {
-            initial: { opacity: 0, scale: 0.98, y: 10 },
-            animate: { opacity: 1, scale: 1, y: 0 },
-            exit: { opacity: 0, scale: 1.02, y: -10 }
-        };
+    // --- АНІМАЦІЯ КРОКІВ ---
+    const stepVariants = {
+        enter: (dir) => ({ x: dir > 0 ? 100 : -100, opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (dir) => ({ x: dir < 0 ? 100 : -100, opacity: 0 }),
+    };
 
+    const renderStepContent = (step) => {
         switch (step) {
-            case 0: return (
-                <motion.div key="s1" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                    <Box sx={{ bgcolor: alpha(mainColor, 0.03), p: 3, borderRadius: 6, border: '1px solid', borderColor: alpha(mainColor, 0.1) }}>
-                        <Typography variant="h6" sx={{ mb: 3, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Inventory2 sx={{ color: mainColor }} /> Вміст відправлення
-                        </Typography>
-                        <Grid container spacing={3}>
+            case 0: // КРОК 1: PARCEL
+                return (
+                    <Box component={motion.div} key="s1" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <TextField label="Опис вмісту" fullWidth multiline rows={2} value={formData.parcel.contentDescription} onChange={(e) => setFormData({...formData, parcel: {...formData.parcel, contentDescription: e.target.value}})} />
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <TextField label="Вага (кг)" fullWidth type="number" InputProps={{ startAdornment: <Scale fontSize="small" sx={{ mr: 1 }} /> }} value={formData.parcel.actualWeight} onChange={(e) => setFormData({...formData, parcel: {...formData.parcel, actualWeight: e.target.value}})} />
+                            <TextField label="Цінність (₴)" fullWidth type="number" InputProps={{ startAdornment: <AttachMoney fontSize="small" sx={{ mr: 1 }} /> }} value={formData.parcel.declaredValue} onChange={(e) => setFormData({...formData, parcel: {...formData.parcel, declaredValue: e.target.value}})} />
+                        </Box>
+                    </Box>
+                );
+            case 1: // КРОК 2: PRICE
+                return (
+                    <Box component={motion.div} key="s2" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} sx={{ pt: 2 }}>
+                        <Grid container spacing={2}>
+                            {['delivery', 'weight', 'distance', 'insuranceFee'].map((f) => (
+                                <Grid item xs={6} key={f}>
+                                    <TextField label={f === 'delivery' ? 'Тариф' : f === 'weight' ? 'За вагу' : f === 'distance' ? 'Відстань' : 'Страховка'} fullWidth type="number" size="small" value={formData.price[f]} onChange={(e) => handlePriceChange(f, e.target.value)} />
+                                </Grid>
+                            ))}
                             <Grid item xs={12}>
-                                <TextField 
-                                    label="Детальний опис товару" multiline rows={2} fullWidth variant="standard"
-                                    placeholder="Що саме всередині пакунка?"
-                                    value={formData.parcel.contentDescription}
-                                    onChange={(e) => setFormData({...formData, parcel: {...formData.parcel, contentDescription: e.target.value}})}
-                                />
+                                <Paper sx={{ p: 2, bgcolor: alpha(mainColor, 0.05), borderRadius: 3, textAlign: 'center', border: `1px dashed ${mainColor}` }}>
+                                    <Typography variant="h5" fontWeight="900" color="primary">{formData.price.total.toFixed(2)} ₴</Typography>
+                                    <Typography variant="caption">Загальна вартість ТТН</Typography>
+                                </Paper>
                             </Grid>
-                            <Grid item xs={6}>
-                                <TextField 
-                                    label="Вага вантажу" fullWidth type="number"
-                                    InputProps={{ endAdornment: <InputAdornment position="end">кг</InputAdornment>, startAdornment: <Scale sx={{ mr: 1, color: alpha(mainColor, 0.4) }} /> }}
-                                    value={formData.parcel.actualWeight} onChange={(e) => setFormData({...formData, parcel: {...formData.parcel, actualWeight: e.target.value}})}
-                                />
-                            </Grid>
-                            <Grid item xs={6}>
-                                <TextField 
-                                    label="Оголошена цінність" fullWidth type="number"
-                                    InputProps={{ endAdornment: <InputAdornment position="end">₴</InputAdornment>, startAdornment: <Security sx={{ mr: 1, color: alpha(mainColor, 0.4) }} /> }}
-                                    value={formData.parcel.declaredValue} onChange={(e) => setFormData({...formData, parcel: {...formData.parcel, declaredValue: e.target.value}})}
-                                />
+                            <Grid item xs={12} sx={{ display: 'flex', gap: 2 }}>
+                                <FormControlLabel control={<Checkbox checked={formData.isSenderPay} onChange={(e) => setFormData({...formData, isSenderPay: e.target.checked})} />} label="Оплачує відправник" />
+                                <FormControlLabel control={<Checkbox checked={formData.isPartiallyPaid} onChange={(e) => setFormData({...formData, isPartiallyPaid: e.target.checked})} />} label="Часткова оплата" />
                             </Grid>
                         </Grid>
                     </Box>
-                </motion.div>
-            );
-            case 1: return (
-                <motion.div key="s2" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                    <Typography variant="h6" sx={{ mb: 3, fontWeight: 800, textAlign: 'center' }}>Розрахунок вартості</Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={8}>
-                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                                {[
-                                    { f: 'delivery', l: 'Тариф', i: <LocalShipping fontSize="small"/> },
-                                    { f: 'weight', l: 'Вага', i: <Scale fontSize="small"/> },
-                                    { f: 'distance', l: 'Дистанція', i: <LocationOn fontSize="small"/> },
-                                    { f: 'insuranceFee', l: 'Страховка', i: <Security fontSize="small"/> },
-                                    { f: 'boxVariant', l: 'Коробка', i: <Inventory2 fontSize="small"/> },
-                                    { f: 'specialPackaging', l: 'Спец. пак', i: <InfoOutlined fontSize="small"/> }
-                                ].map((item) => (
-                                    <TextField 
-                                        key={item.f} label={item.l} type="number" size="small"
-                                        InputProps={{ startAdornment: <InputAdornment position="start">{item.i}</InputAdornment> }}
-                                        value={formData.price[item.f]} onChange={(e) => updatePrice(item.f, e.target.value)}
-                                    />
-                                ))}
-                            </Box>
-                        </Grid>
-                        <Grid item xs={4}>
-                            <Paper elevation={0} sx={{ p: 2, height: '100%', bgcolor: '#212121', color: 'white', borderRadius: 5, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                                <Typography variant="caption" sx={{ opacity: 0.6, letterSpacing: 1 }}>РАЗОМ ДО ОПЛАТИ</Typography>
-                                <Typography variant="h4" sx={{ fontWeight: 900, my: 1 }}>{formData.price.total.toFixed(0)} <small style={{fontSize: 14}}>₴</small></Typography>
-                                <Divider sx={{ bgcolor: 'rgba(255,255,255,0.1)', my: 2 }} />
-                                <FormControlLabel 
-                                    control={<Checkbox size="small" sx={{ color: 'white' }} checked={formData.isSenderPay} onChange={(e) => setFormData({...formData, isSenderPay: e.target.checked})} />} 
-                                    label={<Typography variant="caption">Відправник платить</Typography>} 
-                                />
-                            </Paper>
-                        </Grid>
-                    </Grid>
-                </motion.div>
-            );
-            case 2: return (
-                <motion.div key="s3" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        <Box sx={{ p: 3, border: '1px solid #eee', borderRadius: 6, position: 'relative' }}>
-                            <Box sx={{ position: 'absolute', top: -12, left: 24, bgcolor: 'white', px: 1 }}><Chip label="Відправник" size="small" color="primary" /></Box>
-                            <Autocomplete options={[]} renderInput={(p) => <TextField {...p} placeholder="Почніть вводити ПІБ або телефон..." variant="standard" />} />
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'center' }}><IconButton sx={{ bgcolor: '#f5f5f5' }}><ChevronRight sx={{ transform: 'rotate(90deg)' }} /></IconButton></Box>
-                        <Box sx={{ p: 3, border: '1px solid #eee', borderRadius: 6, position: 'relative' }}>
-                            <Box sx={{ position: 'absolute', top: -12, left: 24, bgcolor: 'white', px: 1 }}><Chip label="Отримувач" size="small" color="secondary" /></Box>
-                            <Autocomplete options={[]} renderInput={(p) => <TextField {...p} placeholder="Кому доставити?" variant="standard" />} />
-                        </Box>
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={6}>
-                                <FormControl fullWidth variant="filled">
-                                    <InputLabel>Тип доставки</InputLabel>
-                                    <Select value={formData.shipmentTypeId} onChange={(e) => setFormData({...formData, shipmentTypeId: e.target.value})}>
-                                        <MenuItem value={1}>Стандартна</MenuItem>
-                                        <MenuItem value={2}>Експрес (Авіа)</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={6}>
-                                <FormControl fullWidth variant="filled">
-                                    <InputLabel>Статус</InputLabel>
-                                    <Select value={formData.shipmentStatusId} onChange={(e) => setFormData({...formData, shipmentStatusId: e.target.value})}>
-                                        <MenuItem value={1}>Нове відправлення</MenuItem>
-                                        <MenuItem value={2}>В дорозі</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                        </Grid>
+                );
+            case 2: // КРОК 3: SHIPMENT
+                return (
+                    <Box component={motion.div} key="s3" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Autocomplete options={[]} renderInput={(p) => <TextField {...p} label="Відправник (Пошук)" />} />
+                        <Autocomplete options={[]} renderInput={(p) => <TextField {...p} label="Отримувач (Пошук)" />} />
+                        <Divider />
+                        <FormControl fullWidth>
+                            <InputLabel>Тип доставки</InputLabel>
+                            <Select value={formData.shipmentTypeId} label="Тип доставки" onChange={(e) => setFormData({...formData, shipmentTypeId: e.target.value})}>
+                                <MenuItem value={1}>Стандарт</MenuItem>
+                                <MenuItem value={2}>Експрес</MenuItem>
+                            </Select>
+                        </FormControl>
                     </Box>
-                </motion.div>
-            );
+                );
             default: return null;
         }
     };
 
     return (
-        <Box sx={{ p: 4, bgcolor: '#f0f2f5', minHeight: '100vh' }}>
+        <Box sx={{ p: 2, pt: 0 }}>
             {/* Header */}
-            <Box sx={{ mb: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box>
-                    <Typography variant="h3" fontWeight="900" sx={{ color: '#1a237e', mb: 1, letterSpacing: -1 }}>Shipments</Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Chip label="Активні: 12" size="small" sx={{ bgcolor: 'white', fontWeight: 'bold' }} />
-                        <Chip label="Сьогодні: +3" size="small" sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 'bold' }} />
-                    </Box>
+            <Paper elevation={0} sx={{
+                p: 2.5, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
+                color: 'white', borderRadius: 4, boxShadow: `0 8px 24px ${alpha(mainColor, 0.25)}`
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <LocalShipping fontSize="large" />
+                    <Typography variant="h6" fontWeight="900">Відправлення</Typography>
                 </Box>
-                <Button 
-                    variant="contained" size="large" 
-                    sx={{ bgcolor: mainColor, px: 5, py: 2, borderRadius: 5, fontWeight: 800, textTransform: 'none', boxShadow: `0 20px 40px ${alpha(mainColor, 0.3)}` }} 
-                    startIcon={<Add />} onClick={() => { setOpen(true); setActiveStep(0); }}
-                >
+                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }} startIcon={<Add />} onClick={handleOpen}>
                     Створити ТТН
                 </Button>
-            </Box>
+            </Paper>
 
-            {/* List */}
-            <Grid container spacing={4}>
-                {MOCK_SHIPMENTS.map((s) => (
-                    <Grid item xs={12} md={6} key={s.id}>
-                        <Card sx={{ borderRadius: 8, border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', transition: '0.4s', '&:hover': { transform: 'translateY(-8px)', boxShadow: '0 30px 60px rgba(0,0,0,0.08)' } }}>
-                            <CardContent sx={{ p: 4 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                                    <Typography variant="h6" fontWeight="900">{s.trackingNumber}</Typography>
-                                    <Chip label={s.shipmentStatusName} sx={{ fontWeight: 800, borderRadius: 2 }} color="primary" />
-                                </Box>
-                                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>{s.parcelDescription}</Typography>
-                                <Divider sx={{ mb: 3, opacity: 0.5 }} />
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Shipments Grid */}
+            <Grid container spacing={3}>
+                {shipments.map((s) => (
+                    <Grid item xs={12} sm={6} md={4} lg={3} xl={2.4} key={s.id} sx={{ display: 'flex' }}>
+                        <Card sx={{
+                            width: '100%', borderRadius: 5, border: '1px solid #eee', transition: '0.3s',
+                            display: 'flex', flexDirection: 'column',
+                            '&:hover': { transform: 'translateY(-5px)', boxShadow: `0 12px 30px ${alpha(mainColor, 0.15)}`, borderColor: mainColor }
+                        }} elevation={0}>
+                            <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                    <Chip icon={<ConfirmationNumber sx={{ fontSize: 14 }} />} label={s.trackingNumber} size="small" sx={{ fontWeight: 800, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
                                     <Box>
-                                        <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 0.5 }}>ОДЕРЖУВАЧ</Typography>
-                                        <Typography variant="subtitle1" fontWeight="bold">{s.recipientFullName}</Typography>
+                                        <IconButton size="small" color="primary"><Edit fontSize="small" /></IconButton>
+                                        <IconButton size="small" color="error"><Delete fontSize="small" /></IconButton>
                                     </Box>
-                                    <Box sx={{ textAlign: 'right' }}>
-                                        <Typography variant="h4" fontWeight="900" color="primary">{s.totalPrice} ₴</Typography>
+                                </Box>
+
+                                <Typography variant="subtitle1" fontWeight="800" sx={{ mb: 2, lineHeight: 1.2, minHeight: '2.8rem' }}>
+                                    {s.parcelDescription}
+                                </Typography>
+
+                                <Divider sx={{ mb: 2, borderStyle: 'dashed' }} />
+
+                                {/* Візуальний маршрут */}
+                                <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 0.5 }}>
+                                        <TripOrigin sx={{ fontSize: 14, color: theme.palette.primary.main }} />
+                                        <Box sx={{ width: '2px', flexGrow: 1, my: 0.5, background: `linear-gradient(to bottom, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`, opacity: 0.3 }} />
+                                        <LocationOn sx={{ fontSize: 14, color: theme.palette.secondary.main }} />
                                     </Box>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden' }}>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" display="block">Звідки:</Typography>
+                                            <Typography variant="body2" fontWeight="700" noWrap>{s.fromLocation}</Typography>
+                                            <Typography variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 700 }}>{s.senderFullName}</Typography>
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" display="block">Куди:</Typography>
+                                            <Typography variant="body2" fontWeight="700" noWrap>{s.toLocation}</Typography>
+                                            <Typography variant="caption" sx={{ color: theme.palette.secondary.main, fontWeight: 700 }}>{s.recipientFullName}</Typography>
+                                        </Box>
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{ mt: 'auto', pt: 2, borderTop: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary', fontWeight: 600 }}>
+                                        <CalendarToday sx={{ fontSize: 14 }} /> {new Date(s.createdAt).toLocaleDateString()}
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight="900" color="primary">{s.totalPrice} ₴</Typography>
+                                </Box>
+                                
+                                <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Chip label={s.shipmentStatusName} size="small" variant="outlined" sx={{ fontSize: 10, fontWeight: 800, color: mainColor, borderColor: mainColor }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
                                 </Box>
                             </CardContent>
                         </Card>
@@ -210,27 +234,28 @@ const ShipmentsPage = () => {
                 ))}
             </Grid>
 
-            {/* Modern Wizard Dialog */}
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 10, p: 2, boxShadow: '0 50px 100px rgba(0,0,0,0.2)' } }}>
-                <DialogTitle sx={{ textAlign: 'center', pb: 0 }}>
-                    <Typography variant="h4" fontWeight="900" sx={{ mb: 1 }}>Нова ТТН</Typography>
-                    <Stepper activeStep={activeStep} alternativeLabel connector={<QontoConnector />} sx={{ mt: 3, mb: 2 }}>
-                        {['Параметри', 'Фінанси', 'Логістика'].map(l => <Step key={l}><StepLabel>{l}</StepLabel></Step>)}
+            {/* Wizard Dialog */}
+            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 6 } }}>
+                <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>
+                    <Receipt sx={{ color: mainColor, fontSize: 40, mb: 1 }} />
+                    <Typography variant="h5" fontWeight="900">Оформлення ТТН</Typography>
+                    <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 3 }}>
+                        {steps.map(label => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
                     </Stepper>
                 </DialogTitle>
-                <DialogContent sx={{ minHeight: 420, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <AnimatePresence mode="wait">
-                        {renderStep(activeStep)}
+                <DialogContent sx={{ minHeight: 380, overflowX: 'hidden' }}>
+                    <AnimatePresence mode="wait" custom={direction}>
+                        {renderStepContent(activeStep)}
                     </AnimatePresence>
                 </DialogContent>
                 <DialogActions sx={{ p: 4, justifyContent: 'space-between' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.disabled', fontWeight: 900 }}>Скасувати</Button>
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        {activeStep > 0 && <Button onClick={() => setActiveStep(s => s - 1)} sx={{ color: mainColor, fontWeight: 800 }}>Назад</Button>}
+                    <Button onClick={() => setOpen(false)} color="inherit" sx={{ fontWeight: 'bold' }}>Скасувати</Button>
+                    <Box sx={{ display: 'flex', gap: 1.5 }}>
+                        {activeStep > 0 && <Button onClick={handleBack} startIcon={<ChevronLeft />} sx={{ fontWeight: 'bold' }}>Назад</Button>}
                         {activeStep < 2 ? (
-                            <Button variant="contained" onClick={() => setActiveStep(s => s + 1)} sx={{ bgcolor: mainColor, borderRadius: 4, px: 5, py: 1.5, fontWeight: 900 }}>Далі</Button>
+                            <Button variant="contained" onClick={handleNext} endIcon={<ChevronRight />} sx={{ bgcolor: mainColor, px: 4, fontWeight: 'bold' }}>Далі</Button>
                         ) : (
-                            <Button variant="contained" color="success" onClick={() => setOpen(false)} sx={{ borderRadius: 4, px: 5, py: 1.5, fontWeight: 900 }}>Підтвердити</Button>
+                            <Button variant="contained" color="success" onClick={() => setOpen(false)} startIcon={<Save />} sx={{ px: 4, fontWeight: 'bold' }}>Оформити</Button>
                         )}
                     </Box>
                 </DialogActions>
