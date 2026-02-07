@@ -11,6 +11,7 @@ export const DictionaryApi = {
         });
     },
 
+    getStatistics: async (entityType) => api.get(`${entityType}/statistics`),
     getByParam: (endpoint, paramName, paramValue) => api.get(`/${endpoint}`, { params: { [paramName]: paramValue } }),
     getById: (endpoint, id) => api.get(`/${endpoint}/${id}`),
 

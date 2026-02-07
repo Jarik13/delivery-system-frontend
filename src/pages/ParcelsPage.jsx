@@ -25,6 +25,13 @@ const ParcelsPage = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
 
+    const [statistics, setStatistics] = useState({
+        minWeight: 0,
+        maxWeight: 100,
+        minDeclaredValue: 0,
+        maxDeclaredValue: 50000
+    });
+
     const [filters, setFilters] = useState({
         name: '',
         parcelTypeId: '',
@@ -40,19 +47,42 @@ const ParcelsPage = () => {
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
-        const loadDictionaries = async () => {
+        const loadInitialData = async () => {
             try {
-                const [typesRes, conditionsRes] = await Promise.all([
+                const [typesRes, conditionsRes, statsRes] = await Promise.all([
                     DictionaryApi.getAll('parcel-types', 0, 100),
-                    DictionaryApi.getAll('storage-conditions', 0, 100)
+                    DictionaryApi.getAll('storage-conditions', 0, 100),
+                    DictionaryApi.getStatistics('parcels')
                 ]);
+                
                 setParcelTypes(typesRes.data.content || []);
                 setStorageConditions(conditionsRes.data.content || []);
+                
+                const stats = statsRes.data;
+                setStatistics({
+                    minWeight: stats.minWeight || 0,
+                    maxWeight: stats.maxWeight || 100,
+                    minDeclaredValue: stats.minDeclaredValue || 0,
+                    maxDeclaredValue: stats.maxDeclaredValue || 50000
+                });
+                
+                setFilters(prev => ({
+                    ...prev,
+                    weightMin: stats.minWeight || 0,
+                    weightMax: stats.maxWeight || 100,
+                    declaredValueMin: stats.minDeclaredValue || 0,
+                    declaredValueMax: stats.maxDeclaredValue || 50000
+                }));
             } catch (error) {
-                console.error("Помилка завантаження довідників", error);
+                console.error("Помилка завантаження даних", error);
+                setNotification({ 
+                    open: true, 
+                    message: 'Помилка завантаження початкових даних', 
+                    severity: 'error' 
+                });
             }
         };
-        loadDictionaries();
+        loadInitialData();
     }, []);
 
     const loadTableData = useCallback(async () => {
@@ -79,10 +109,10 @@ const ParcelsPage = () => {
         setFilters({
             name: '',
             parcelTypeId: '',
-            weightMin: 0,
-            weightMax: 100,
-            declaredValueMin: 0,
-            declaredValueMax: 50000
+            weightMin: statistics.minWeight,
+            weightMax: statistics.maxWeight,
+            declaredValueMin: statistics.minDeclaredValue,
+            declaredValueMax: statistics.maxDeclaredValue
         });
         setPage(0);
     };
@@ -126,8 +156,24 @@ const ParcelsPage = () => {
     const filterFields = [
         { name: 'name', label: 'Опис вмісту', type: 'text', md: 2.5 },
         { name: 'parcelTypeId', label: 'Тип посилки', type: 'select', options: parcelTypes, md: 2 },
-        { label: 'Вага (кг)', type: 'range', minName: 'weightMin', maxName: 'weightMax', min: 0, max: 100, md: 3.5 },
-        { label: 'Вартість (грн)', type: 'range', minName: 'declaredValueMin', maxName: 'declaredValueMax', min: 0, max: 50000, md: 4 }
+        { 
+            label: 'Вага (кг)', 
+            type: 'range', 
+            minName: 'weightMin', 
+            maxName: 'weightMax', 
+            min: statistics.minWeight, 
+            max: statistics.maxWeight, 
+            md: 3.5 
+        },
+        { 
+            label: 'Вартість (грн)', 
+            type: 'range', 
+            minName: 'declaredValueMin', 
+            maxName: 'declaredValueMax', 
+            min: statistics.minDeclaredValue, 
+            max: statistics.maxDeclaredValue, 
+            md: 4 
+        }
     ];
 
     return (
