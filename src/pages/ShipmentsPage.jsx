@@ -270,28 +270,40 @@ const ShipmentsPage = () => {
 
                                 <Divider sx={{ mt: 0.5, mb: 1.5, opacity: 0.5, borderStyle: 'dashed' }} />
 
-                                <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 0.6 }}>
+                                <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'stretch' }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
                                         <TripOrigin sx={{ fontSize: 10, color: theme.palette.primary.main }} />
-                                        {/* Збільшив my до 0.8 для більшої висоти лінії */}
-                                        <Box sx={{ width: '1px', flexGrow: 1, my: 0.8, borderLeft: '1px dashed #ccc' }} />
-                                        <LocationOn sx={{ fontSize: 12, color: theme.palette.secondary.main }} />
+                                        <Box sx={{ 
+                                            width: '1px', 
+                                            flexGrow: 1, 
+                                            minHeight: '75px', 
+                                            my: 0.5, 
+                                            borderLeft: '1px dashed #ccc' 
+                                        }} />
+                                        <LocationOn sx={{ fontSize: 14, color: theme.palette.secondary.main }} />
                                     </Box>
-                                    {/* Збільшив gap до 1.5, щоб пункти розійшлися, а лінія розтягнулася */}
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden' }}>
+
+                                    <Box sx={{ 
+                                        display: 'flex', 
+                                        flexDirection: 'column', 
+                                        justifyContent: 'space-between',
+                                        py: 0.2,
+                                        overflow: 'hidden' 
+                                    }}>
                                         <Box sx={{ lineHeight: 1 }}>
                                             <Typography variant="body2" fontWeight="700" noWrap sx={{ lineHeight: 1.1 }}>
                                                 {s.originLocationName || 'Забір вантажу'}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1 }}>
+                                            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1.2 }}>
                                                 {s.senderFullName}
                                             </Typography>
                                         </Box>
+                                        
                                         <Box sx={{ lineHeight: 1 }}>
                                             <Typography variant="body2" fontWeight="700" noWrap sx={{ lineHeight: 1.1 }}>
                                                 {s.destinationLocationName || 'Точка видачі'}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1 }}>
+                                            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1.2 }}>
                                                 {s.recipientFullName}
                                             </Typography>
                                         </Box>
