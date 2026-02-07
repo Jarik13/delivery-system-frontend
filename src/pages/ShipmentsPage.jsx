@@ -16,6 +16,21 @@ import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
+const STATUS_COLORS = {
+    'Створено': '#2196f3',              // Синій
+    'Очікує надходження': '#90caf9',    // Світло-синій
+    'Прийнято у відділенні': '#673ab7', // Фіолетовий
+    'Сортування термінал': '#00bcd4',   // Блакитний
+    'У дорозі': '#ff9800',              // Помаранчевий
+    'Прибув у відділення': '#8bc34a',   // Салатовий
+    'Видано кур\'єру': '#e91e63',       // Рожевий
+    'Доставлено': '#2e7d32',            // Зелений
+    'Відмова': '#f44336',               // Червоний
+    'Втрачено': '#b71c1c',              // Темно-червоний
+    'Утилізовано': '#616161',           // Сірий
+    'default': '#9e9e9e'                // Дефолтний сірий
+};
+
 const steps = ['Вантаж', 'Фінанси', 'Логістика'];
 
 const ShipmentsPage = () => {
@@ -247,85 +262,102 @@ const ShipmentsPage = () => {
             />
 
             <Grid container spacing={3} sx={{ m: 0, width: '100%', display: 'flex', flexWrap: 'wrap' }}>
-                {shipments.map((s) => (
-                    <Grid item key={s.id} xs={12} sm={6} md={4} lg={3} xl={2.4} sx={{ display: 'flex', flexGrow: 1 }}>
-                        <Card sx={{
-                            width: '100%', borderRadius: 4, transition: 'all 0.3s ease', border: '1px solid', borderColor: 'divider',
-                            display: 'flex', flexDirection: 'column',
-                            '&:hover': { transform: 'translateY(-5px)', boxShadow: `0 12px 24px ${alpha(mainColor, 0.15)}`, borderColor: mainColor }
-                        }} elevation={0}>
-                            <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                    <Chip
-                                        icon={<ConfirmationNumber sx={{ fontSize: '14px !important' }} />}
-                                        label={s.trackingNumber} size="small"
-                                        sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor, borderRadius: 1.5 }}
-                                    />
-                                    <IconButton size="small" color="error" onClick={() => handleDelete(s.id)}><Delete fontSize="small" /></IconButton>
-                                </Box>
+                {shipments.map((s) => {
+                    const statusColor = STATUS_COLORS[s.shipmentStatusName] || STATUS_COLORS.default;
+                    
+                    return (
+                        <Grid item key={s.id} xs={12} sm={6} md={4} lg={3} xl={2.4} sx={{ display: 'flex', flexGrow: 1 }}>
+                            <Card sx={{
+                                width: '100%', borderRadius: 4, transition: 'all 0.3s ease', border: '1px solid', borderColor: 'divider',
+                                display: 'flex', flexDirection: 'column',
+                                '&:hover': { transform: 'translateY(-5px)', boxShadow: `0 12px 24px ${alpha(mainColor, 0.15)}`, borderColor: mainColor }
+                            }} elevation={0}>
+                                <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                        <Chip
+                                            icon={<ConfirmationNumber sx={{ fontSize: '14px !important' }} />}
+                                            label={s.trackingNumber} size="small"
+                                            sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor, borderRadius: 1.5 }}
+                                        />
+                                        <IconButton size="small" color="error" onClick={() => handleDelete(s.id)}><Delete fontSize="small" /></IconButton>
+                                    </Box>
 
-                                <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, lineHeight: 1.2 }}>
-                                    {s.parcelDescription || 'Без опису'}
-                                </Typography>
+                                    <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, lineHeight: 1.2 }}>
+                                        {s.parcelDescription || 'Без опису'}
+                                    </Typography>
 
-                                <Divider sx={{ mt: 0.5, mb: 1.5, opacity: 0.5, borderStyle: 'dashed' }} />
+                                    <Divider sx={{ mt: 0.5, mb: 1.5, opacity: 0.5, borderStyle: 'dashed' }} />
 
-                                <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'stretch' }}>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
-                                        <TripOrigin sx={{ fontSize: 10, color: theme.palette.primary.main }} />
+                                    <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'stretch' }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
+                                            <TripOrigin sx={{ fontSize: 10, color: theme.palette.primary.main }} />
+                                            <Box sx={{ 
+                                                width: '1px', 
+                                                flexGrow: 1, 
+                                                minHeight: '75px', 
+                                                my: 0.5, 
+                                                borderLeft: '1px dashed #ccc' 
+                                            }} />
+                                            <LocationOn sx={{ fontSize: 14, color: theme.palette.secondary.main }} />
+                                        </Box>
+
                                         <Box sx={{ 
-                                            width: '1px', 
-                                            flexGrow: 1, 
-                                            minHeight: '75px', 
-                                            my: 0.5, 
-                                            borderLeft: '1px dashed #ccc' 
-                                        }} />
-                                        <LocationOn sx={{ fontSize: 14, color: theme.palette.secondary.main }} />
-                                    </Box>
-
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        justifyContent: 'space-between',
-                                        py: 0.2,
-                                        overflow: 'hidden' 
-                                    }}>
-                                        <Box sx={{ lineHeight: 1 }}>
-                                            <Typography variant="body2" fontWeight="700" noWrap sx={{ lineHeight: 1.1 }}>
-                                                {s.originLocationName || 'Забір вантажу'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1.2 }}>
-                                                {s.senderFullName}
-                                            </Typography>
-                                        </Box>
-                                        
-                                        <Box sx={{ lineHeight: 1 }}>
-                                            <Typography variant="body2" fontWeight="700" noWrap sx={{ lineHeight: 1.1 }}>
-                                                {s.destinationLocationName || 'Точка видачі'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1.2 }}>
-                                                {s.recipientFullName}
-                                            </Typography>
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            justifyContent: 'space-between',
+                                            py: 0.2,
+                                            overflow: 'hidden' 
+                                        }}>
+                                            <Box sx={{ lineHeight: 1 }}>
+                                                <Typography variant="body2" fontWeight="700" noWrap sx={{ lineHeight: 1.1 }}>
+                                                    {s.originLocationName || 'Забір вантажу'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1.2 }}>
+                                                    {s.senderFullName}
+                                                </Typography>
+                                            </Box>
+                                            
+                                            <Box sx={{ lineHeight: 1 }}>
+                                                <Typography variant="body2" fontWeight="700" noWrap sx={{ lineHeight: 1.1 }}>
+                                                    {s.destinationLocationName || 'Точка видачі'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1.2 }}>
+                                                    {s.recipientFullName}
+                                                </Typography>
+                                            </Box>
                                         </Box>
                                     </Box>
-                                </Box>
 
-                                <Box sx={{ mt: 'auto', pt: 1.5, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
-                                        <CalendarToday sx={{ fontSize: 14 }} />
-                                        <Typography variant="caption" fontWeight="600">{new Date(s.createdAt).toLocaleDateString()}</Typography>
+                                    <Box sx={{ mt: 'auto', pt: 1.5, borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+                                            <CalendarToday sx={{ fontSize: 14 }} />
+                                            <Typography variant="caption" fontWeight="600">{new Date(s.createdAt).toLocaleDateString()}</Typography>
+                                        </Box>
+                                        <Typography variant="body1" fontWeight="700" color="success.main">{s.totalPrice} ₴</Typography>
                                     </Box>
-                                    <Typography variant="body1" fontWeight="700" color="success.main">{s.totalPrice} ₴</Typography>
-                                </Box>
 
-                                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Chip label={s.shipmentStatusName} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
-                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
+                                    <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Chip 
+                                            label={s.shipmentStatusName} 
+                                            size="small" 
+                                            variant="outlined" 
+                                            sx={{ 
+                                                height: 20, 
+                                                fontSize: '0.65rem', 
+                                                fontWeight: 800,
+                                                borderColor: statusColor,
+                                                color: statusColor,
+                                                bgcolor: alpha(statusColor, 0.08),
+                                                '& .MuiChip-label': { px: 1 }
+                                            }} 
+                                        />
+                                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    );
+                })}
             </Grid>
 
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', bgcolor: 'white', borderRadius: 2, p: 1 }}>
