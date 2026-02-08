@@ -1,22 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, Chip, TablePagination,
-    useTheme, alpha, MenuItem, Select, FormControl, InputLabel, Autocomplete,
-    Grid, Card, CardContent, Divider, Stepper, Step, StepLabel,
-    Checkbox, FormControlLabel
+    useTheme, alpha, MenuItem, Autocomplete,
+    Grid, Card, CardContent, Divider, Stepper, Step, StepLabel
 } from '@mui/material';
 import {
-    Add, Delete, LocalShipping, ConfirmationNumber,
-    CalendarToday, TripOrigin, LocationOn, Scale, AttachMoney,
-    Receipt, ChevronRight, ChevronLeft, Save, EventAvailable, AccessTime
+    Add, Delete, LocalShipping, TripOrigin, LocationOn, 
+    Receipt, AccessTime, EventAvailable
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
-// --- КОЛЬОРИ ДЛЯ ВСІХ 11 СТАТУСІВ ---
 const STATUS_COLORS = {
     'Створено': '#2196f3',
     'Очікує надходження': '#90caf9',
@@ -43,7 +40,26 @@ const ShipmentsPage = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
-    const [filters, setFilters] = useState({ trackingNumber: '', shipmentStatusId: '' });
+    const [stats, setStats] = useState(null);
+
+    const [filters, setFilters] = useState({
+        trackingNumber: '',
+        shipmentStatusId: '',
+        shipmentTypeId: '',
+        parcelDescription: '',
+        createdAtFrom: '',
+        createdAtTo: '',
+        issuedAtFrom: '',
+        issuedAtTo: '',
+        weightMin: 0, weightMax: 100,
+        totalPriceMin: 0, totalPriceMax: 10000,
+        deliveryPriceMin: 0, deliveryPriceMax: 5000,
+        weightPriceMin: 0, weightPriceMax: 2000,
+        distancePriceMin: 0, distancePriceMax: 2000,
+        boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
+        specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000,
+        insuranceFeeMin: 0, insuranceFeeMax: 1000
+    });
 
     const [statuses, setStatuses] = useState([]);
     const [clients, setClients] = useState([]);
@@ -66,18 +82,35 @@ const ShipmentsPage = () => {
     useEffect(() => {
         const loadReferences = async () => {
             try {
-                const [sRes, cRes, pRes, tRes] = await Promise.all([
+                const [sRes, cRes, pRes, tRes, statsRes] = await Promise.all([
                     DictionaryApi.getAll('shipment-statuses', 0, 100),
                     DictionaryApi.getAll('clients', 0, 1000),
                     DictionaryApi.getAll('parcel-types', 0, 100),
-                    DictionaryApi.getAll('shipment-types', 0, 100)
+                    DictionaryApi.getAll('shipment-types', 0, 100),
+                    DictionaryApi.getStatistics('shipments')
                 ]);
                 setStatuses(sRes.data.content || []);
                 setClients(cRes.data.content || []);
                 setParcelTypes(pRes.data.content || []);
                 setShipmentTypes(tRes.data.content || []);
+
+                if (statsRes.data) {
+                    const s = statsRes.data;
+                    setStats(s);
+                    setFilters(prev => ({
+                        ...prev,
+                        weightMin: s.minWeight, weightMax: s.maxWeight,
+                        totalPriceMin: s.minTotalPrice, totalPriceMax: s.maxTotalPrice,
+                        deliveryPriceMin: s.minDeliveryPrice, deliveryPriceMax: s.maxDeliveryPrice,
+                        weightPriceMin: s.minWeightPrice, weightPriceMax: s.maxWeightPrice,
+                        distancePriceMin: s.minDistancePrice, distancePriceMax: s.maxDistancePrice,
+                        boxVariantPriceMin: s.minBoxVariantPrice, boxVariantPriceMax: s.maxBoxVariantPrice,
+                        specialPackagingPriceMin: s.minSpecialPackagingPrice, specialPackagingPriceMax: s.maxSpecialPackagingPrice,
+                        insuranceFeeMin: s.minInsuranceFee, insuranceFeeMax: s.maxInsuranceFee
+                    }));
+                }
             } catch (error) {
-                console.error("Помилка завантаження довідників", error);
+                console.error("Помилка завантаження метаданих", error);
             }
         };
         loadReferences();
@@ -85,7 +118,10 @@ const ShipmentsPage = () => {
 
     const loadTableData = useCallback(async () => {
         try {
-            const response = await DictionaryApi.getAll('shipments', page, rowsPerPage, filters);
+            const activeFilters = Object.fromEntries(
+                Object.entries(filters).filter(([_, v]) => v !== '' && v !== null)
+            );
+            const response = await DictionaryApi.getAll('shipments', page, rowsPerPage, activeFilters);
             setShipments(response.data.content || []);
             setTotalElements(response.data.totalElements || 0);
         } catch (error) {
@@ -101,6 +137,22 @@ const ShipmentsPage = () => {
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
         setPage(0);
+    };
+
+    const resetFilters = () => {
+        if (!stats) return;
+        setFilters({
+            trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',
+            createdAtFrom: '', createdAtTo: '', issuedAtFrom: '', issuedAtTo: '',
+            weightMin: stats.minWeight, weightMax: stats.maxWeight,
+            totalPriceMin: stats.minTotalPrice, totalPriceMax: stats.maxTotalPrice,
+            deliveryPriceMin: stats.minDeliveryPrice, deliveryPriceMax: stats.maxDeliveryPrice,
+            weightPriceMin: stats.minWeightPrice, weightPriceMax: stats.maxWeightPrice,
+            distancePriceMin: stats.minDistancePrice, distancePriceMax: stats.maxDistancePrice,
+            boxVariantPriceMin: stats.minBoxVariantPrice, boxVariantPriceMax: stats.maxBoxVariantPrice,
+            specialPackagingPriceMin: stats.minSpecialPackagingPrice, specialPackagingPriceMax: stats.maxSpecialPackagingPrice,
+            insuranceFeeMin: stats.minInsuranceFee, insuranceFeeMax: stats.maxInsuranceFee
+        });
     };
 
     const handleOpenWizard = () => {
@@ -203,17 +255,30 @@ const ShipmentsPage = () => {
                 </Button>
             </Paper>
 
-            <DataFilters filters={filters} onChange={handleFilterChange} onClear={() => setFilters({ trackingNumber: '', shipmentStatusId: '' })}
+            <DataFilters filters={filters} onChange={handleFilterChange} onClear={resetFilters}
                 fields={[
-                    { name: 'trackingNumber', label: 'Трек-номер', type: 'text', md: 6 },
-                    { name: 'shipmentStatusId', label: 'Статус', type: 'select', options: statuses, md: 6 },
+                    { name: 'trackingNumber', label: 'Трек-номер', type: 'text', md: 3 },
+                    { name: 'shipmentStatusId', label: 'Статус', type: 'select', options: statuses, md: 3 },
+                    { name: 'shipmentTypeId', label: 'Тип доставки', type: 'select', options: shipmentTypes, md: 3 },
+                    { name: 'parcelDescription', label: 'Опис вмісту', type: 'text', md: 3 },
+                    { name: 'createdAtFrom', label: 'Створено з', type: 'datetime', md: 3 },
+                    { name: 'createdAtTo', label: 'Створено до', type: 'datetime', md: 3 },
+                    { name: 'issuedAtFrom', label: 'Видано з', type: 'datetime', md: 3 },
+                    { name: 'issuedAtTo', label: 'Видано до', type: 'datetime', md: 3 },
+                    { label: 'Вага (кг)', type: 'range', minName: 'weightMin', maxName: 'weightMax', min: stats?.minWeight || 0, max: stats?.maxWeight || 100, md: 4 },
+                    { label: 'Ціна загальна', type: 'range', minName: 'totalPriceMin', maxName: 'totalPriceMax', min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000, md: 4 },
+                    { label: 'Базовий тариф', type: 'range', minName: 'deliveryPriceMin', maxName: 'deliveryPriceMax', min: stats?.minDeliveryPrice || 0, max: stats?.maxDeliveryPrice || 5000, md: 4 },
+                    { label: 'Доплата вага', type: 'range', minName: 'weightPriceMin', maxName: 'weightPriceMax', min: stats?.minWeightPrice || 0, max: stats?.maxWeightPrice || 2000, md: 3 },
+                    { label: 'Доплата відст.', type: 'range', minName: 'distancePriceMin', maxName: 'distancePriceMax', min: stats?.minDistancePrice || 0, max: stats?.maxDistancePrice || 2000, md: 3 },
+                    { label: 'Ціна коробки', type: 'range', minName: 'boxVariantPriceMin', maxName: 'boxVariantPriceMax', min: stats?.minBoxVariantPrice || 0, max: stats?.maxBoxVariantPrice || 1000, md: 3 },
+                    { label: 'Страховка', type: 'range', minName: 'insuranceFeeMin', maxName: 'insuranceFeeMax', min: stats?.minInsuranceFee || 0, max: stats?.maxInsuranceFee || 1000, md: 3 },
                 ]}
             />
 
             <Grid container spacing={3} sx={{ m: 0, width: '100%', display: 'flex', flexWrap: 'wrap' }}>
                 {shipments.map((s) => {
                     const statusColor = STATUS_COLORS[s.shipmentStatusName] || STATUS_COLORS.default;
-                    
+
                     return (
                         <Grid item key={s.id} xs={12} sm={6} md={4} lg={3} xl={2.4} sx={{ display: 'flex', flexGrow: 1 }}>
                             <Card sx={{
@@ -242,8 +307,8 @@ const ShipmentsPage = () => {
 
                                         <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', py: 0.2, flex: 1, overflow: 'hidden' }}>
                                             <Box>
-                                                <Typography variant="body2" fontWeight="700" sx={{ 
-                                                    lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' 
+                                                <Typography variant="body2" fontWeight="700" sx={{
+                                                    lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
                                                 }}>
                                                     {s.originLocationName || 'Не вказано'}
                                                 </Typography>
@@ -252,8 +317,8 @@ const ShipmentsPage = () => {
                                                 </Typography>
                                             </Box>
                                             <Box>
-                                                <Typography variant="body2" fontWeight="700" sx={{ 
-                                                    lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' 
+                                                <Typography variant="body2" fontWeight="700" sx={{
+                                                    lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
                                                 }}>
                                                     {s.destinationLocationName || 'Не вказано'}
                                                 </Typography>
@@ -274,11 +339,11 @@ const ShipmentsPage = () => {
                                                 {new Date(s.createdAt).toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </Typography>
                                         </Box>
-                                        
+
                                         {s.issuedAt && (
-                                            <Box sx={{ 
-                                                display: 'flex', 
-                                                justifyContent: 'space-between', 
+                                            <Box sx={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
                                                 alignItems: 'center',
                                                 bgcolor: alpha(theme.palette.success.main, 0.05),
                                                 p: 0.5,
@@ -302,14 +367,14 @@ const ShipmentsPage = () => {
                                     </Box>
 
                                     <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Chip 
-                                            label={s.shipmentStatusName} 
-                                            size="small" 
-                                            variant="outlined" 
-                                            sx={{ 
-                                                height: 20, fontSize: '0.65rem', fontWeight: 800, 
+                                        <Chip
+                                            label={s.shipmentStatusName}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{
+                                                height: 20, fontSize: '0.65rem', fontWeight: 800,
                                                 borderColor: statusColor, color: statusColor, bgcolor: alpha(statusColor, 0.08)
-                                            }} 
+                                            }}
                                         />
                                         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
                                     </Box>
