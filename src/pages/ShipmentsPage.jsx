@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, Chip, TablePagination,
     useTheme, alpha, MenuItem, Autocomplete,
-    Grid, Card, CardContent, Divider, Stepper, Step, StepLabel
+    Grid, Card, CardContent, Divider, Stepper, Step, StepLabel, Collapse
 } from '@mui/material';
 import {
-    Add, Delete, LocalShipping, TripOrigin, LocationOn, 
-    Receipt, AccessTime, EventAvailable
+    Add, Delete, LocalShipping, TripOrigin, LocationOn,
+    Receipt, AccessTime, EventAvailable, AddCircleOutline, RemoveCircleOutline
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
@@ -42,6 +42,9 @@ const ShipmentsPage = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [stats, setStats] = useState(null);
 
+    const [expandedHistory, setExpandedHistory] = useState({});
+    const [movements, setMovements] = useState({});
+
     const [filters, setFilters] = useState({
         trackingNumber: '',
         shipmentStatusId: '',
@@ -63,7 +66,6 @@ const ShipmentsPage = () => {
 
     const [statuses, setStatuses] = useState([]);
     const [clients, setClients] = useState([]);
-    const [parcelTypes, setParcelTypes] = useState([]);
     const [shipmentTypes, setShipmentTypes] = useState([]);
 
     const [open, setOpen] = useState(false);
@@ -79,19 +81,34 @@ const ShipmentsPage = () => {
         shipmentTypeId: '', shipmentStatusId: ''
     });
 
+    const toggleHistory = async (shipmentId) => {
+        if (expandedHistory[shipmentId]) {
+            setExpandedHistory(prev => ({ ...prev, [shipmentId]: false }));
+            return;
+        }
+
+        if (!movements[shipmentId]) {
+            try {
+                const response = await DictionaryApi.getMovement(shipmentId);
+                setMovements(prev => ({ ...prev, [shipmentId]: response.data }));
+            } catch (error) {
+                console.error("Помилка завантаження маршруту", error);
+            }
+        }
+        setExpandedHistory(prev => ({ ...prev, [shipmentId]: true }));
+    };
+
     useEffect(() => {
         const loadReferences = async () => {
             try {
-                const [sRes, cRes, pRes, tRes, statsRes] = await Promise.all([
+                const [sRes, cRes, tRes, statsRes] = await Promise.all([
                     DictionaryApi.getAll('shipment-statuses', 0, 100),
                     DictionaryApi.getAll('clients', 0, 1000),
-                    DictionaryApi.getAll('parcel-types', 0, 100),
                     DictionaryApi.getAll('shipment-types', 0, 100),
                     DictionaryApi.getStatistics('shipments')
                 ]);
                 setStatuses(sRes.data.content || []);
                 setClients(cRes.data.content || []);
-                setParcelTypes(pRes.data.content || []);
                 setShipmentTypes(tRes.data.content || []);
 
                 if (statsRes.data) {
@@ -278,6 +295,8 @@ const ShipmentsPage = () => {
             <Grid container spacing={3} sx={{ m: 0, width: '100%', display: 'flex', flexWrap: 'wrap' }}>
                 {shipments.map((s) => {
                     const statusColor = STATUS_COLORS[s.shipmentStatusName] || STATUS_COLORS.default;
+                    const isExpanded = expandedHistory[s.id];
+                    const history = movements[s.id] || [];
 
                     return (
                         <Grid item key={s.id} xs={12} sm={6} md={4} lg={3} xl={2.4} sx={{ display: 'flex', flexGrow: 1 }}>
@@ -298,31 +317,84 @@ const ShipmentsPage = () => {
 
                                     <Divider sx={{ mt: 0.5, mb: 1.5, opacity: 0.5, borderStyle: 'dashed' }} />
 
-                                    <Box sx={{ display: 'flex', gap: 1.8, mb: 2, height: '110px', alignItems: 'stretch' }}>
+                                    <Box sx={{ display: 'flex', gap: 1.8, mb: 2, minHeight: '110px', alignItems: 'stretch' }}>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
                                             <TripOrigin sx={{ fontSize: 10, color: theme.palette.primary.main }} />
-                                            <Box sx={{ width: '1px', flexGrow: 1, my: 0.5, borderLeft: '1px dashed #ccc' }} />
+                                            <Box sx={{
+                                                width: '1px', flexGrow: 1, my: 0.5, borderLeft: '1px dashed #ccc',
+                                                position: 'relative', minHeight: isExpanded ? '40px' : '20px'
+                                            }}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => toggleHistory(s.id)}
+                                                    sx={{
+                                                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                                                        bgcolor: 'white', border: '1px solid #eee', p: '2px', zIndex: 2
+                                                    }}
+                                                >
+                                                    {isExpanded ?
+                                                        <RemoveCircleOutline sx={{ fontSize: 14, color: mainColor }} /> :
+                                                        <AddCircleOutline sx={{ fontSize: 14, color: mainColor }} />
+                                                    }
+                                                </IconButton>
+                                            </Box>
                                             <LocationOn sx={{ fontSize: 14, color: theme.palette.secondary.main }} />
                                         </Box>
 
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', py: 0.2, flex: 1, overflow: 'hidden' }}>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                             <Box>
-                                                <Typography variant="body2" fontWeight="700" sx={{
-                                                    lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                                                }}>
+                                                <Typography variant="body2" fontWeight="700" sx={{ lineHeight: 1.1 }}>
                                                     {s.originLocationName || 'Не вказано'}
                                                 </Typography>
-                                                <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1 }}>
+                                                <Typography variant="caption" color="text.secondary" noWrap display="block">
                                                     {s.senderFullName}
                                                 </Typography>
                                             </Box>
-                                            <Box>
-                                                <Typography variant="body2" fontWeight="700" sx={{
-                                                    lineHeight: 1.1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+
+                                            <Collapse in={isExpanded}>
+                                                <Box sx={{
+                                                    my: 1.5, pl: 1.5, borderLeft: `2px solid ${alpha(mainColor, 0.1)}`,
+                                                    display: 'flex', flexDirection: 'column', gap: 1.5
                                                 }}>
+                                                    {(() => {
+                                                        const transitPoints = history.filter((step) => {
+                                                            const isOrigin = step.locationName === s.originLocationName;
+                                                            const isDestination = step.locationName === s.destinationLocationName;
+                                                            return !isOrigin && !isDestination;
+                                                        });
+
+                                                        if (transitPoints.length > 0) {
+                                                            return transitPoints.map((step, idx) => (
+                                                                <Box key={idx} sx={{ position: 'relative' }}>
+                                                                    <Box sx={{
+                                                                        position: 'absolute', left: -17, top: 6,
+                                                                        width: 6, height: 6, borderRadius: '50%',
+                                                                        bgcolor: alpha(mainColor, 0.4)
+                                                                    }} />
+                                                                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.1 }}>
+                                                                        {step.locationName}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                                                                        {step.statusDescription} • {new Date(step.time).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </Typography>
+                                                                </Box>
+                                                            ));
+                                                        }
+
+                                                        return (
+                                                            <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', fontSize: '0.7rem' }}>
+                                                                Транзитних пунктів не зафіксовано
+                                                            </Typography>
+                                                        );
+                                                    })()}
+                                                </Box>
+                                            </Collapse>
+
+                                            <Box sx={{ mt: isExpanded ? 0.5 : 'auto' }}>
+                                                <Typography variant="body2" fontWeight="700" sx={{ lineHeight: 1.1 }}>
                                                     {s.destinationLocationName || 'Не вказано'}
                                                 </Typography>
-                                                <Typography variant="caption" color="text.secondary" noWrap display="block" sx={{ lineHeight: 1 }}>
+                                                <Typography variant="caption" color="text.secondary" noWrap display="block">
                                                     {s.recipientFullName}
                                                 </Typography>
                                             </Box>
@@ -342,13 +414,8 @@ const ShipmentsPage = () => {
 
                                         {s.issuedAt && (
                                             <Box sx={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                bgcolor: alpha(theme.palette.success.main, 0.05),
-                                                p: 0.5,
-                                                px: 1,
-                                                borderRadius: 1.5
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                bgcolor: alpha(theme.palette.success.main, 0.05), p: 0.5, px: 1, borderRadius: 1.5
                                             }}>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, color: 'success.main' }}>
                                                     <EventAvailable sx={{ fontSize: 14 }} />
