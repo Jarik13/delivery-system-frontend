@@ -7,7 +7,11 @@ import {
 } from '@mui/material';
 import {
     Add, Delete, LocalShipping, TripOrigin, LocationOn,
-    Receipt, AccessTime, EventAvailable, AddCircleOutline, RemoveCircleOutline
+    Receipt, AccessTime, EventAvailable, AddCircleOutline, RemoveCircleOutline,
+    CheckCircle,
+    PendingActions,
+    ErrorOutline,
+    Payments, ExpandMore, ExpandLess, CreditScore, AssignmentReturn
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
@@ -43,6 +47,7 @@ const ShipmentsPage = () => {
     const [stats, setStats] = useState(null);
 
     const [expandedHistory, setExpandedHistory] = useState({});
+    const [expandedFinance, setExpandedFinance] = useState({});
     const [movements, setMovements] = useState({});
 
     const [filters, setFilters] = useState({
@@ -387,7 +392,6 @@ const ShipmentsPage = () => {
                                                                 </Box>
                                                             ));
                                                         }
-
                                                         return (
                                                             <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', fontSize: '0.7rem' }}>
                                                                 Транзитних пунктів не зафіксовано
@@ -433,24 +437,136 @@ const ShipmentsPage = () => {
                                                 </Typography>
                                             </Box>
                                         )}
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.2 }}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>Вартість:</Typography>
-                                            <Typography variant="body2" fontWeight="800" color="success.main">{s.totalPrice} ₴</Typography>
-                                        </Box>
                                     </Box>
 
-                                    <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Chip
-                                            label={s.shipmentStatusName}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{
-                                                height: 20, fontSize: '0.65rem', fontWeight: 800,
-                                                borderColor: statusColor, color: statusColor, bgcolor: alpha(statusColor, 0.08)
-                                            }}
-                                        />
-                                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
+                                    <Box sx={{ mt: 1.5, pt: 1, borderTop: '1px dashed #ddd' }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                            {(() => {
+                                                let status = { label: 'Не оплачено', color: '#d32f2f', icon: <ErrorOutline sx={{ fontSize: 14 }} /> };
+                                                if (s.isFullyPaid) status = { label: 'Оплачено', color: '#2e7d32', icon: <CheckCircle sx={{ fontSize: 14 }} /> };
+                                                else if (s.totalPaidAmount > 0) status = { label: 'Частково', color: '#ffa000', icon: <PendingActions sx={{ fontSize: 14 }} /> };
+
+                                                return (
+                                                    <Chip
+                                                        icon={status.icon}
+                                                        label={status.label}
+                                                        size="small"
+                                                        sx={{
+                                                            height: 20, fontSize: '0.65rem', fontWeight: 800,
+                                                            bgcolor: alpha(status.color, 0.1), color: status.color,
+                                                            border: `1px solid ${alpha(status.color, 0.2)}`
+                                                        }}
+                                                    />
+                                                );
+                                            })()}
+
+                                            <Button
+                                                size="small"
+                                                onClick={() => setExpandedFinance(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                                endIcon={expandedFinance[s.id] ? <ExpandLess /> : <ExpandMore />}
+                                                sx={{ fontSize: '0.65rem', fontWeight: 700, p: 0, minWidth: 'auto', textTransform: 'none', color: mainColor }}
+                                            >
+                                                {(s.payments?.length || 0) + (s.returns?.length || 0) > 0 ? 'Транзакції' : 'Платежі'}
+                                            </Button>
+                                        </Box>
+
+                                        {!s.isFullyPaid && s.totalPaidAmount > 0 && (
+                                            <Box sx={{ width: '100%', height: 3, bgcolor: '#eee', borderRadius: 1, mb: 1, overflow: 'hidden' }}>
+                                                <Box sx={{ width: `${(s.totalPaidAmount / s.totalPrice) * 100}%`, height: '100%', bgcolor: '#ffa000' }} />
+                                            </Box>
+                                        )}
+
+                                        <Collapse in={expandedFinance[s.id]}>
+                                            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.8 }}>
+                                                {s.payments && s.payments.length > 0 ? (
+                                                    <Box>
+                                                        <Typography variant="caption" fontWeight="800" sx={{ fontSize: '0.6rem', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                                            <CreditScore sx={{ fontSize: 12 }} /> ІСТОРІЯ ПЛАТЕЖІВ:
+                                                        </Typography>
+                                                        {s.payments.map((p) => (
+                                                            <Box key={p.id} sx={{
+                                                                p: 0.8, mb: 0.4, borderRadius: 1, bgcolor: alpha(theme.palette.success.main, 0.03),
+                                                                borderLeft: `2px solid ${theme.palette.success.main}`,
+                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                            }}>
+                                                                <Box>
+                                                                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1 }}>{p.amount} ₴</Typography>
+                                                                    <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.secondary' }}>{p.paymentTypeName}</Typography>
+                                                                </Box>
+                                                                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>{new Date(p.paymentDate).toLocaleDateString()}</Typography>
+                                                            </Box>
+                                                        ))}
+                                                    </Box>
+                                                ) : (
+                                                    <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.disabled', fontSize: '0.65rem', pl: 1 }}>Транзакцій ще не було</Typography>
+                                                )}
+
+                                                {s.returns && s.returns.length > 0 && (
+                                                    <Box sx={{ mt: 0.5 }}>
+                                                        <Typography variant="caption" fontWeight="800" sx={{ fontSize: '0.6rem', color: 'error.main', display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+                                                            <AssignmentReturn sx={{ fontSize: 12 }} /> ПОВЕРНЕННЯ:
+                                                        </Typography>
+                                                        {s.returns.map((r) => (
+                                                            <Box key={r.id} sx={{ p: 0.8, mb: 0.5, borderRadius: 1, bgcolor: alpha(theme.palette.error.main, 0.03), borderLeft: `2px solid ${theme.palette.error.main}` }}>
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                                    <Box>
+                                                                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'error.main', display: 'block', lineHeight: 1 }}>
+                                                                            {r.returnTrackingNumber || 'Повернення'}
+                                                                        </Typography>
+                                                                        <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.65rem' }}>
+                                                                            {r.refundAmount} ₴
+                                                                        </Typography>
+                                                                    </Box>
+                                                                    <Box sx={{ textAlign: 'right' }}>
+                                                                        <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
+                                                                            {r.initiationDate && new Date(r.initiationDate).toLocaleDateString()}
+                                                                        </Typography>
+                                                                        {r.completionDate && (
+                                                                            <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'success.main', fontWeight: 700 }}>
+                                                                                Завершено
+                                                                            </Typography>
+                                                                        )}
+                                                                    </Box>
+                                                                </Box>
+                                                                <Typography variant="caption" display="block" sx={{ fontSize: '0.6rem', color: 'text.secondary', fontStyle: 'italic', mt: 0.5 }}>
+                                                                    Причина: {r.returnReasonName || 'Без причини'}
+                                                                </Typography>
+                                                            </Box>
+                                                        ))}
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        </Collapse>
+                                    </Box>
+
+                                    {/* Фінальна секція: Вартість, Борг, Статус ТТН та Вага */}
+                                    <Box sx={{ mt: 'auto', pt: 1.5 }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
+                                            <Box>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', lineHeight: 1 }}>Загальна вартість:</Typography>
+                                                {s.remainingAmount > 0 && (
+                                                    <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 800, fontSize: '0.7rem' }}>
+                                                        Борг: {s.remainingAmount} ₴
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                            <Typography variant="h6" fontWeight="900" sx={{ color: s.isFullyPaid ? 'success.main' : 'text.primary', lineHeight: 1 }}>
+                                                {s.totalPrice} ₴
+                                            </Typography>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Chip
+                                                label={s.shipmentStatusName}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{
+                                                    height: 22, fontSize: '0.65rem', fontWeight: 800,
+                                                    borderColor: statusColor, color: statusColor, bgcolor: alpha(statusColor, 0.08)
+                                                }}
+                                            />
+                                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
+                                        </Box>
                                     </Box>
                                 </CardContent>
                             </Card>
