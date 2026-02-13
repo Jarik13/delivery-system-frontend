@@ -79,10 +79,10 @@ const PostomatsPage = () => {
             if (serverData?.validationErrors) {
                 setFieldErrors(serverData.validationErrors);
             }
-            setNotification({ 
-                open: true, 
-                message: serverData?.message || 'Помилка збереження', 
-                severity: 'error' 
+            setNotification({
+                open: true,
+                message: serverData?.message || 'Помилка збереження',
+                severity: 'error'
             });
         }
     };
@@ -143,7 +143,14 @@ const PostomatsPage = () => {
                 </Button>
             </Paper>
 
-            <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />
+            <DataFilters
+                filters={filters}
+                onChange={handleFilterChange}
+                onClear={handleClearFilters}
+                searchPlaceholder="Назва або адреса..."
+                quickFilters={['isActive']}
+                fields={filterFields}
+            />
 
             <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e0e0e0' }} elevation={0}>
                 <TableContainer>
@@ -207,47 +214,47 @@ const PostomatsPage = () => {
                     </Typography>
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3, mt: 1 }}>
-                    <TextField 
-                        label="Назва" 
-                        value={currentItem.name || ''} 
-                        onChange={(e) => handleValueChange('name', e.target.value)} 
-                        fullWidth 
+                    <TextField
+                        label="Назва"
+                        value={currentItem.name || ''}
+                        onChange={(e) => handleValueChange('name', e.target.value)}
+                        fullWidth
                         margin="dense"
                         error={!!fieldErrors.name}
                         helperText={fieldErrors.name}
                     />
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField 
-                            label="Код" 
-                            value={currentItem.code || ''} 
-                            disabled 
-                            fullWidth 
-                            variant="filled" 
+                        <TextField
+                            label="Код"
+                            value={currentItem.code || ''}
+                            disabled
+                            fullWidth
+                            variant="filled"
                             helperText="Генерується автоматично"
                         />
-                        <TextField 
-                            label="Комірок" 
-                            type="number" 
-                            value={currentItem.cellsCount ?? ''} 
-                            onChange={(e) => handleValueChange('cellsCount', e.target.value === '' ? null : e.target.value)} 
+                        <TextField
+                            label="Комірок"
+                            type="number"
+                            value={currentItem.cellsCount ?? ''}
+                            onChange={(e) => handleValueChange('cellsCount', e.target.value === '' ? null : e.target.value)}
                             fullWidth
                             error={!!fieldErrors.cellsCount}
                             helperText={fieldErrors.cellsCount}
                         />
                     </Box>
                     <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
-                        <LocationSelector 
-                            selectedCityId={currentItem.cityId} 
-                            onCityChange={(cityId) => handleValueChange('cityId', cityId)} 
+                        <LocationSelector
+                            selectedCityId={currentItem.cityId}
+                            onCityChange={(cityId) => handleValueChange('cityId', cityId)}
                         />
                         {fieldErrors.cityId && <FormHelperText error sx={{ ml: 1.5, mt: 0.5 }}>{fieldErrors.cityId}</FormHelperText>}
-                        
-                        <TextField 
-                            label="Вулиця та номер" 
-                            value={currentItem.address || ''} 
-                            onChange={(e) => handleValueChange('address', e.target.value)} 
-                            fullWidth 
-                            sx={{ mt: 2 }} 
+
+                        <TextField
+                            label="Вулиця та номер"
+                            value={currentItem.address || ''}
+                            onChange={(e) => handleValueChange('address', e.target.value)}
+                            fullWidth
+                            sx={{ mt: 2 }}
                             error={!!fieldErrors.address}
                             helperText={fieldErrors.address}
                         />

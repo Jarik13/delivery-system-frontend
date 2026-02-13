@@ -1,208 +1,271 @@
 import React, { useState } from 'react';
-import { 
-    Box, TextField, MenuItem, Button, IconButton, 
-    Typography, Slider, Badge, Paper, Stack, Popover, Chip, Divider, alpha
+import {
+    Box, TextField, MenuItem, Button, Drawer, IconButton,
+    Typography, Divider, Slider, Badge, Tooltip, Paper, Chip, Stack, alpha, InputAdornment
 } from '@mui/material';
-import { 
-    Search, Tune, RestartAlt, ExpandMore, 
-    CalendarMonth, LocalShipping, QueryStats, Close 
-} from '@mui/icons-material';
+import { Search, Tune, Close, RestartAlt, FilterList } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs from 'dayjs';
+import 'dayjs/locale/uk';
 
-const FilterCategory = ({ label, icon, children, activeCount }) => {
-    const [anchorEl, setAnchorEl] = useState(null);
-
-    return (
-        <Box>
-            <Badge 
-                badgeContent={activeCount} 
-                color="primary" 
-                sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 16, minWidth: 16, top: 4, right: 4 } }}
-            >
-                <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={icon}
-                    endIcon={<ExpandMore />}
-                    onClick={(e) => setAnchorEl(e.currentTarget)}
-                    sx={{ 
-                        borderRadius: 2, 
-                        textTransform: 'none', 
-                        borderColor: activeCount > 0 ? 'primary.main' : '#e0e0e0',
-                        color: activeCount > 0 ? 'primary.main' : 'text.primary',
-                        bgcolor: activeCount > 0 ? alpha('#1976d2', 0.05) : 'transparent',
-                        fontWeight: activeCount > 0 ? 700 : 400,
-                        '&:hover': { borderColor: 'primary.dark' }
-                    }}
-                >
-                    {label}
-                </Button>
-            </Badge>
-            <Popover
-                open={Boolean(anchorEl)}
-                anchorEl={anchorEl}
-                onClose={() => setAnchorEl(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                PaperProps={{ sx: { p: 2, mt: 1, width: 280, borderRadius: 3, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' } }}
-            >
-                {children}
-            </Popover>
-        </Box>
+const DataFilters = ({
+    filters,
+    onChange,
+    onClear,
+    fields,
+    searchPlaceholder = "Пошук...",
+    quickFilters = []
+}) => {
+    const [open, setOpen] = useState(false);
+    
+    const searchField = fields[0];
+    const quickAccessFields = fields.filter(f => quickFilters.includes(f.name));
+    const advancedFields = fields.filter(f =>
+        f.name !== searchField?.name &&
+        !quickFilters.includes(f.name)
     );
-};
 
-const DataFilters = ({ filters, onChange, onClear, fields }) => {
-    const logisticsFields = fields.filter(f => !f.type || f.type === 'select' || f.type === 'text').slice(1);
-    const timeFields = fields.filter(f => f.type === 'datetime');
-    const rangeFields = fields.filter(f => f.type === 'range');
-
-    const getActiveCount = (group) => {
-        return group.filter(f => {
-            if (f.type === 'range') {
-                return filters[f.minName] > f.min || filters[f.maxName] < f.max;
-            }
-            return filters[f.name] !== '' && filters[f.name] != null;
-        }).length;
+    const formatDisplayDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = dayjs(dateStr);
+        return d.isValid() ? d.format('DD.MM.YYYY, HH:mm') : dateStr;
     };
 
-    const handleRemoveFilter = (field) => {
+    const getOptionLabel = (field, value) => {
+        const option = field.options?.find(o => String(o.id) === String(value));
+        return option ? (option.name || option.label) : value;
+    };
+
+    const activeCount = Object.keys(filters).filter(key => {
+        const val = filters[key];
+        const field = fields.find(f => f.minName === key || f.maxName === key || f.name === key);
+        if (!field || val === '' || val === null || val === undefined) return false;
         if (field.type === 'range') {
-            onChange(field.minName, field.min);
-            onChange(field.maxName, field.max);
-        } else {
-            onChange(field.name, '');
+            if (key === field.minName) return val > field.min;
+            if (key === field.maxName) return val < field.max;
         }
+        return true;
+    }).length;
+
+    const renderField = (field, isQuick = false) => {
+        if (!field) return null;
+
+        const commonSx = {
+            mb: isQuick ? 0 : 2.5, 
+            mt: isQuick ? 0 : 1.5,
+            minWidth: isQuick ? 200 : 'auto',
+            '& .MuiInputLabel-root': {
+                bgcolor: 'white',
+                px: 1,
+                ml: -0.5,
+                fontWeight: 400,
+                color: 'text.secondary',
+            },
+            '& .MuiOutlinedInput-root': {
+                borderRadius: 3,
+                '& fieldset legend': { fontSize: '0.75rem' } 
+            }
+        };
+
+        if (field.type === 'range') {
+            const isModified = filters[field.minName] > field.min || filters[field.maxName] < field.max;
+            return (
+                <Box key={field.label} sx={{ px: 1, mb: 4, mt: isQuick ? 0 : 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                        <Typography variant="body2" fontWeight="400" color="text.secondary">
+                            {field.label}: <span style={{ color: '#1976d2', fontWeight: 600 }}>{filters[field.minName]} — {filters[field.maxName]}</span>
+                        </Typography>
+                        {isModified && (
+                            <IconButton size="small" color="error" onClick={() => { onChange(field.minName, field.min); onChange(field.maxName, field.max); }}>
+                                <Close sx={{ fontSize: 14 }} />
+                            </IconButton>
+                        )}
+                    </Box>
+                    <Slider
+                        size="small"
+                        value={[Number(filters[field.minName] || field.min), Number(filters[field.maxName] || field.max)]}
+                        onChange={(e, v) => { onChange(field.minName, v[0]); onChange(field.maxName, v[1]); }}
+                        min={field.min}
+                        max={field.max}
+                        valueLabelDisplay="auto"
+                    />
+                </Box>
+            );
+        }
+
+        if (field.type === 'datetime') {
+            return (
+                <DateTimePicker
+                    key={field.name}
+                    label={field.label}
+                    value={filters[field.name] ? dayjs(filters[field.name]) : null}
+                    onChange={(newValue) => {
+                        onChange(field.name, newValue && newValue.isValid() ? newValue.format('YYYY-MM-DDTHH:mm:ss') : '');
+                    }}
+                    ampm={false}
+                    format="DD.MM.YYYY HH:mm"
+                    slotProps={{
+                        textField: {
+                            fullWidth: !isQuick,
+                            size: 'small',
+                            sx: commonSx,
+                            InputLabelProps: { shrink: true },
+                            InputProps: {
+                                endAdornment: filters[field.name] && (
+                                    <InputAdornment position="end" sx={{ mr: 3 }}>
+                                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onChange(field.name, ''); }}>
+                                            <Close sx={{ fontSize: 16 }} />
+                                        </IconButton>
+                                    </InputAdornment>
+                                )
+                            }
+                        }
+                    }}
+                />
+            );
+        }
+
+        const hasValue = filters[field.name] !== '' && filters[field.name] !== null;
+
+        return (
+            <TextField
+                key={field.name}
+                fullWidth={!isQuick}
+                size="small"
+                label={field.label}
+                select={field.type === 'select'}
+                value={filters[field.name] || ''}
+                onChange={(e) => onChange(field.name, e.target.value)}
+                sx={commonSx}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{
+                    startAdornment: isQuick && (
+                        <InputAdornment position="start">
+                            <FilterList fontSize="small" color="action" />
+                        </InputAdornment>
+                    ),
+                    endAdornment: hasValue ? (
+                        <InputAdornment position="end" sx={{ mr: field.type === 'select' ? 2 : 0 }}>
+                            <IconButton size="small" color="error" onClick={() => onChange(field.name, '')}>
+                                <Close sx={{ fontSize: 16 }} />
+                            </IconButton>
+                        </InputAdornment>
+                    ) : null
+                }}
+            >
+                {field.type === 'select' && [
+                    <MenuItem key="all" value=""><em>Всі</em></MenuItem>,
+                    ...(field.options || []).map(o => (
+                        <MenuItem key={o.id} value={o.id}>{o.name || o.label}</MenuItem>
+                    ))
+                ]}
+            </TextField>
+        );
     };
 
-    const renderInput = (field) => (
-        <TextField 
-            key={field.name}
-            fullWidth size="small" label={field.label}
-            select={field.type === 'select'}
-            type={field.type === 'datetime' ? 'datetime-local' : 'text'}
-            value={filters[field.name] || ''}
-            onChange={(e) => onChange(field.name, e.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ mb: 2 }}
-        >
-            {field.type === 'select' && [
-                <MenuItem key="all" value=""><em>Всі</em></MenuItem>,
-                ...(field.options || []).map(o => <MenuItem key={o.id} value={o.id}>{o.name || o.label}</MenuItem>)
-            ]}
-        </TextField>
-    );
-
-    const renderRange = (field) => (
-        <Box key={field.label} sx={{ mb: 2, px: 1 }}>
-            <Typography variant="caption" fontWeight="700" color="text.secondary">
-                {field.label}
-            </Typography>
-            <Slider
-                size="small"
-                value={[Number(filters[field.minName] || field.min), Number(filters[field.maxName] || field.max)]}
-                onChange={(e, v) => { onChange(field.minName, v[0]); onChange(field.maxName, v[1]); }}
-                min={field.min} max={field.max}
-                valueLabelDisplay="auto"
-            />
-        </Box>
-    );
-
     return (
-        <Paper elevation={0} sx={{ p: 2, mb: 3, border: '1px solid #e0e0e0', borderRadius: 3, bgcolor: '#ffffff' }}>
-            <Stack spacing={2}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                    <TextField 
-                        placeholder="Швидкий пошук..." 
-                        size="small" 
-                        value={filters[fields[0]?.name] || ''}
-                        onChange={(e) => onChange(fields[0]?.name, e.target.value)}
-                        sx={{ width: 250, '& .MuiOutlinedInput-root': { borderRadius: 2, bgcolor: '#fcfcfc' } }}
-                        InputProps={{ startAdornment: <Search fontSize="small" sx={{ mr: 1, color: 'text.disabled' }} /> }}
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="uk">
+            <Box sx={{ mb: 3 }}>
+                <Paper elevation={0} sx={{
+                    p: 1.5, borderRadius: 3, display: 'flex', gap: 1.5, alignItems: 'center',
+                    border: '1px solid #e0e0e0', bgcolor: 'white', mb: 1.5, flexWrap: 'wrap'
+                }}>
+                    <TextField
+                        placeholder={searchPlaceholder}
+                        size="small"
+                        value={filters[searchField?.name] || ''}
+                        onChange={(e) => onChange(searchField?.name, e.target.value)}
+                        sx={{ flexGrow: 2, minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        InputProps={{
+                            startAdornment: <Search sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
+                            endAdornment: filters[searchField?.name] ? (
+                                <IconButton size="small" onClick={() => onChange(searchField?.name, '')}><Close sx={{ fontSize: 16 }} /></IconButton>
+                            ) : null
+                        }}
                     />
-                    
-                    <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
 
-                    <FilterCategory label="Логістика" icon={<LocalShipping fontSize="small" />} activeCount={getActiveCount(logisticsFields)}>
-                        {logisticsFields.map(renderInput)}
-                    </FilterCategory>
+                    {quickAccessFields.map(f => renderField(f, true))}
 
-                    <FilterCategory label="Період" icon={<CalendarMonth fontSize="small" />} activeCount={getActiveCount(timeFields)}>
-                        {timeFields.map(renderInput)}
-                    </FilterCategory>
+                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, display: { xs: 'none', md: 'block' } }} />
 
-                    <FilterCategory label="Ціни/Вага" icon={<QueryStats fontSize="small" />} activeCount={getActiveCount(rangeFields)}>
-                        {rangeFields.map(renderRange)}
-                    </FilterCategory>
+                    <Badge badgeContent={activeCount} color="primary">
+                        <Button
+                            variant={activeCount > 0 ? "contained" : "outlined"}
+                            startIcon={<Tune />}
+                            onClick={() => setOpen(true)}
+                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 2, height: 40 }}
+                        >
+                            Більше
+                        </Button>
+                    </Badge>
 
-                    <Box sx={{ flexGrow: 1 }} />
+                    {activeCount > 0 && (
+                        <Tooltip title="Скинути все">
+                            <IconButton onClick={onClear} color="error" sx={{ bgcolor: alpha('#f44336', 0.05), borderRadius: 2 }}>
+                                <RestartAlt />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </Paper>
 
-                    <Button 
-                        startIcon={<RestartAlt />} 
-                        size="small" 
-                        onClick={onClear} 
-                        sx={{ color: 'text.secondary', textTransform: 'none', '&:hover': { color: 'error.main' } }}
-                    >
-                        Скинути все
-                    </Button>
-                </Stack>
-
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ minHeight: 26 }}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ minHeight: 26, px: 0.5 }}>
                     {fields.map(f => {
-                        if (f.type !== 'range') {
-                            if (!filters[f.name]) return null;
-                            
-                            let displayValue = filters[f.name];
-                            if (f.type === 'select') {
-                                const opt = f.options.find(o => String(o.id) === String(filters[f.name]));
-                                displayValue = opt ? (opt.name || opt.label) : displayValue;
-                            } else if (f.type === 'datetime') {
-                                displayValue = new Date(filters[f.name]).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-                            }
+                        const hasVal = f.type === 'range'
+                            ? (filters[f.minName] > f.min || filters[f.maxName] < f.max)
+                            : (filters[f.name] !== '' && filters[f.name] !== null);
 
-                            return (
-                                <Chip 
-                                    key={f.name}
-                                    label={`${f.label}: ${displayValue}`}
-                                    size="small"
-                                    onDelete={() => handleRemoveFilter(f)}
-                                    deleteIcon={<Close sx={{ color: 'error.main !important' }} />}
-                                    sx={{ 
-                                        borderRadius: 1.5, 
-                                        bgcolor: alpha('#1976d2', 0.1), 
-                                        color: 'primary.dark', 
-                                        fontWeight: 600,
-                                        border: `1px solid ${alpha('#1976d2', 0.2)}`
-                                    }}
-                                />
-                            );
+                        if (!hasVal) return null;
+
+                        let displayValue = "";
+                        if (f.type === 'range') {
+                            displayValue = `${filters[f.minName]}-${filters[f.maxName]}`;
+                        } else if (f.type === 'datetime') {
+                            displayValue = formatDisplayDate(filters[f.name]);
+                        } else if (f.type === 'select') {
+                            displayValue = getOptionLabel(f, filters[f.name]);
+                        } else {
+                            displayValue = filters[f.name];
                         }
 
-                        const isMinChanged = filters[f.minName] > f.min;
-                        const isMaxChanged = filters[f.maxName] < f.max;
-
-                        if (isMinChanged || isMaxChanged) {
-                            return (
-                                <Chip 
-                                    key={f.label}
-                                    label={`${f.label}: ${filters[f.minName]} - ${filters[f.maxName]}`}
-                                    size="small"
-                                    onDelete={() => handleRemoveFilter(f)}
-                                    deleteIcon={<Close sx={{ color: 'error.main !important' }} />}
-                                    sx={{ 
-                                        borderRadius: 1.5, 
-                                        bgcolor: alpha('#ed6c02', 0.1), 
-                                        color: '#e65100', 
-                                        fontWeight: 600,
-                                        border: `1px solid ${alpha('#ed6c02', 0.2)}`
-                                    }}
-                                />
-                            );
-                        }
-                        return null;
+                        return (
+                            <Chip
+                                key={f.name || f.label}
+                                label={`${f.label}: ${displayValue}`}
+                                size="small"
+                                onDelete={() => {
+                                    if (f.type === 'range') {
+                                        onChange(f.minName, f.min); onChange(f.maxName, f.max);
+                                    } else onChange(f.name, '');
+                                }}
+                                sx={{ bgcolor: alpha('#1976d2', 0.08), color: 'primary.dark', fontWeight: 500, borderRadius: 1.5 }}
+                            />
+                        );
                     })}
                 </Stack>
-            </Stack>
-        </Paper>
+
+                <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
+                    <Box sx={{ width: 380, p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <Typography variant="h6" fontWeight="800" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <FilterList color="primary" /> Всі фільтри
+                        </Typography>
+
+                        <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 0.5 }}>
+                            {advancedFields.map(f => renderField(f))}
+                        </Box>
+
+                        <Button 
+                            fullWidth variant="contained" 
+                            onClick={() => setOpen(false)} 
+                            sx={{ mt: 2, py: 1.5, borderRadius: 2, bgcolor: '#263238' }}
+                        >
+                            Застосувати
+                        </Button>
+                    </Box>
+                </Drawer>
+            </Box>
+        </LocalizationProvider>
     );
 };
 

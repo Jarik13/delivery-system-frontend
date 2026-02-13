@@ -93,15 +93,15 @@ const BranchesPage = () => {
             setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
             const serverData = error.response?.data;
-            
+
             if (serverData?.validationErrors) {
                 setFieldErrors(serverData.validationErrors);
             }
 
-            setNotification({ 
-                open: true, 
-                message: serverData?.message || 'Помилка збереження', 
-                severity: 'error' 
+            setNotification({
+                open: true,
+                message: serverData?.message || 'Помилка збереження',
+                severity: 'error'
             });
         }
     };
@@ -113,10 +113,10 @@ const BranchesPage = () => {
                 loadTableData();
                 setNotification({ open: true, message: 'Видалено', severity: 'success' });
             } catch (error) {
-                setNotification({ 
-                    open: true, 
-                    message: error.response?.data?.message || 'Помилка видалення', 
-                    severity: 'error' 
+                setNotification({
+                    open: true,
+                    message: error.response?.data?.message || 'Помилка видалення',
+                    severity: 'error'
                 });
             }
         }
@@ -157,7 +157,14 @@ const BranchesPage = () => {
                 </Button>
             </Paper>
 
-            <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />
+            <DataFilters
+                filters={filters}
+                onChange={handleFilterChange}
+                onClear={handleClearFilters}
+                searchPlaceholder="Назва або адреса..."
+                quickFilters={['branchTypeId']}
+                fields={filterFields}
+            />
 
             <Paper sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid #e0e0e0' }} elevation={0}>
                 <TableContainer>
@@ -209,40 +216,40 @@ const BranchesPage = () => {
                     </Typography>
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 3, mt: 1 }}>
-                    <TextField 
-                        label="Назва" 
-                        fullWidth 
-                        value={currentItem.name || ''} 
+                    <TextField
+                        label="Назва"
+                        fullWidth
+                        value={currentItem.name || ''}
                         onChange={(e) => {
                             setCurrentItem({ ...currentItem, name: e.target.value });
-                            if (fieldErrors.name) setFieldErrors({...fieldErrors, name: null});
-                        }} 
-                        margin="dense" 
+                            if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: null });
+                        }}
+                        margin="dense"
                         error={!!fieldErrors.name}
                         helperText={fieldErrors.name}
                     />
-                    
+
                     <Box sx={{ p: 2, bgcolor: '#f9f9f9', borderRadius: 2 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>Локація</Typography>
-                        <LocationSelector 
-                            selectedCityId={currentItem.cityId} 
+                        <LocationSelector
+                            selectedCityId={currentItem.cityId}
                             onCityChange={(cityId) => {
                                 setCurrentItem({ ...currentItem, cityId });
-                                if (fieldErrors.cityId) setFieldErrors({...fieldErrors, cityId: null});
-                            }} 
+                                if (fieldErrors.cityId) setFieldErrors({ ...fieldErrors, cityId: null });
+                            }}
                             error={!!fieldErrors.cityId}
                         />
-                        {fieldErrors.cityId && <FormHelperText error sx={{ml: 2}}>{fieldErrors.cityId}</FormHelperText>}
+                        {fieldErrors.cityId && <FormHelperText error sx={{ ml: 2 }}>{fieldErrors.cityId}</FormHelperText>}
 
-                        <TextField 
-                            label="Вулиця та номер будинку" 
-                            fullWidth 
-                            value={currentItem.address || ''} 
+                        <TextField
+                            label="Вулиця та номер будинку"
+                            fullWidth
+                            value={currentItem.address || ''}
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, address: e.target.value });
-                                if (fieldErrors.address) setFieldErrors({...fieldErrors, address: null});
-                            }} 
-                            sx={{ mt: 2 }} 
+                                if (fieldErrors.address) setFieldErrors({ ...fieldErrors, address: null });
+                            }}
+                            sx={{ mt: 2 }}
                             error={!!fieldErrors.address}
                             helperText={fieldErrors.address}
                         />
@@ -250,12 +257,12 @@ const BranchesPage = () => {
 
                     <FormControl fullWidth error={!!fieldErrors.branchTypeId}>
                         <InputLabel>Тип відділення</InputLabel>
-                        <Select 
-                            value={currentItem.branchTypeId || ''} 
-                            label="Тип відділення" 
+                        <Select
+                            value={currentItem.branchTypeId || ''}
+                            label="Тип відділення"
                             onChange={(e) => {
                                 setCurrentItem({ ...currentItem, branchTypeId: e.target.value });
-                                if (fieldErrors.branchTypeId) setFieldErrors({...fieldErrors, branchTypeId: null});
+                                if (fieldErrors.branchTypeId) setFieldErrors({ ...fieldErrors, branchTypeId: null });
                             }}
                         >
                             {branchTypes.map(type => (<MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>))}

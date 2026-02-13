@@ -202,7 +202,14 @@ const ParcelsPage = () => {
                 </Button>
             </Paper>
 
-            <DataFilters filters={filters} onChange={handleFilterChange} onClear={handleClearFilters} fields={filterFields} />
+            <DataFilters
+                filters={filters}
+                onChange={handleFilterChange}
+                onClear={handleClearFilters}
+                searchPlaceholder="Опис вмісту..."
+                quickFilters={['parcelTypeId']}
+                fields={filterFields}
+            />
 
             <Grid
                 container

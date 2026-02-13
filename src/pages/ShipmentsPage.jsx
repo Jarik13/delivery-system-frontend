@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import { filter } from 'framer-motion/client';
 
 const STATUS_COLORS = {
     'Створено': '#2196f3',
@@ -258,6 +259,24 @@ const ShipmentsPage = () => {
         }
     };
 
+    const filterFields = [
+        { name: 'trackingNumber', label: 'Трек-номер', type: 'text', md: 3 },
+        { name: 'shipmentStatusId', label: 'Статус', type: 'select', options: statuses, md: 3 },
+        { name: 'shipmentTypeId', label: 'Тип доставки', type: 'select', options: shipmentTypes, md: 3 },
+        { name: 'parcelDescription', label: 'Опис вмісту', type: 'text', md: 3 },
+        { name: 'createdAtFrom', label: 'Створено з', type: 'datetime', md: 3 },
+        { name: 'createdAtTo', label: 'Створено до', type: 'datetime', md: 3 },
+        { name: 'issuedAtFrom', label: 'Видано з', type: 'datetime', md: 3 },
+        { name: 'issuedAtTo', label: 'Видано до', type: 'datetime', md: 3 },
+        { label: 'Вага (кг)', type: 'range', minName: 'weightMin', maxName: 'weightMax', min: stats?.minWeight || 0, max: stats?.maxWeight || 100, md: 4 },
+        { label: 'Ціна загальна', type: 'range', minName: 'totalPriceMin', maxName: 'totalPriceMax', min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000, md: 4 },
+        { label: 'Базовий тариф', type: 'range', minName: 'deliveryPriceMin', maxName: 'deliveryPriceMax', min: stats?.minDeliveryPrice || 0, max: stats?.maxDeliveryPrice || 5000, md: 4 },
+        { label: 'Доплата вага', type: 'range', minName: 'weightPriceMin', maxName: 'weightPriceMax', min: stats?.minWeightPrice || 0, max: stats?.maxWeightPrice || 2000, md: 3 },
+        { label: 'Доплата відст.', type: 'range', minName: 'distancePriceMin', maxName: 'distancePriceMax', min: stats?.minDistancePrice || 0, max: stats?.maxDistancePrice || 2000, md: 3 },
+        { label: 'Ціна коробки', type: 'range', minName: 'boxVariantPriceMin', maxName: 'boxVariantPriceMax', min: stats?.minBoxVariantPrice || 0, max: stats?.maxBoxVariantPrice || 1000, md: 3 },
+        { label: 'Страховка', type: 'range', minName: 'insuranceFeeMin', maxName: 'insuranceFeeMax', min: stats?.minInsuranceFee || 0, max: stats?.maxInsuranceFee || 1000, md: 3 },
+    ];
+
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
             <Paper elevation={0} sx={{
@@ -284,24 +303,13 @@ const ShipmentsPage = () => {
                 </Button>
             </Paper>
 
-            <DataFilters filters={filters} onChange={handleFilterChange} onClear={resetFilters}
-                fields={[
-                    { name: 'trackingNumber', label: 'Трек-номер', type: 'text', md: 3 },
-                    { name: 'shipmentStatusId', label: 'Статус', type: 'select', options: statuses, md: 3 },
-                    { name: 'shipmentTypeId', label: 'Тип доставки', type: 'select', options: shipmentTypes, md: 3 },
-                    { name: 'parcelDescription', label: 'Опис вмісту', type: 'text', md: 3 },
-                    { name: 'createdAtFrom', label: 'Створено з', type: 'datetime', md: 3 },
-                    { name: 'createdAtTo', label: 'Створено до', type: 'datetime', md: 3 },
-                    { name: 'issuedAtFrom', label: 'Видано з', type: 'datetime', md: 3 },
-                    { name: 'issuedAtTo', label: 'Видано до', type: 'datetime', md: 3 },
-                    { label: 'Вага (кг)', type: 'range', minName: 'weightMin', maxName: 'weightMax', min: stats?.minWeight || 0, max: stats?.maxWeight || 100, md: 4 },
-                    { label: 'Ціна загальна', type: 'range', minName: 'totalPriceMin', maxName: 'totalPriceMax', min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000, md: 4 },
-                    { label: 'Базовий тариф', type: 'range', minName: 'deliveryPriceMin', maxName: 'deliveryPriceMax', min: stats?.minDeliveryPrice || 0, max: stats?.maxDeliveryPrice || 5000, md: 4 },
-                    { label: 'Доплата вага', type: 'range', minName: 'weightPriceMin', maxName: 'weightPriceMax', min: stats?.minWeightPrice || 0, max: stats?.maxWeightPrice || 2000, md: 3 },
-                    { label: 'Доплата відст.', type: 'range', minName: 'distancePriceMin', maxName: 'distancePriceMax', min: stats?.minDistancePrice || 0, max: stats?.maxDistancePrice || 2000, md: 3 },
-                    { label: 'Ціна коробки', type: 'range', minName: 'boxVariantPriceMin', maxName: 'boxVariantPriceMax', min: stats?.minBoxVariantPrice || 0, max: stats?.maxBoxVariantPrice || 1000, md: 3 },
-                    { label: 'Страховка', type: 'range', minName: 'insuranceFeeMin', maxName: 'insuranceFeeMax', min: stats?.minInsuranceFee || 0, max: stats?.maxInsuranceFee || 1000, md: 3 },
-                ]}
+            <DataFilters
+                filters={filters}
+                onChange={handleFilterChange}
+                onClear={resetFilters}
+                searchPlaceholder="Трек-номер..."
+                quickFilters={['shipmentStatusId', 'shipmentTypeId']}
+                fields={filterFields}
             />
 
             <Grid container spacing={3} sx={{ m: 0, width: '100%', display: 'flex', flexWrap: 'wrap' }}>
@@ -356,6 +364,7 @@ const ShipmentsPage = () => {
                                         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                             <Box>
                                                 <Typography variant="body2" fontWeight="700" sx={{ lineHeight: 1.1 }}>
+                                                    {s.originCityName ? `${s.originCityName}, ` : ''}
                                                     {s.originLocationName || 'Не вказано'}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap display="block">
@@ -377,13 +386,14 @@ const ShipmentsPage = () => {
 
                                                         if (transitPoints.length > 0) {
                                                             return transitPoints.map((step, idx) => (
-                                                                <Box key={idx} sx={{ position: 'relative' }}>
+                                                                <Box key={idx} sx={{ position: 'relative', mb: 1.5 }}>
                                                                     <Box sx={{
                                                                         position: 'absolute', left: -17, top: 6,
                                                                         width: 6, height: 6, borderRadius: '50%',
                                                                         bgcolor: alpha(mainColor, 0.4)
                                                                     }} />
                                                                     <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.1 }}>
+                                                                        {step.cityName ? `${step.cityName}, ` : ''}
                                                                         {step.locationName}
                                                                     </Typography>
                                                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
@@ -403,6 +413,7 @@ const ShipmentsPage = () => {
 
                                             <Box sx={{ mt: isExpanded ? 0.5 : 'auto' }}>
                                                 <Typography variant="body2" fontWeight="700" sx={{ lineHeight: 1.1 }}>
+                                                    {s.destinationCityName ? `${s.destinationCityName}, ` : ''}
                                                     {s.destinationLocationName || 'Не вказано'}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap display="block">

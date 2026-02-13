@@ -90,10 +90,10 @@ const RoutesPage = () => {
             if (serverData?.validationErrors) {
                 setFieldErrors(serverData.validationErrors);
             }
-            setNotification({ 
-                open: true, 
-                message: serverData?.message || 'Помилка збереження', 
-                severity: 'error' 
+            setNotification({
+                open: true,
+                message: serverData?.message || 'Помилка збереження',
+                severity: 'error'
             });
         }
     };
@@ -104,15 +104,21 @@ const RoutesPage = () => {
                 await DictionaryApi.delete('routes', id);
                 loadTableData();
                 setNotification({ open: true, message: 'Видалено', severity: 'success' });
-            } catch (error) { 
-                setNotification({ 
-                    open: true, 
-                    message: error.response?.data?.message || 'Помилка видалення', 
-                    severity: 'error' 
+            } catch (error) {
+                setNotification({
+                    open: true,
+                    message: error.response?.data?.message || 'Помилка видалення',
+                    severity: 'error'
                 });
             }
         }
     };
+
+    const filterFields = [
+        { name: 'originBranchName', label: 'Звідки', type: 'text' },
+        { name: 'destinationBranchName', label: 'Куди', type: 'text' },
+        { name: 'needSorting', label: 'Логістика', type: 'select', options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] }
+    ];
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
@@ -141,11 +147,9 @@ const RoutesPage = () => {
                 filters={filters}
                 onChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(0); }}
                 onClear={() => setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' })}
-                fields={[
-                    { name: 'originBranchName', label: 'Звідки (назва)', type: 'text' },
-                    { name: 'destinationBranchName', label: 'Куди (назва)', type: 'text' },
-                    { name: 'needSorting', label: 'Тип логістики', type: 'select', options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] }
-                ]}
+                searchPlaceholder="Пошук маршруту..."
+                quickFilters={['needSorting']}
+                fields={filterFields}
             />
 
             <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e0e0e0' }}>
@@ -160,32 +164,57 @@ const RoutesPage = () => {
                     <TableBody>
                         {routes.map((row) => (
                             <TableRow key={row.id} hover>
-                                <TableCell sx={{ pl: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <Box sx={{ flex: 1, textAlign: 'right' }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                <TableCell sx={{ pl: 3, pr: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 3 }}>
+                                        <Box sx={{ textAlign: 'left', minWidth: 'fit-content' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                                                 {row.originBranchName}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Place sx={{ fontSize: 12 }} />
                                                 {row.originCityName || 'Невідомо'}
                                             </Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120, px: 1 }}>
-                                            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled', mb: 0.5, letterSpacing: 1 }}>КУДИ</Typography>
+
+                                        <Box sx={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            position: 'relative',
+                                            minWidth: 100
+                                        }}>
+                                            <Typography variant="caption" sx={{
+                                                fontSize: '0.65rem',
+                                                color: 'text.disabled',
+                                                mb: 0.5,
+                                                letterSpacing: 2,
+                                                fontWeight: 600,
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                куди
+                                            </Typography>
+
                                             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'divider' }} />
-                                                <Box sx={{ flex: 1, height: 0, borderTop: '1px dashed', borderColor: 'divider' }} />
-                                                <LocalShipping color="primary" sx={{ fontSize: 20, mx: 0.5 }} />
-                                                <Box sx={{ flex: 1, height: 0, borderTop: '1px dashed', borderColor: 'divider' }} />
-                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 18, ml: -0.5 }} />
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'divider', flexShrink: 0 }} />
+                                                <Box sx={{ flex: 1, height: 0, borderTop: '2px dashed', borderColor: 'divider' }} />
+                                                <LocalShipping color="primary" sx={{
+                                                    fontSize: 28,
+                                                    mx: 1.5,
+                                                    flexShrink: 0,
+                                                    filter: 'drop-shadow(0px 2px 3px rgba(0,0,0,0.1))'
+                                                }} />
+
+                                                <Box sx={{ flex: 1, height: 0, borderTop: '2px dashed', borderColor: 'divider' }} />
+                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 24, ml: -1, flexShrink: 0 }} />
                                             </Box>
                                         </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+
+                                        <Box sx={{ textAlign: 'right', minWidth: 'fit-content' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                                                 {row.destinationBranchName}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                                                 <Place sx={{ fontSize: 12 }} />
                                                 {row.destinationCityName || 'Невідомо'}
                                             </Typography>
@@ -248,9 +277,9 @@ const RoutesPage = () => {
                         </Box>
                     </Box>
                     <Box sx={{ mt: 3 }}>
-                        <Paper variant="outlined" sx={{ 
-                            p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', 
-                            bgcolor: 'transparent', borderColor: fieldErrors.destinationBranchId ? 'error.main' : '#e0e0e0' 
+                        <Paper variant="outlined" sx={{
+                            p: 2, borderRadius: 2, display: 'flex', alignItems: 'center',
+                            bgcolor: 'transparent', borderColor: fieldErrors.destinationBranchId ? 'error.main' : '#e0e0e0'
                         }}>
                             <FormControlLabel
                                 control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
