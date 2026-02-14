@@ -3,11 +3,14 @@ import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     Box, Typography, Snackbar, Alert, Chip, Checkbox, FormControlLabel,
-    TablePagination, useTheme, alpha, FormHelperText
+    TablePagination, useTheme, alpha, FormHelperText,
+    Grid,
+    TextField
 } from '@mui/material';
 import {
     Add, Edit, Delete, LocalShipping, SwapHoriz,
-    ArrowRightAlt, Map, TripOrigin, LocationOn, Place
+    ArrowRightAlt, Map, TripOrigin, LocationOn, Place,
+    Straighten
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -176,37 +179,16 @@ const RoutesPage = () => {
                                             </Typography>
                                         </Box>
 
-                                        <Box sx={{
-                                            flex: 1,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            position: 'relative',
-                                            minWidth: 100
-                                        }}>
-                                            <Typography variant="caption" sx={{
-                                                fontSize: '0.65rem',
-                                                color: 'text.disabled',
-                                                mb: 0.5,
-                                                letterSpacing: 2,
-                                                fontWeight: 600,
-                                                textTransform: 'uppercase'
-                                            }}>
-                                                куди
+                                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                            <Typography variant="caption" sx={{ color: mainColor, fontWeight: 800, mb: 0.5 }}>
+                                                {row.distanceKm ? `${row.distanceKm} км` : '—'}
                                             </Typography>
-
                                             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'divider', flexShrink: 0 }} />
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'divider' }} />
                                                 <Box sx={{ flex: 1, height: 0, borderTop: '2px dashed', borderColor: 'divider' }} />
-                                                <LocalShipping color="primary" sx={{
-                                                    fontSize: 28,
-                                                    mx: 1.5,
-                                                    flexShrink: 0,
-                                                    filter: 'drop-shadow(0px 2px 3px rgba(0,0,0,0.1))'
-                                                }} />
-
+                                                <LocalShipping color="primary" sx={{ fontSize: 24, mx: 1 }} />
                                                 <Box sx={{ flex: 1, height: 0, borderTop: '2px dashed', borderColor: 'divider' }} />
-                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 24, ml: -1, flexShrink: 0 }} />
+                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 24, ml: -1 }} />
                                             </Box>
                                         </Box>
 
@@ -249,7 +231,7 @@ const RoutesPage = () => {
                         {currentItem.id ? 'Редагувати магістральний маршрут' : 'Новий маршрут'}
                     </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ p: 3, overflowX: 'hidden', mt: 1 }}>
+                <DialogContent sx={{ p: 3, mt: 1 }}>
                     <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <RouteBranchSelector
@@ -276,23 +258,43 @@ const RoutesPage = () => {
                             )}
                         </Box>
                     </Box>
-                    <Box sx={{ mt: 3 }}>
-                        <Paper variant="outlined" sx={{
-                            p: 2, borderRadius: 2, display: 'flex', alignItems: 'center',
-                            bgcolor: 'transparent', borderColor: fieldErrors.destinationBranchId ? 'error.main' : '#e0e0e0'
-                        }}>
-                            <FormControlLabel
-                                control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
-                                label={<Typography fontWeight={500}>Маршрут потребує додаткового сортування на терміналі</Typography>}
-                                sx={{ width: '100%', ml: 0 }}
+
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                label="Відстань (км)"
+                                type="number"
+                                fullWidth
+                                variant="outlined"
+                                value={currentItem.distanceKm || ''}
+                                onChange={(e) => handleFieldChange('distanceKm', e.target.value)}
+                                error={!!fieldErrors.distanceKm}
+                                helperText={fieldErrors.distanceKm}
+                                InputProps={{
+                                    startAdornment: <Straighten sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />,
+                                }}
+                                sx={{ mt: 1 }}
                             />
-                        </Paper>
-                    </Box>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Paper variant="outlined" sx={{
+                                p: 1, px: 2, mt: 1, height: '56px', display: 'flex', alignItems: 'center',
+                                borderRadius: 2, bgcolor: 'transparent', borderColor: '#ccc'
+                            }}>
+                                <FormControlLabel
+                                    control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
+                                    label={<Typography fontWeight={500}>Потребує сортування на терміналі</Typography>}
+                                    sx={{ width: '100%', ml: 0 }}
+                                />
+                            </Paper>
+                        </Grid>
+                    </Grid>
                 </DialogContent>
+
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>Скасувати</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Скасувати</Button>
                     <Button onClick={handleSave} variant="contained" disableElevation
-                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
+                        sx={{ bgcolor: mainColor, px: 4, borderRadius: 2, fontWeight: 'bold' }}
                     >
                         Зберегти
                     </Button>
