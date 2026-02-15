@@ -41,6 +41,7 @@ export const groupIcons = {
 export const ITEM_GROUP_MAP = {
     "parcels": GROUPS.LOGISTICS,
     "shipments": GROUPS.LOGISTICS,
+    "trips": GROUPS.LOGISTICS,
 
     "branches": GROUPS.NETWORK,
     "postomats": GROUPS.NETWORK,
@@ -61,7 +62,6 @@ export const ITEM_GROUP_MAP = {
     "fleets": GROUPS.FLEET,
     "vehicles": GROUPS.FLEET,
     "drivers": GROUPS.FLEET,
-    "trips": GROUPS.FLEET,
     "trip-statuses": GROUPS.FLEET,
 
     "box-types": GROUPS.PACKAGING,
@@ -107,5 +107,6 @@ export const itemIcons = {
     "payment-types": <LocalAtm />,
     "clients": <People />,
     "employees": <Badge />,
-    "payments": <Payments />
+    "payments": <Payments />,
+    "trips": <DirectionsBus />
 };

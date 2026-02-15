@@ -18,6 +18,12 @@ export const MENU_GROUPS = [
                 isCustomPage: true,
                 endpoint: 'shipments'
             },
+            {
+                label: 'Рейси',
+                path: 'trips',
+                isCustomPage: true,
+                endpoint: 'trips'
+            },
         ]
     },
     {
