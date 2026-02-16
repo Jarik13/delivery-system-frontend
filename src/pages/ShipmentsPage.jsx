@@ -1,23 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Paper, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-    TextField, Box, Typography, Snackbar, Alert, Chip, TablePagination,
-    useTheme, alpha, MenuItem, Autocomplete,
-    Grid, Card, CardContent, Divider, Stepper, Step, StepLabel, Collapse
+    Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions,
+    TextField, Box, Typography, Snackbar, Alert, TablePagination,
+    useTheme, alpha, Autocomplete, Grid, Stepper, Step, StepLabel
 } from '@mui/material';
-import {
-    Add, Delete, LocalShipping, TripOrigin, LocationOn,
-    Receipt, AccessTime, EventAvailable, AddCircleOutline, RemoveCircleOutline,
-    CheckCircle,
-    PendingActions,
-    ErrorOutline,
-    Payments, ExpandMore, ExpandLess, CreditScore, AssignmentReturn
-} from '@mui/icons-material';
+import { Add, LocalShipping, Receipt } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
-import { filter } from 'framer-motion/client';
+import ShipmentGrid from '../components/ShipmentGrid';
 
 const STATUS_COLORS = {
     'Створено': '#2196f3',
@@ -312,279 +304,17 @@ const ShipmentsPage = () => {
                 fields={filterFields}
             />
 
-            <Grid container spacing={3} sx={{ m: 0, width: '100%', display: 'flex', flexWrap: 'wrap' }}>
-                {shipments.map((s) => {
-                    const statusColor = STATUS_COLORS[s.shipmentStatusName] || STATUS_COLORS.default;
-                    const isExpanded = expandedHistory[s.id];
-                    const history = movements[s.id] || [];
-
-                    return (
-                        <Grid item key={s.id} xs={12} sm={6} md={4} lg={3} xl={2.4} sx={{ display: 'flex', flexGrow: 1 }}>
-                            <Card sx={{
-                                width: '100%', borderRadius: 4, transition: 'all 0.3s ease', border: '1px solid', borderColor: 'divider',
-                                display: 'flex', flexDirection: 'column',
-                                '&:hover': { transform: 'translateY(-5px)', boxShadow: `0 12px 24px ${alpha(mainColor, 0.15)}`, borderColor: mainColor }
-                            }} elevation={0}>
-                                <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                                        <Chip label={s.trackingNumber} size="small" sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(s.id)}><Delete fontSize="small" /></IconButton>
-                                    </Box>
-
-                                    <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, lineHeight: 1.2 }}>
-                                        {s.parcelDescription || 'Без опису'}
-                                    </Typography>
-
-                                    <Divider sx={{ mt: 0.5, mb: 1.5, opacity: 0.5, borderStyle: 'dashed' }} />
-
-                                    <Box sx={{ display: 'flex', gap: 1.8, mb: 2, minHeight: '110px', alignItems: 'stretch' }}>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 0.5 }}>
-                                            <TripOrigin sx={{ fontSize: 10, color: theme.palette.primary.main }} />
-                                            <Box sx={{
-                                                width: '1px', flexGrow: 1, my: 0.5, borderLeft: '1px dashed #ccc',
-                                                position: 'relative', minHeight: isExpanded ? '40px' : '20px'
-                                            }}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => toggleHistory(s.id)}
-                                                    sx={{
-                                                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                                                        bgcolor: 'white', border: '1px solid #eee', p: '2px', zIndex: 2
-                                                    }}
-                                                >
-                                                    {isExpanded ?
-                                                        <RemoveCircleOutline sx={{ fontSize: 14, color: mainColor }} /> :
-                                                        <AddCircleOutline sx={{ fontSize: 14, color: mainColor }} />
-                                                    }
-                                                </IconButton>
-                                            </Box>
-                                            <LocationOn sx={{ fontSize: 14, color: theme.palette.secondary.main }} />
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                            <Box>
-                                                <Typography variant="body2" fontWeight="700" sx={{ lineHeight: 1.1 }}>
-                                                    {s.originCityName ? `${s.originCityName}, ` : ''}
-                                                    {s.originLocationName || 'Не вказано'}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                                    {s.senderFullName}
-                                                </Typography>
-                                            </Box>
-
-                                            <Collapse in={isExpanded}>
-                                                <Box sx={{
-                                                    my: 1.5, pl: 1.5, borderLeft: `2px solid ${alpha(mainColor, 0.1)}`,
-                                                    display: 'flex', flexDirection: 'column', gap: 1.5
-                                                }}>
-                                                    {(() => {
-                                                        const transitPoints = history.filter((step) => {
-                                                            const isOrigin = step.locationName === s.originLocationName;
-                                                            const isDestination = step.locationName === s.destinationLocationName;
-                                                            return !isOrigin && !isDestination;
-                                                        });
-
-                                                        if (transitPoints.length > 0) {
-                                                            return transitPoints.map((step, idx) => (
-                                                                <Box key={idx} sx={{ position: 'relative', mb: 1.5 }}>
-                                                                    <Box sx={{
-                                                                        position: 'absolute', left: -17, top: 6,
-                                                                        width: 6, height: 6, borderRadius: '50%',
-                                                                        bgcolor: alpha(mainColor, 0.4)
-                                                                    }} />
-                                                                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.1 }}>
-                                                                        {step.cityName ? `${step.cityName}, ` : ''}
-                                                                        {step.locationName}
-                                                                    </Typography>
-                                                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                                                                        {step.statusDescription} • {new Date(step.time).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                                                    </Typography>
-                                                                </Box>
-                                                            ));
-                                                        }
-                                                        return (
-                                                            <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic', fontSize: '0.7rem' }}>
-                                                                Транзитних пунктів не зафіксовано
-                                                            </Typography>
-                                                        );
-                                                    })()}
-                                                </Box>
-                                            </Collapse>
-
-                                            <Box sx={{ mt: isExpanded ? 0.5 : 'auto' }}>
-                                                <Typography variant="body2" fontWeight="700" sx={{ lineHeight: 1.1 }}>
-                                                    {s.destinationCityName ? `${s.destinationCityName}, ` : ''}
-                                                    {s.destinationLocationName || 'Не вказано'}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" noWrap display="block">
-                                                    {s.recipientFullName}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-                                    </Box>
-
-                                    <Box sx={{ mt: 'auto', pt: 1.5, borderTop: '1px solid #eee', display: 'flex', flexDirection: 'column', gap: 0.8 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, color: 'text.secondary' }}>
-                                                <AccessTime sx={{ fontSize: 14 }} />
-                                                <Typography variant="caption" sx={{ fontWeight: 600 }}>Оформлено:</Typography>
-                                            </Box>
-                                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                                {new Date(s.createdAt).toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                            </Typography>
-                                        </Box>
-
-                                        {s.issuedAt && (
-                                            <Box sx={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                bgcolor: alpha(theme.palette.success.main, 0.05), p: 0.5, px: 1, borderRadius: 1.5
-                                            }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, color: 'success.main' }}>
-                                                    <EventAvailable sx={{ fontSize: 14 }} />
-                                                    <Typography variant="caption" sx={{ fontWeight: 800 }}>Видано:</Typography>
-                                                </Box>
-                                                <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.main' }}>
-                                                    {new Date(s.issuedAt).toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    </Box>
-
-                                    <Box sx={{ mt: 1.5, pt: 1, borderTop: '1px dashed #ddd' }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                            {(() => {
-                                                let status = { label: 'Не оплачено', color: '#d32f2f', icon: <ErrorOutline sx={{ fontSize: 14 }} /> };
-                                                if (s.isFullyPaid) status = { label: 'Оплачено', color: '#2e7d32', icon: <CheckCircle sx={{ fontSize: 14 }} /> };
-                                                else if (s.totalPaidAmount > 0) status = { label: 'Частково', color: '#ffa000', icon: <PendingActions sx={{ fontSize: 14 }} /> };
-
-                                                return (
-                                                    <Chip
-                                                        icon={status.icon}
-                                                        label={status.label}
-                                                        size="small"
-                                                        sx={{
-                                                            height: 20, fontSize: '0.65rem', fontWeight: 800,
-                                                            bgcolor: alpha(status.color, 0.1), color: status.color,
-                                                            border: `1px solid ${alpha(status.color, 0.2)}`
-                                                        }}
-                                                    />
-                                                );
-                                            })()}
-
-                                            <Button
-                                                size="small"
-                                                onClick={() => setExpandedFinance(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
-                                                endIcon={expandedFinance[s.id] ? <ExpandLess /> : <ExpandMore />}
-                                                sx={{ fontSize: '0.65rem', fontWeight: 700, p: 0, minWidth: 'auto', textTransform: 'none', color: mainColor }}
-                                            >
-                                                {(s.payments?.length || 0) + (s.returns?.length || 0) > 0 ? 'Транзакції' : 'Платежі'}
-                                            </Button>
-                                        </Box>
-
-                                        {!s.isFullyPaid && s.totalPaidAmount > 0 && (
-                                            <Box sx={{ width: '100%', height: 3, bgcolor: '#eee', borderRadius: 1, mb: 1, overflow: 'hidden' }}>
-                                                <Box sx={{ width: `${(s.totalPaidAmount / s.totalPrice) * 100}%`, height: '100%', bgcolor: '#ffa000' }} />
-                                            </Box>
-                                        )}
-
-                                        <Collapse in={expandedFinance[s.id]}>
-                                            <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.8 }}>
-                                                {s.payments && s.payments.length > 0 ? (
-                                                    <Box>
-                                                        <Typography variant="caption" fontWeight="800" sx={{ fontSize: '0.6rem', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                                                            <CreditScore sx={{ fontSize: 12 }} /> ІСТОРІЯ ПЛАТЕЖІВ:
-                                                        </Typography>
-                                                        {s.payments.map((p) => (
-                                                            <Box key={p.id} sx={{
-                                                                p: 0.8, mb: 0.4, borderRadius: 1, bgcolor: alpha(theme.palette.success.main, 0.03),
-                                                                borderLeft: `2px solid ${theme.palette.success.main}`,
-                                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                                            }}>
-                                                                <Box>
-                                                                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1 }}>{p.amount} ₴</Typography>
-                                                                    <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.secondary' }}>{p.paymentTypeName}</Typography>
-                                                                </Box>
-                                                                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>{new Date(p.paymentDate).toLocaleDateString()}</Typography>
-                                                            </Box>
-                                                        ))}
-                                                    </Box>
-                                                ) : (
-                                                    <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.disabled', fontSize: '0.65rem', pl: 1 }}>Транзакцій ще не було</Typography>
-                                                )}
-
-                                                {s.returns && s.returns.length > 0 && (
-                                                    <Box sx={{ mt: 0.5 }}>
-                                                        <Typography variant="caption" fontWeight="800" sx={{ fontSize: '0.6rem', color: 'error.main', display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                                                            <AssignmentReturn sx={{ fontSize: 12 }} /> ПОВЕРНЕННЯ:
-                                                        </Typography>
-                                                        {s.returns.map((r) => (
-                                                            <Box key={r.id} sx={{ p: 0.8, mb: 0.5, borderRadius: 1, bgcolor: alpha(theme.palette.error.main, 0.03), borderLeft: `2px solid ${theme.palette.error.main}` }}>
-                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                                    <Box>
-                                                                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'error.main', display: 'block', lineHeight: 1 }}>
-                                                                            {r.returnTrackingNumber || 'Повернення'}
-                                                                        </Typography>
-                                                                        <Typography variant="caption" sx={{ fontWeight: 700, fontSize: '0.65rem' }}>
-                                                                            {r.refundAmount} ₴
-                                                                        </Typography>
-                                                                    </Box>
-                                                                    <Box sx={{ textAlign: 'right' }}>
-                                                                        <Typography variant="caption" sx={{ fontSize: '0.6rem', display: 'block' }}>
-                                                                            {r.initiationDate && new Date(r.initiationDate).toLocaleDateString()}
-                                                                        </Typography>
-                                                                        {r.completionDate && (
-                                                                            <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'success.main', fontWeight: 700 }}>
-                                                                                Завершено
-                                                                            </Typography>
-                                                                        )}
-                                                                    </Box>
-                                                                </Box>
-                                                                <Typography variant="caption" display="block" sx={{ fontSize: '0.6rem', color: 'text.secondary', fontStyle: 'italic', mt: 0.5 }}>
-                                                                    Причина: {r.returnReasonName || 'Без причини'}
-                                                                </Typography>
-                                                            </Box>
-                                                        ))}
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </Collapse>
-                                    </Box>
-
-                                    {/* Фінальна секція: Вартість, Борг, Статус ТТН та Вага */}
-                                    <Box sx={{ mt: 'auto', pt: 1.5 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 1 }}>
-                                            <Box>
-                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', lineHeight: 1 }}>Загальна вартість:</Typography>
-                                                {s.remainingAmount > 0 && (
-                                                    <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 800, fontSize: '0.7rem' }}>
-                                                        Борг: {s.remainingAmount} ₴
-                                                    </Typography>
-                                                )}
-                                            </Box>
-                                            <Typography variant="h6" fontWeight="900" sx={{ color: s.isFullyPaid ? 'success.main' : 'text.primary', lineHeight: 1 }}>
-                                                {s.totalPrice} ₴
-                                            </Typography>
-                                        </Box>
-
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Chip
-                                                label={s.shipmentStatusName}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{
-                                                    height: 22, fontSize: '0.65rem', fontWeight: 800,
-                                                    borderColor: statusColor, color: statusColor, bgcolor: alpha(statusColor, 0.08)
-                                                }}
-                                            />
-                                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.disabled' }}>{s.actualWeight} кг</Typography>
-                                        </Box>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    );
-                })}
-            </Grid>
+            <ShipmentGrid
+                shipments={shipments}
+                mainColor={mainColor}
+                statusColors={STATUS_COLORS}
+                expandedHistory={expandedHistory}
+                expandedFinance={expandedFinance}
+                movements={movements}
+                onDelete={handleDelete}
+                onToggleHistory={toggleHistory}
+                onToggleFinance={(id) => setExpandedFinance(prev => ({ ...prev, [id]: !prev[id] }))}
+            />
 
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', bgcolor: 'white', p: 1, borderRadius: 2 }}>
                 <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))} />
