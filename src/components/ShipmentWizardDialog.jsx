@@ -172,8 +172,9 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                     <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та тип доставки
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}>
+                                    <Grid size={4}>
                                         <Autocomplete
+                                            fullWidth
                                             options={clients}
                                             getOptionLabel={(o) => {
                                                 const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
@@ -181,10 +182,15 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                 return name + phone || '';
                                             }}
                                             onChange={(_, v) => setFormData({ ...formData, senderId: v?.id })}
-                                            renderInput={(p) => <TextField {...p} label="Відправник" size="small" />} />
+                                            renderInput={(p) => (
+                                                <TextField {...p} label="Відправник" size="small" />
+                                            )}
+                                        />
                                     </Grid>
-                                    <Grid item xs={4}>
+
+                                    <Grid size={4}>
                                         <Autocomplete
+                                            fullWidth
                                             options={clients}
                                             getOptionLabel={(o) => {
                                                 const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
@@ -192,9 +198,23 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                 return name + phone || '';
                                             }}
                                             onChange={(_, v) => setFormData({ ...formData, recipientId: v?.id })}
-                                            renderInput={(p) => <TextField {...p} label="Отримувач" size="small" />} />
+                                            renderInput={(p) => (
+                                                <TextField {...p} label="Отримувач" size="small" />
+                                            )}
+                                        />
                                     </Grid>
-                                    <Grid item xs={4}><Autocomplete options={shipmentTypes} getOptionLabel={(o) => o.name} onChange={(_, v) => setFormData({ ...formData, shipmentTypeId: v?.id })} renderInput={(p) => <TextField {...p} label="Тип доставки" size="small" />} /></Grid>
+
+                                    <Grid size={4}>
+                                        <Autocomplete
+                                            fullWidth
+                                            options={shipmentTypes}
+                                            getOptionLabel={(o) => o.name || ''}
+                                            onChange={(_, v) => setFormData({ ...formData, shipmentTypeId: v?.id })}
+                                            renderInput={(p) => (
+                                                <TextField {...p} label="Тип доставки" size="small" />
+                                            )}
+                                        />
+                                    </Grid>
                                 </Grid>
                                 <Divider />
                                 <DeliveryPointSelector point={formData.origin} label="Звідки" onChange={(v) => setFormData({ ...formData, origin: v })} />
