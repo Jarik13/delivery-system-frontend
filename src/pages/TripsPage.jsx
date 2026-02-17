@@ -114,8 +114,11 @@ const LeafletMap = ({ origin, destination, waypoints = [] }) => {
 const StatusChip = ({ status }) => {
     const config = {
         'Заплановано': { color: '#1976d2', bg: '#e3f2fd', icon: <RadioButtonUnchecked sx={{ fontSize: 13 }} /> },
-        'В дорозі':    { color: '#f57c00', bg: '#fff3e0', icon: <LocalShipping sx={{ fontSize: 13 }} /> },
-        'Завершено':   { color: '#388e3c', bg: '#e8f5e9', icon: <CheckCircle sx={{ fontSize: 13 }} /> },
+        'Завантаження': { color: '#00bcd4', bg: '#e0f7fa', icon: <PendingActions sx={{ fontSize: 13 }} /> },
+        'В дорозі': { color: '#f57c00', bg: '#fff3e0', icon: <LocalShipping sx={{ fontSize: 13 }} /> },
+        'Розвантаження': { color: '#673ab7', bg: '#ede7f6', icon: <MoveToInbox sx={{ fontSize: 13 }} /> },
+        'Завершено': { color: '#388e3c', bg: '#e8f5e9', icon: <CheckCircle sx={{ fontSize: 13 }} /> },
+        'Аварійна зупинка': { color: '#d32f2f', bg: '#ffebee', icon: <WarningAmber sx={{ fontSize: 13 }} /> },
     };
     const cfg = config[status] || { color: '#666', bg: '#f5f5f5', icon: null };
     return (
@@ -139,14 +142,14 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
     const formatTime = (dateStr) => dateStr ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
 
     return (
-        <Card sx={{ 
-            mb: 2, ml: 6.5, borderRadius: 4, border: '1px solid #eee', 
+        <Card sx={{
+            mb: 2, ml: 6.5, borderRadius: 4, border: '1px solid #eee',
             transition: 'all 0.2s ease-in-out',
             position: 'relative',
-            '&:hover': { 
+            '&:hover': {
                 boxShadow: '0 6px 16px rgba(0,0,0,0.08)',
                 borderColor: alpha(color, 0.3)
-            } 
+            }
         }} elevation={0}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -164,14 +167,14 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                 </Typography>
                             </Box>
                         </Box>
-                        
+
                         <Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed' }} />
-                        
+
                         <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" fontWeight="800" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                 {trip.originCity} <ArrowRightAlt sx={{ fontSize: 16, color: 'text.disabled' }} /> {trip.destinationCity}
                             </Typography>
-                            
+
                             <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
                                     <Scale sx={{ fontSize: 13 }} />
@@ -192,8 +195,8 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <StatusChip status={trip.status} />
-                            <IconButton 
-                                size="small" 
+                            <IconButton
+                                size="small"
                                 onClick={() => setExpanded(!expanded)}
                                 sx={{ bgcolor: expanded ? alpha(color, 0.1) : 'transparent' }}
                             >
@@ -217,7 +220,7 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                     <Box>
                                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Виїзд (План / Факт):</Typography>
                                         <Typography variant="body2" fontWeight="700">
-                                            {formatTime(trip.scheduledDepartureTime)} / 
+                                            {formatTime(trip.scheduledDepartureTime)} /
                                             <Box component="span" sx={{ ml: 1, color: trip.actualDepartureTime ? 'success.main' : 'text.disabled' }}>
                                                 {formatTime(trip.actualDepartureTime)}
                                             </Box>
@@ -226,7 +229,7 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                     <Box>
                                         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Прибуття (План / Факт):</Typography>
                                         <Typography variant="body2" fontWeight="700">
-                                            {formatTime(trip.scheduledArrivalTime)} / 
+                                            {formatTime(trip.scheduledArrivalTime)} /
                                             <Box component="span" sx={{ ml: 1, color: trip.actualArrivalTime ? 'success.main' : 'text.disabled' }}>
                                                 {formatTime(trip.actualArrivalTime)}
                                             </Box>
@@ -259,18 +262,18 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
                                     {trip.waypoints?.map((wp, i) => (
-                                        <Chip 
-                                            key={i} 
-                                            label={wp} 
-                                            size="small" 
-                                            variant="outlined" 
-                                            sx={{ 
-                                                height: 20, 
-                                                fontSize: '0.65rem', 
+                                        <Chip
+                                            key={i}
+                                            label={wp}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{
+                                                height: 20,
+                                                fontSize: '0.65rem',
                                                 fontWeight: 600,
                                                 borderColor: alpha(color, 0.2),
                                                 bgcolor: 'white'
-                                            }} 
+                                            }}
                                         />
                                     ))}
                                     {(!trip.waypoints || trip.waypoints.length === 0) && (
@@ -283,18 +286,18 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                         </Grid>
 
                         <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #f9f9f9', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-                            <Button 
-                                size="small" 
-                                startIcon={<MapIcon />} 
+                            <Button
+                                size="small"
+                                startIcon={<MapIcon />}
                                 onClick={() => onMap(trip)}
                                 sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
                             >
                                 Переглянути шлях
                             </Button>
-                            <Button 
-                                size="small" 
-                                color="error" 
-                                startIcon={<Delete />} 
+                            <Button
+                                size="small"
+                                color="error"
+                                startIcon={<Delete />}
                                 onClick={() => onDelete(trip.id)}
                                 sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
                             >
@@ -319,10 +322,21 @@ const TripsPage = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(false);
 
-    const [filters, setFilters] = useState({ status: '', driverName: '', vehiclePlate: '' });
+    const [statuses, setStatuses] = useState([]);
+
     const [mapTrip, setMapTrip] = useState(null);
     const [leafletReady, setLeafletReady] = useState(false);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+
+    const [filters, setFilters] = useState({
+        tripNumber: '',
+        tripStatusId: '',
+        scheduledDepartureFrom: null,
+        scheduledDepartureTo: null,
+        actualArrivalFrom: null,
+        actualArrivalTo: null,
+        // можна додати driverId та vehicleId якщо потрібно
+    });
 
     useEffect(() => {
         if (window.L) { setLeafletReady(true); return; }
@@ -336,14 +350,30 @@ const TripsPage = () => {
         document.head.appendChild(script);
     }, []);
 
+    useEffect(() => {
+        const loadReferences = async () => {
+            try {
+                const sRes = await DictionaryApi.getAll('trip-statuses', 0, 100);
+                setStatuses(sRes.data.content || []);
+            } catch (error) {
+                console.error("Помилка завантаження статусів", error);
+            }
+        };
+        loadReferences();
+    }, []);
+
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await DictionaryApi.getAll('trips', page, rowsPerPage, filters);
+            const activeFilters = Object.fromEntries(
+                Object.entries(filters).filter(([_, v]) => v !== '' && v !== null)
+            );
+
+            const res = await DictionaryApi.getAll('trips', page, rowsPerPage, activeFilters);
             setTrips(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
         } catch {
-            setNotification({ open: true, message: 'Помилка завантаження', severity: 'error' });
+            setNotification({ open: true, message: 'Помилка завантаження рейсів', severity: 'error' });
         } finally { setLoading(false); }
     }, [page, rowsPerPage, filters]);
 
@@ -352,34 +382,46 @@ const TripsPage = () => {
         return () => clearTimeout(t);
     }, [loadData]);
 
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        setPage(0);
+    };
+
+    const handleClearFilters = () => {
+        setFilters({
+            tripNumber: '',
+            tripStatusId: '',
+            scheduledDepartureFrom: null,
+            scheduledDepartureTo: null,
+            actualArrivalFrom: null,
+            actualArrivalTo: null
+        });
+        setPage(0);
+    };
+
     const handleDelete = async (id) => {
-        if (!window.confirm('Видалити рейс?')) return;
+        if (!window.confirm('Видалити цей рейс?')) return;
         try {
             await DictionaryApi.delete('trips', id);
             loadData();
-            setNotification({ open: true, message: 'Видалено', severity: 'success' });
+            setNotification({ open: true, message: 'Рейс видалено', severity: 'success' });
         } catch {
-            setNotification({ open: true, message: 'Помилка видалення', severity: 'error' });
+            setNotification({ open: true, message: 'Помилка при видаленні', severity: 'error' });
         }
     };
 
     const filterFields = [
-        {
-            name: 'status', label: 'Статус', type: 'select', md: 2,
-            options: [
-                { id: 'Заплановано', name: 'Заплановано' },
-                { id: 'В дорозі',    name: 'В дорозі' },
-                { id: 'Завершено',   name: 'Завершено' }
-            ]
-        },
-        { name: 'driverName',   label: 'Водій',  type: 'text', md: 2.5 },
-        { name: 'vehiclePlate', label: 'Номер авто', type: 'text', md: 2 },
+        { name: 'tripNumber', label: 'Номер рейсу', type: 'text' },
+        { name: 'tripStatusId', label: 'Статус', type: 'select', options: statuses },
+        { name: 'scheduledDepartureFrom', label: 'Виїзд (з)', type: 'datetime' },
+        { name: 'scheduledDepartureTo', label: 'Виїзд (до)', type: 'datetime' },
+        { name: 'actualArrivalFrom', label: 'Прибуття (з)', type: 'datetime' },
+        { name: 'actualArrivalTo', label: 'Прибуття (до)', type: 'datetime' },
     ];
 
-    // Групуємо рейси по даті
     const grouped = trips.reduce((acc, trip) => {
-        const date = trip.scheduledDeparture
-            ? new Date(trip.scheduledDeparture).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })
+        const date = trip.scheduledDepartureTime
+            ? new Date(trip.scheduledDepartureTime).toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' })
             : 'Без дати';
         if (!acc[date]) acc[date] = [];
         acc[date].push(trip);
@@ -388,7 +430,6 @@ const TripsPage = () => {
 
     return (
         <Box sx={{ px: 2, pb: 4, pt: 0 }}>
-            {/* Header */}
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
@@ -400,97 +441,109 @@ const TripsPage = () => {
                         <LocalShipping fontSize="medium" />
                     </Box>
                     <Box>
-                        <Typography variant="h6" fontWeight="bold">Рейси</Typography>
+                        <Typography variant="h6" fontWeight="bold">Магістральні рейси</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
-                            Магістральні перевезення • {totalElements} записів
+                            Керування логістичною мережею • {totalElements} рейсів
                         </Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" size="small"
+                <Button
+                    variant="contained" size="small"
                     sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                    startIcon={<Add />}>
+                    startIcon={<Add />}
+                >
                     Новий рейс
                 </Button>
             </Paper>
 
             <DataFilters
                 filters={filters}
-                onChange={(k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(0); }}
-                onClear={() => { setFilters({ status: '', driverName: '', vehiclePlate: '' }); setPage(0); }}
+                onChange={handleFilterChange}
+                onClear={handleClearFilters}
                 fields={filterFields}
-                quickFilters={['status']}
+                searchPlaceholder="Пошук за номером №..."
+                quickFilters={['tripStatusId']}
             />
 
-            {/* Timeline */}
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
                     <CircularProgress sx={{ color: mainColor }} />
                 </Box>
             ) : (
-                <Box sx={{ maxWidth: 820, mx: 'auto' }}>
+                <Box sx={{ maxWidth: 850, mx: 'auto' }}>
                     {Object.entries(grouped).map(([date, dayTrips]) => (
-                        <Box key={date} sx={{ mb: 1 }}>
-                            {/* Дата-роздільник */}
+                        <Box key={date} sx={{ mb: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, ml: 6.5 }}>
                                 <Typography variant="caption" fontWeight="800"
-                                    sx={{ textTransform: 'uppercase', letterSpacing: 1.2, color: 'text.disabled', fontSize: '0.65rem' }}>
+                                    sx={{ textTransform: 'uppercase', letterSpacing: 1.2, color: 'text.disabled', fontSize: '0.7rem' }}>
                                     {date}
                                 </Typography>
                                 <Divider sx={{ flex: 1 }} />
-                                <Chip label={`${dayTrips.length} рейсів`} size="small"
-                                    sx={{ height: 18, fontSize: '0.6rem', bgcolor: alpha(mainColor, 0.08), color: mainColor, fontWeight: 700 }} />
+                                <Chip
+                                    label={`${dayTrips.length} рейсів`}
+                                    size="small"
+                                    sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha(mainColor, 0.05), color: mainColor, fontWeight: 700 }}
+                                />
                             </Box>
 
-                            {dayTrips.map(trip => (
-                                <TripCard
-                                    key={trip.id}
-                                    trip={trip}
-                                    color={mainColor}
-                                    onMap={setMapTrip}
-                                    onEdit={() => {}}
-                                    onDelete={handleDelete}
-                                />
-                            ))}
+                            <Stack spacing={0.5}>
+                                {dayTrips.map(trip => (
+                                    <TripCard
+                                        key={trip.id}
+                                        trip={trip}
+                                        color={mainColor}
+                                        onMap={() => setMapTrip(trip)}
+                                        onDelete={handleDelete}
+                                    />
+                                ))}
+                            </Stack>
                         </Box>
                     ))}
 
                     {trips.length === 0 && !loading && (
-                        <Box sx={{ textAlign: 'center', py: 8, color: 'text.disabled' }}>
-                            <LocalShipping sx={{ fontSize: 48, mb: 2, opacity: 0.3 }} />
-                            <Typography variant="h6">Рейси не знайдено</Typography>
+                        <Box sx={{ textAlign: 'center', py: 12, color: 'text.disabled', bgcolor: 'white', borderRadius: 4, border: '1px dashed #ccc' }}>
+                            <LocalShipping sx={{ fontSize: 64, mb: 2, opacity: 0.2 }} />
+                            <Typography variant="h6" fontWeight="700">Рейсів не знайдено</Typography>
+                            <Typography variant="body2">Спробуйте змінити параметри фільтрації</Typography>
                         </Box>
                     )}
                 </Box>
             )}
 
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                 <TablePagination
-                    component="div" count={totalElements} page={page}
+                    component={Paper}
+                    elevation={0}
+                    variant="outlined"
+                    count={totalElements}
+                    page={page}
                     onPageChange={(e, n) => setPage(n)}
                     rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-                    labelRowsPerPage="Рейсів:"
+                    labelRowsPerPage="Показувати по:"
                     rowsPerPageOptions={[10, 20, 50]}
-                    sx={{ bgcolor: 'white', borderRadius: 2 }}
+                    sx={{ borderRadius: 3, border: '1px solid #eee' }}
                 />
             </Box>
 
-            {/* Map Dialog */}
-            <Dialog open={!!mapTrip} onClose={() => setMapTrip(null)}
-                fullWidth maxWidth="md"
-                PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+            <Dialog
+                open={!!mapTrip}
+                onClose={() => setMapTrip(null)}
+                fullWidth
+                maxWidth="md"
+                PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}
+            >
                 <DialogTitle sx={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     background: `linear-gradient(135deg, ${mainColor}, ${alpha(mainColor, 0.8)})`,
-                    color: 'white', pb: 2
+                    color: 'white', py: 2
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <MapIcon />
                         <Box>
-                            <Typography fontWeight="bold">Маршрут рейсу №{mapTrip?.tripNumber}</Typography>
-                            <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                                {mapTrip?.originCity} → {mapTrip?.destinationCity}
-                                {mapTrip?.distanceKm ? ` • ${mapTrip.distanceKm} км` : ''}
+                            <Typography fontWeight="800">Маршрут рейсу №{mapTrip?.tripNumber}</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                                {mapTrip?.originCity} — {mapTrip?.destinationCity}
                             </Typography>
                         </Box>
                     </Box>
@@ -498,7 +551,7 @@ const TripsPage = () => {
                         <Close />
                     </IconButton>
                 </DialogTitle>
-                <DialogContent sx={{ p: 0 }}>
+                <DialogContent sx={{ p: 0, height: 450 }}>
                     {leafletReady && mapTrip ? (
                         <LeafletMap
                             origin={{ cityName: mapTrip.originCity }}
@@ -506,28 +559,30 @@ const TripsPage = () => {
                             waypoints={mapTrip.waypoints || []}
                         />
                     ) : (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 420 }}>
-                            <CircularProgress />
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            <CircularProgress sx={{ color: mainColor }} />
                         </Box>
                     )}
                 </DialogContent>
-                <DialogActions sx={{ p: 2, bgcolor: '#fafafa', borderTop: '1px solid #eee' }}>
-                    <Box sx={{ display: 'flex', gap: 2, flex: 1 }}>
-                        <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#4CAF50', ml: 0.5 }} />}
-                            label={`Відправлення: ${mapTrip?.originCity || '—'}`} variant="outlined" size="small" />
-                        <Chip icon={<Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F44336', ml: 0.5 }} />}
-                            label={`Призначення: ${mapTrip?.destinationCity || '—'}`} variant="outlined" size="small" />
-                    </Box>
-                    <Button onClick={() => setMapTrip(null)} variant="contained" disableElevation size="small"
-                        sx={{ bgcolor: mainColor, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}>
+                <DialogActions sx={{ p: 2.5, bgcolor: '#fafafa' }}>
+                    <Button
+                        onClick={() => setMapTrip(null)}
+                        variant="contained"
+                        disableElevation
+                        sx={{ bgcolor: mainColor, borderRadius: 2, fontWeight: 'bold', px: 4 }}
+                    >
                         Закрити
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            <Snackbar open={notification.open} autoHideDuration={4000}
-                onClose={() => setNotification(p => ({ ...p, open: false }))}>
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2 }}>
+            <Snackbar
+                open={notification.open}
+                autoHideDuration={4000}
+                onClose={() => setNotification(p => ({ ...p, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 2, fontWeight: 600 }}>
                     {notification.message}
                 </Alert>
             </Snackbar>
