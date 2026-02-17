@@ -24,6 +24,7 @@ export const DictionaryApi = {
     },
     getById: (endpoint, id) => api.get(`/${endpoint}/${id}`),
 
+    calculatePrices: (data) => api.post('/shipments/calculate', data),
     create: (endpoint, data) => api.post(`/${endpoint}`, data),
     update: (endpoint, id, data) => api.put(`/${endpoint}/${id}`, data),
     delete: (endpoint, id) => api.delete(`/${endpoint}/${id}`),
