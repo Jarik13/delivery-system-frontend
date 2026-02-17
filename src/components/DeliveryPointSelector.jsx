@@ -6,7 +6,9 @@ import {
 } from '@mui/material';
 import {
     ArrowDownward, LocationOn, Map, Public,
-    Business, MailOutline, Home
+    Business, MailOutline, Home,
+    Explore,
+    LocationCity
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 
@@ -187,7 +189,7 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
             </ToggleButtonGroup>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Public color="primary" />
+                <Explore color="primary" />
                 <FormControl fullWidth size="small">
                     <InputLabel>1. Оберіть область</InputLabel>
                     <Select
@@ -236,7 +238,7 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
                         <ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} />
                     </Stack>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                        <LocationOn color="primary" />
+                        <LocationCity color="primary" />
                         <Autocomplete
                             fullWidth
                             size="small"
