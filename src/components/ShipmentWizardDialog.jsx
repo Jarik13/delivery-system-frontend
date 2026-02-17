@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { 
     Inventory, Person, Calculate, CheckCircle, 
-    LocalShipping, ChevronRight, ChevronLeft, Payments 
+    LocalShipping, ChevronRight, ChevronLeft, Payments, AccountBalanceWallet 
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import DeliveryPointSelector from './DeliveryPointSelector';
@@ -52,14 +52,13 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
         destination: { type: 'branch', branchId: null, postomatId: null, cityId: null, streetId: null, houseNumber: '', apartmentNumber: '' },
         senderId: null, recipientId: null, shipmentTypeId: null, shipmentStatusId: null,
         price: { deliveryPrice: 0, weightPrice: 0, distancePrice: 0, boxVariantPrice: 0, specialPackagingPrice: 0, insuranceFee: 0, totalPrice: 0 },
-        senderPay: true, partiallyPaid: false
+        senderPay: true, partiallyPaid: false, partialAmount: ''
     });
 
     const calculatePrice = useCallback(() => {
         const weight = parseFloat(formData.parcel.actualWeight) || 0;
         const declaredValue = parseFloat(formData.parcel.declaredValue) || 0;
         
-        // Базова логіка розрахунку (можна коригувати залежно від типу доставки)
         let deliveryPrice = 50;
         let weightPrice = weight > 5 ? (weight - 5) * 10 : 0;
         let boxVariantPrice = 0;
@@ -70,7 +69,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
             if (selectedBox) boxVariantPrice = selectedBox.price || 0;
         }
 
-        // Якщо обрано специфічний тип доставки, можна додати логіку зміни ціни тут
         if (formData.shipmentTypeId) {
             const type = shipmentTypes.find(t => t.id === formData.shipmentTypeId);
             if (type?.name?.toLowerCase().includes('експрес')) deliveryPrice += 30;
@@ -135,7 +133,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                     {activeStep === 0 && (
                         <motion.div key="step0" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                                <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
                                     <Inventory sx={{ color: mainColor, fontSize: 18 }} /> Параметри посилки
                                 </Typography>
                                 <TextField label="Опис вмісту" fullWidth multiline rows={2} value={formData.parcel.contentDescription}
@@ -167,13 +165,20 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                         <Chip label={option.name} {...getTagProps({ index })} size="small" sx={{ bgcolor: alpha(mainColor, 0.08), color: mainColor, fontWeight: 700 }} />
                                     ))}
                                 />
-                                <FormControlLabel control={<Checkbox sx={{ '&.Mui-checked': { color: mainColor } }} checked={formData.box.useBox} onChange={(e) => setFormData({...formData, box: {...formData.box, useBox: e.target.checked}})} />} label="Потрібна коробка" />
-                                {formData.box.useBox && (
-                                    <Autocomplete options={boxVariants} getOptionLabel={(o) => `${o.boxTypeName || 'Коробка'} (${o.length}x${o.width}x${o.height} см) - ${o.price} ₴`}
-                                        onChange={(_, v) => setFormData({...formData, box: {...formData.box, boxVariantId: v?.id}})}
-                                        renderInput={(p) => <TextField {...p} label="Розмір коробки" />}
-                                    />
-                                )}
+                                
+                                <Box sx={{ mt: 1, p: 2, borderRadius: 2, bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent', border: formData.box.useBox ? `1px dashed ${mainColor}` : '1px solid #eee', transition: '0.3s' }}>
+                                    <FormControlLabel control={<Checkbox sx={{ '&.Mui-checked': { color: mainColor } }} checked={formData.box.useBox} onChange={(e) => setFormData({...formData, box: {...formData.box, useBox: e.target.checked}})} />} label="Потрібна коробка" />
+                                    <AnimatePresence>
+                                        {formData.box.useBox && (
+                                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                                                <Autocomplete sx={{ mt: 2 }} options={boxVariants} getOptionLabel={(o) => `${o.boxTypeName || 'Коробка'} (${o.length}x${o.width}x${o.height} см) - ${o.price} ₴`}
+                                                    onChange={(_, v) => setFormData({...formData, box: {...formData.box, boxVariantId: v?.id}})}
+                                                    renderInput={(p) => <TextField {...p} label="Розмір коробки" size="small" />}
+                                                />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </Box>
                             </Box>
                         </motion.div>
                     )}
@@ -182,28 +187,36 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                         <motion.div key="step1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                 <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
-                                    <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та маршрут
+                                    <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та тип доставки
                                 </Typography>
-                                <Autocomplete options={clients} getOptionLabel={(o) => `${o.fullName} (${o.phoneNumber})`}
-                                    onChange={(_, v) => setFormData({...formData, senderId: v?.id})}
-                                    renderInput={(p) => <TextField {...p} label="Відправник" />}
-                                />
-                                <Autocomplete options={clients} getOptionLabel={(o) => `${o.fullName} (${o.phoneNumber})`}
-                                    onChange={(_, v) => setFormData({...formData, recipientId: v?.id})}
-                                    renderInput={(p) => <TextField {...p} label="Отримувач" />}
-                                />
+                                
+                                <Grid container spacing={2}>
+                                    <Grid item xs={4}>
+                                        <Autocomplete options={clients} getOptionLabel={(o) => `${o.fullName}`}
+                                            onChange={(_, v) => setFormData({...formData, senderId: v?.id})}
+                                            renderInput={(p) => <TextField {...p} label="Відправник" size="small" />}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={4}>
+                                        <Autocomplete options={clients} getOptionLabel={(o) => `${o.fullName}`}
+                                            onChange={(_, v) => setFormData({...formData, recipientId: v?.id})}
+                                            renderInput={(p) => <TextField {...p} label="Отримувач" size="small" />}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={4}>
+                                        <Autocomplete 
+                                            options={shipmentTypes} 
+                                            getOptionLabel={(o) => o.name || ''}
+                                            value={shipmentTypes.find(t => t.id === formData.shipmentTypeId) || null}
+                                            onChange={(_, v) => setFormData({...formData, shipmentTypeId: v?.id})}
+                                            renderInput={(p) => <TextField {...p} label="Тип доставки" size="small" />}
+                                        />
+                                    </Grid>
+                                </Grid>
+
                                 <Divider />
                                 <DeliveryPointSelector point={formData.origin} label="Звідки" onChange={(val) => setFormData({...formData, origin: val})} />
                                 <DeliveryPointSelector point={formData.destination} label="Куди" onChange={(val) => setFormData({...formData, destination: val})} />
-                                
-                                {/* ТИП ВІДПРАВЛЕННЯ (Експрес / Стандарт тощо) */}
-                                <Autocomplete 
-                                    options={shipmentTypes} 
-                                    getOptionLabel={(o) => o.name || ''}
-                                    value={shipmentTypes.find(t => t.id === formData.shipmentTypeId) || null}
-                                    onChange={(_, v) => setFormData({...formData, shipmentTypeId: v?.id})}
-                                    renderInput={(p) => <TextField {...p} label="Тип доставки" />}
-                                />
                             </Box>
                         </motion.div>
                     )}
@@ -217,7 +230,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <Card variant="outlined" sx={{ border: `1px solid #eee`, bgcolor: '#fafafa', borderRadius: 3 }}>
                                     <CardContent>
                                         <Grid container spacing={2}>
-                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Доставка:</Typography><Typography fontWeight="700">{formData.price.deliveryPrice.toFixed(2)} ₴</Typography></Grid>
+                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Доставка:</Typography><Typography fontWeight="700">50.00 ₴</Typography></Grid>
                                             <Grid item xs={6}><Typography variant="caption" color="text.secondary">За вагу:</Typography><Typography fontWeight="700">{formData.price.weightPrice.toFixed(2)} ₴</Typography></Grid>
                                             <Grid item xs={6}><Typography variant="caption" color="text.secondary">Коробка:</Typography><Typography fontWeight="700">{formData.price.boxVariantPrice.toFixed(2)} ₴</Typography></Grid>
                                             <Grid item xs={6}><Typography variant="caption" color="text.secondary">Страховка:</Typography><Typography fontWeight="700">{formData.price.insuranceFee.toFixed(2)} ₴</Typography></Grid>
@@ -230,25 +243,37 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                     </CardContent>
                                 </Card>
 
-                                <Box>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>Хто оплачує:</Typography>
-                                    <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'} onChange={(e) => setFormData({...formData, senderPay: e.target.value === 'sender'})}>
-                                        <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Відправник" />
-                                        <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Отримувач" />
-                                    </RadioGroup>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', mb: 0.5, display: 'block' }}>Хто оплачує:</Typography>
+                                        <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'} onChange={(e) => setFormData({...formData, senderPay: e.target.value === 'sender'})}>
+                                            <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Відправник" />
+                                            <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Отримувач" />
+                                        </RadioGroup>
+                                    </Box>
+                                    <FormControlLabel control={<Checkbox sx={{ '&.Mui-checked': { color: mainColor } }} checked={formData.partiallyPaid} onChange={(e) => setFormData({...formData, partiallyPaid: e.target.checked})} />} label="Часткова оплата" />
                                 </Box>
 
-                                {/* ЧАСТКОВА ОПЛАТА */}
-                                <FormControlLabel 
-                                    control={
-                                        <Checkbox 
-                                            sx={{ '&.Mui-checked': { color: mainColor } }} 
-                                            checked={formData.partiallyPaid} 
-                                            onChange={(e) => setFormData({...formData, partiallyPaid: e.target.checked})} 
-                                        />
-                                    } 
-                                    label="Дозволити часткову оплату (кредит / аванс)" 
-                                />
+                                <AnimatePresence>
+                                    {formData.partiallyPaid && (
+                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                                            <Box sx={{ p: 2, mt: 1, border: `1px dashed ${mainColor}`, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
+                                                <Typography variant="subtitle2" sx={{ color: mainColor, mb: 1.5, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <AccountBalanceWallet fontSize="small" /> Сума попередньої оплати
+                                                </Typography>
+                                                <TextField 
+                                                    label="Введіть суму авансу (₴)" 
+                                                    fullWidth 
+                                                    size="small" 
+                                                    type="number" 
+                                                    value={formData.partialAmount}
+                                                    onChange={(e) => setFormData({...formData, partialAmount: e.target.value})}
+                                                    InputProps={{ startAdornment: <InputAdornment position="start">₴</InputAdornment> }}
+                                                />
+                                            </Box>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </Box>
                         </motion.div>
                     )}
