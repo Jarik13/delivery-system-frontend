@@ -1,23 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, TablePagination,
     useTheme, alpha, Autocomplete, Grid, Stepper, Step, StepLabel,
-    FormControlLabel, Checkbox, MenuItem, Divider, Chip, RadioGroup, Radio,
-    InputAdornment, Card, CardContent, ToggleButton, ToggleButtonGroup,
-    Stack,
-    FormControl,
-    InputLabel,
-    Select,
-    Grow,
-    Collapse
-} from '@mui/material';
-import {
-    Add, LocalShipping, Receipt, Inventory, AttachMoney,
-    LocationOn, Person, Home, Apartment, Business,
-    DirectionsCar, Calculate, CheckCircle, LocalPostOffice,
-    MailOutline, Public, Map, ArrowDownward
-} from '@mui/icons-material';
+    FormControlLabel, Checkbox, Divider, Chip, RadioGroup, Radio,
+    InputAdornment, Card, CardContent } from '@mui/material';
+import { Add, LocalShipping, Receipt, Inventory, Person, Calculate, CheckCircle } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -75,7 +63,6 @@ const ShipmentsPage = () => {
     const [branches, setBranches] = useState([]);
     const [postomats, setPostomats] = useState([]);
     const [cities, setCities] = useState([]);
-    const [streets, setStreets] = useState([]);
 
     const [open, setOpen] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
