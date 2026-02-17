@@ -1,10 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, TablePagination,
-    useTheme, alpha, Autocomplete, Grid, Stepper, Step, StepLabel
+    useTheme, alpha, Autocomplete, Grid, Stepper, Step, StepLabel,
+    FormControlLabel, Checkbox, MenuItem, Divider, Chip, RadioGroup, Radio,
+    InputAdornment, Card, CardContent, ToggleButton, ToggleButtonGroup,
+    Stack,
+    FormControl,
+    InputLabel,
+    Select,
+    Grow,
+    Collapse
 } from '@mui/material';
-import { Add, LocalShipping, Receipt } from '@mui/icons-material';
+import {
+    Add, LocalShipping, Receipt, Inventory, AttachMoney,
+    LocationOn, Person, Home, Apartment, Business,
+    DirectionsCar, Calculate, CheckCircle, LocalPostOffice,
+    MailOutline, Public, Map, ArrowDownward
+} from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -26,7 +39,234 @@ const STATUS_COLORS = {
     'default': '#9e9e9e'
 };
 
-const steps = ['Вантаж', 'Фінанси', 'Логістика'];
+const steps = ['Посилка', 'Маршрут', 'Вартість'];
+
+const DeliveryPointSelector = ({ point, onChange, label }) => {
+    const [regions, setRegions] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [leafItems, setLeafItems] = useState([]);
+
+    const [selectedRegion, setSelectedRegion] = useState('');
+    const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [selectedCity, setSelectedCity] = useState('');
+
+    const isInternalChange = useRef(false);
+
+    useEffect(() => {
+        DictionaryApi.getAll('regions', 0, 100).then(res => {
+            setRegions(res.data.content || res.data || []);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (isInternalChange.current) {
+            isInternalChange.current = false;
+            return;
+        }
+
+        const loadHierarchy = async () => {
+            if (point.cityId && regions.length > 0) {
+                try {
+                    const cityRes = await DictionaryApi.getById('cities', point.cityId);
+                    const cityData = cityRes.data;
+                    const districtId = cityData.districtId || cityData.district?.id;
+
+                    if (districtId) {
+                        const distRes = await DictionaryApi.getById('districts', districtId);
+                        const distData = distRes.data;
+                        const regionId = distData.regionId || distData.region?.id;
+
+                        if (regionId) {
+                            const [dRes, cRes] = await Promise.all([
+                                DictionaryApi.getAll('districts', 0, 500, { regionId }),
+                                DictionaryApi.getAll('cities', 0, 5000, { districtId })
+                            ]);
+
+                            setDistricts(dRes.data.content || dRes.data || []);
+                            setCities(cRes.data.content || cRes.data || []);
+                            setSelectedRegion(regionId);
+                            setSelectedDistrict(districtId);
+                            setSelectedCity(point.cityId);
+                            
+                            loadLeafItems(point.cityId, point.type);
+                        }
+                    }
+                } catch (e) { console.error("Hierarchy load failed", e); }
+            }
+        };
+        loadHierarchy();
+    }, [point.cityId, regions.length]);
+
+    const loadLeafItems = async (cityId, type) => {
+        if (!cityId) return;
+        try {
+            let res;
+            if (type === 'branch') res = await DictionaryApi.getAll('branches', 0, 1000, { cityId });
+            else if (type === 'postomat') res = await DictionaryApi.getAll('postomats', 0, 1000, { cityId });
+            else if (type === 'address') res = await DictionaryApi.getAll('streets', 0, 5000, { cityId });
+            
+            setLeafItems(res?.data?.content || res?.data || []);
+        } catch (e) { console.error(e); }
+    };
+
+    const handleRegionChange = async (e) => {
+        const id = e.target.value;
+        setSelectedRegion(id);
+        setSelectedDistrict('');
+        setSelectedCity('');
+        setDistricts([]);
+        setCities([]);
+        setLeafItems([]);
+        
+        isInternalChange.current = true;
+        onChange({ ...point, cityId: null, branchId: null, postomatId: null, streetId: null });
+
+        if (id) {
+            const res = await DictionaryApi.getAll('districts', 0, 500, { regionId: id });
+            setDistricts(res.data.content || res.data || []);
+        }
+    };
+
+    const handleDistrictChange = async (e, value) => {
+        const id = value?.id || '';
+        setSelectedDistrict(id);
+        setSelectedCity('');
+        setCities([]);
+        setLeafItems([]);
+
+        isInternalChange.current = true;
+        onChange({ ...point, cityId: null, branchId: null, postomatId: null, streetId: null });
+
+        if (id) {
+            const res = await DictionaryApi.getAll('cities', 0, 5000, { districtId: id });
+            setCities(res.data.content || res.data || []);
+        }
+    };
+
+    const handleCityChange = (e, value) => {
+        const id = value?.id || '';
+        setSelectedCity(id);
+        isInternalChange.current = true;
+        onChange({ ...point, cityId: id, branchId: null, postomatId: null, streetId: null });
+        loadLeafItems(id, point.type);
+    };
+
+    const handleTypeChange = (newType) => {
+        if (!newType) return;
+        setSelectedRegion('');
+        setSelectedDistrict('');
+        setSelectedCity('');
+        setDistricts([]);
+        setCities([]);
+        setLeafItems([]);
+        onChange({
+            ...point,
+            type: newType,
+            cityId: null, branchId: null, postomatId: null, streetId: null,
+            houseNumber: '', apartmentNumber: ''
+        });
+    };
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <Typography variant="subtitle2" color="primary" fontWeight="700" sx={{ mb: 2 }}>{label}</Typography>
+
+            <ToggleButtonGroup
+                value={point.type}
+                exclusive
+                onChange={(_, val) => handleTypeChange(val)}
+                fullWidth size="small"
+                sx={{ mb: 2 }}
+            >
+                <ToggleButton value="branch"><Business sx={{ mr: 1, fontSize: 18 }} />Відділення</ToggleButton>
+                <ToggleButton value="postomat"><MailOutline sx={{ mr: 1, fontSize: 18 }} />Поштомат</ToggleButton>
+                <ToggleButton value="address"><Home sx={{ mr: 1, fontSize: 18 }} />Адреса</ToggleButton>
+            </ToggleButtonGroup>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                <Public color="primary" />
+                <FormControl fullWidth size="small">
+                    <InputLabel sx={{ fontWeight: 400 }}>1. Оберіть область</InputLabel>
+                    <Select value={selectedRegion} label="1. Оберіть область" onChange={handleRegionChange}>
+                        {regions.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
+                    </Select>
+                </FormControl>
+            </Box>
+
+            <Collapse in={!!selectedRegion} unmountOnExit>
+                <Box sx={{ mt: 1 }}>
+                    <Stack alignItems="center" sx={{ mb: 1 }}><ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} /></Stack>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                        <Map color="primary" />
+                        <Autocomplete
+                            fullWidth size="small"
+                            options={districts}
+                            getOptionLabel={(o) => o.name || ''}
+                            value={districts.find(d => d.id === selectedDistrict) || null}
+                            onChange={handleDistrictChange}
+                            renderInput={(params) => <TextField {...params} label="2. Оберіть район" />}
+                        />
+                    </Box>
+                </Box>
+            </Collapse>
+
+            <Collapse in={!!selectedDistrict} unmountOnExit>
+                <Box sx={{ mt: 1 }}>
+                    <Stack alignItems="center" sx={{ mb: 1 }}><ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} /></Stack>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                        <LocationOn color="primary" />
+                        <Autocomplete
+                            fullWidth size="small"
+                            options={cities}
+                            getOptionLabel={(o) => o.name || ''}
+                            value={cities.find(c => c.id === selectedCity) || null}
+                            onChange={handleCityChange}
+                            renderInput={(params) => <TextField {...params} label="3. Оберіть місто / село" />}
+                        />
+                    </Box>
+                </Box>
+            </Collapse>
+
+            <Collapse in={!!selectedCity} unmountOnExit>
+                <Box sx={{ mt: 1 }}>
+                    <Stack alignItems="center" sx={{ mb: 1 }}><ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} /></Stack>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            {point.type === 'branch' ? <Business color="success" /> : point.type === 'postomat' ? <MailOutline color="success" /> : <LocationOn color="success" />}
+                            <Autocomplete
+                                fullWidth size="small"
+                                options={leafItems}
+                                getOptionLabel={(o) => o.name || o.number || ''}
+                                onChange={(_, v) => {
+                                    if (point.type === 'branch') onChange({ ...point, branchId: v?.id });
+                                    else if (point.type === 'postomat') onChange({ ...point, postomatId: v?.id });
+                                    else if (point.type === 'address') onChange({ ...point, streetId: v?.id });
+                                }}
+                                renderInput={(params) => <TextField {...params} label={`4. Оберіть ${point.type === 'address' ? 'вулицю' : point.type === 'branch' ? 'відділення' : 'поштомат'}`} />}
+                            />
+                        </Box>
+
+                        {point.type === 'address' && point.streetId && (
+                            <Box sx={{ display: 'flex', gap: 2, pl: 5, mb: 1 }}>
+                                <TextField
+                                    label="Будинок" size="small" fullWidth
+                                    value={point.houseNumber}
+                                    onChange={(e) => onChange({ ...point, houseNumber: e.target.value })}
+                                />
+                                <TextField
+                                    label="Кв." size="small" fullWidth
+                                    value={point.apartmentNumber}
+                                    onChange={(e) => onChange({ ...point, apartmentNumber: e.target.value })}
+                                />
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
+            </Collapse>
+        </Box>
+    );
+};
 
 const ShipmentsPage = () => {
     const theme = useTheme();
@@ -44,27 +284,24 @@ const ShipmentsPage = () => {
     const [movements, setMovements] = useState({});
 
     const [filters, setFilters] = useState({
-        trackingNumber: '',
-        shipmentStatusId: '',
-        shipmentTypeId: '',
-        parcelDescription: '',
-        createdAtFrom: '',
-        createdAtTo: '',
-        issuedAtFrom: '',
-        issuedAtTo: '',
-        weightMin: 0, weightMax: 100,
-        totalPriceMin: 0, totalPriceMax: 10000,
-        deliveryPriceMin: 0, deliveryPriceMax: 5000,
-        weightPriceMin: 0, weightPriceMax: 2000,
-        distancePriceMin: 0, distancePriceMax: 2000,
-        boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
-        specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000,
-        insuranceFeeMin: 0, insuranceFeeMax: 1000
+        trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',
+        createdAtFrom: '', createdAtTo: '', issuedAtFrom: '', issuedAtTo: '',
+        weightMin: 0, weightMax: 100, totalPriceMin: 0, totalPriceMax: 10000,
+        deliveryPriceMin: 0, deliveryPriceMax: 5000, weightPriceMin: 0, weightPriceMax: 2000,
+        distancePriceMin: 0, distancePriceMax: 2000, boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
+        specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000, insuranceFeeMin: 0, insuranceFeeMax: 1000
     });
 
     const [statuses, setStatuses] = useState([]);
     const [clients, setClients] = useState([]);
     const [shipmentTypes, setShipmentTypes] = useState([]);
+    const [parcelTypes, setParcelTypes] = useState([]);
+    const [storageConditions, setStorageConditions] = useState([]);
+    const [boxVariants, setBoxVariants] = useState([]);
+    const [branches, setBranches] = useState([]);
+    const [postomats, setPostomats] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [streets, setStreets] = useState([]);
 
     const [open, setOpen] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
@@ -73,10 +310,57 @@ const ShipmentsPage = () => {
     const [fieldErrors, setFieldErrors] = useState({});
 
     const [formData, setFormData] = useState({
-        parcel: { contentDescription: '', actualWeight: '', declaredValue: '', parcelTypeId: '' },
-        price: { delivery: 0, weight: 0, distance: 0, insuranceFee: 0, total: 0 },
-        isSenderPay: true, isPartiallyPaid: false, senderId: null, recipientId: null,
-        shipmentTypeId: '', shipmentStatusId: ''
+        parcel: {
+            declaredValue: '',
+            actualWeight: '',
+            contentDescription: '',
+            parcelTypeId: null,
+            storageConditionIds: []
+        },
+        box: {
+            useBox: false,
+            boxVariantId: null
+        },
+        origin: {
+            type: 'branch',
+            branchId: null,
+            postomatId: null,
+            // Для адреси
+            cityId: null,
+            streetId: null,
+            houseNumber: '',
+            apartmentNumber: '',
+            floor: '',
+            entrance: '',
+            intercom: ''
+        },
+        destination: {
+            type: 'branch',
+            branchId: null,
+            postomatId: null,
+            cityId: null,
+            streetId: null,
+            houseNumber: '',
+            apartmentNumber: '',
+            floor: '',
+            entrance: '',
+            intercom: ''
+        },
+        senderId: null,
+        recipientId: null,
+        shipmentTypeId: null,
+        shipmentStatusId: null,
+        price: {
+            deliveryPrice: 0,
+            weightPrice: 0,
+            distancePrice: 0,
+            boxVariantPrice: 0,
+            specialPackagingPrice: 0,
+            insuranceFee: 0,
+            totalPrice: 0
+        },
+        senderPay: true,
+        partiallyPaid: false
     });
 
     const toggleHistory = async (shipmentId) => {
@@ -84,7 +368,6 @@ const ShipmentsPage = () => {
             setExpandedHistory(prev => ({ ...prev, [shipmentId]: false }));
             return;
         }
-
         if (!movements[shipmentId]) {
             try {
                 const response = await DictionaryApi.getMovement(shipmentId);
@@ -99,15 +382,30 @@ const ShipmentsPage = () => {
     useEffect(() => {
         const loadReferences = async () => {
             try {
-                const [sRes, cRes, tRes, statsRes] = await Promise.all([
+                const [
+                    sRes, cRes, tRes, ptRes, scRes, bvRes, brRes, pRes, ctRes, statsRes
+                ] = await Promise.all([
                     DictionaryApi.getAll('shipment-statuses', 0, 100),
                     DictionaryApi.getAll('clients', 0, 1000),
                     DictionaryApi.getAll('shipment-types', 0, 100),
+                    DictionaryApi.getAll('parcel-types', 0, 100),
+                    DictionaryApi.getAll('storage-conditions', 0, 100),
+                    DictionaryApi.getAll('box-variants', 0, 100),
+                    DictionaryApi.getAll('branches', 0, 500),
+                    DictionaryApi.getAll('postomats', 0, 500),
+                    DictionaryApi.getAll('cities', 0, 500),
                     DictionaryApi.getStatistics('shipments')
                 ]);
+
                 setStatuses(sRes.data.content || []);
                 setClients(cRes.data.content || []);
                 setShipmentTypes(tRes.data.content || []);
+                setParcelTypes(ptRes.data.content || []);
+                setStorageConditions(scRes.data.content || []);
+                setBoxVariants(bvRes.data.content || []);
+                setBranches(brRes.data.content || []);
+                setPostomats(pRes.data.content || []);
+                setCities(ctRes.data.content || []);
 
                 if (statsRes.data) {
                     const s = statsRes.data;
@@ -130,6 +428,55 @@ const ShipmentsPage = () => {
         };
         loadReferences();
     }, []);
+
+    const loadStreets = async (cityId) => {
+        if (!cityId) return;
+        try {
+            const response = await DictionaryApi.getByParam('streets', 'cityId', cityId);
+            setStreets(response.data.content || response.data || []);
+        } catch (error) {
+            console.error("Помилка завантаження вулиць", error);
+        }
+    };
+
+    const calculatePrice = useCallback(() => {
+        const weight = parseFloat(formData.parcel.actualWeight) || 0;
+        const declaredValue = parseFloat(formData.parcel.declaredValue) || 0;
+
+        let deliveryPrice = 50;
+        let weightPrice = weight > 5 ? (weight - 5) * 10 : 0;
+        let distancePrice = 0;
+        let boxVariantPrice = 0;
+        let specialPackagingPrice = formData.parcel.storageConditionIds.length * 15;
+        let insuranceFee = declaredValue * 0.01;
+
+        // Ціна коробки
+        if (formData.box.useBox && formData.box.boxVariantId) {
+            const selectedBox = boxVariants.find(b => b.id === formData.box.boxVariantId);
+            if (selectedBox) boxVariantPrice = selectedBox.price || 0;
+        }
+
+        const totalPrice = deliveryPrice + weightPrice + distancePrice + boxVariantPrice + specialPackagingPrice + insuranceFee;
+
+        setFormData(prev => ({
+            ...prev,
+            price: {
+                deliveryPrice,
+                weightPrice,
+                distancePrice,
+                boxVariantPrice,
+                specialPackagingPrice,
+                insuranceFee,
+                totalPrice
+            }
+        }));
+    }, [formData.parcel, formData.box, boxVariants]);
+
+    useEffect(() => {
+        if (activeStep === 2) {
+            calculatePrice();
+        }
+    }, [activeStep, formData.parcel.actualWeight, formData.parcel.declaredValue, formData.box, calculatePrice]);
 
     const loadTableData = useCallback(async () => {
         try {
@@ -173,9 +520,56 @@ const ShipmentsPage = () => {
     const handleOpenWizard = () => {
         setFieldErrors({});
         setFormData({
-            parcel: { contentDescription: '', actualWeight: '', declaredValue: '', parcelTypeId: '' },
-            price: { delivery: 0, weight: 0, distance: 0, insuranceFee: 0, total: 0 },
-            isSenderPay: true, isPartiallyPaid: false, senderId: null, recipientId: null, shipmentTypeId: '', shipmentStatusId: ''
+            parcel: {
+                declaredValue: '',
+                actualWeight: '',
+                contentDescription: '',
+                parcelTypeId: null,
+                storageConditionIds: []
+            },
+            box: {
+                useBox: false,
+                boxVariantId: null
+            },
+            origin: {
+                type: 'branch',
+                branchId: null,
+                postomatId: null,
+                cityId: null,
+                streetId: null,
+                houseNumber: '',
+                apartmentNumber: '',
+                floor: '',
+                entrance: '',
+                intercom: ''
+            },
+            destination: {
+                type: 'branch',
+                branchId: null,
+                postomatId: null,
+                cityId: null,
+                streetId: null,
+                houseNumber: '',
+                apartmentNumber: '',
+                floor: '',
+                entrance: '',
+                intercom: ''
+            },
+            senderId: null,
+            recipientId: null,
+            shipmentTypeId: null,
+            shipmentStatusId: null,
+            price: {
+                deliveryPrice: 0,
+                weightPrice: 0,
+                distancePrice: 0,
+                boxVariantPrice: 0,
+                specialPackagingPrice: 0,
+                insuranceFee: 0,
+                totalPrice: 0
+            },
+            senderPay: true,
+            partiallyPaid: false
         });
         setActiveStep(0);
         setOpen(true);
@@ -184,14 +578,66 @@ const ShipmentsPage = () => {
     const handleSaveShipment = async () => {
         setFieldErrors({});
         try {
-            await DictionaryApi.create('shipments', formData);
+            let statusId = formData.shipmentStatusId;
+            if (!statusId) {
+                const createdStatus = statuses.find(s => s.name === 'Створено');
+                statusId = createdStatus?.id;
+            }
+
+            const shipmentData = {
+                parcel: {
+                    declaredValue: formData.parcel.declaredValue,
+                    actualWeight: formData.parcel.actualWeight,
+                    contentDescription: formData.parcel.contentDescription,
+                    parcelTypeId: formData.parcel.parcelTypeId,
+                    storageConditionIds: formData.parcel.storageConditionIds
+                },
+                price: formData.price,
+                senderPay: formData.senderPay,
+                partiallyPaid: formData.partiallyPaid,
+                senderId: formData.senderId,
+                recipientId: formData.recipientId,
+                shipmentTypeId: formData.shipmentTypeId,
+                shipmentStatusId: statusId,
+                originDeliveryPoint: formData.origin.type === 'branch' ? {
+                    branchId: formData.origin.branchId
+                } : formData.origin.type === 'postomat' ? {
+                    postomatId: formData.origin.postomatId
+                } : null,
+                destinationDeliveryPoint: formData.destination.type === 'branch' ? {
+                    branchId: formData.destination.branchId
+                } : formData.destination.type === 'postomat' ? {
+                    postomatId: formData.destination.postomatId
+                } : null,
+                originAddress: formData.origin.type === 'address' ? {
+                    streetId: formData.origin.streetId,
+                    houseNumber: formData.origin.houseNumber,
+                    apartmentNumber: formData.origin.apartmentNumber,
+                    floor: formData.origin.floor,
+                    entrance: formData.origin.entrance,
+                    intercom: formData.origin.intercom
+                } : null,
+                destinationAddress: formData.destination.type === 'address' ? {
+                    streetId: formData.destination.streetId,
+                    houseNumber: formData.destination.houseNumber,
+                    apartmentNumber: formData.destination.apartmentNumber,
+                    floor: formData.destination.floor,
+                    entrance: formData.destination.entrance,
+                    intercom: formData.destination.intercom
+                } : null,
+                shipmentBox: formData.box.useBox ? {
+                    boxVariantId: formData.box.boxVariantId
+                } : null
+            };
+
+            await DictionaryApi.create('shipments', shipmentData);
             setOpen(false);
             loadTableData();
-            setNotification({ open: true, message: 'Відправлення створено', severity: 'success' });
+            setNotification({ open: true, message: 'Відправлення створено успішно', severity: 'success' });
         } catch (error) {
             const serverData = error.response?.data;
             if (serverData?.validationErrors) setFieldErrors(serverData.validationErrors);
-            setNotification({ open: true, message: 'Помилка збереження', severity: 'error' });
+            setNotification({ open: true, message: serverData?.message || 'Помилка збереження', severity: 'error' });
         }
     };
 
@@ -215,39 +661,296 @@ const ShipmentsPage = () => {
         };
 
         switch (step) {
-            case 0: return (
-                <Box component={motion.div} key="s1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                    <Typography variant="subtitle2" color="primary" fontWeight="700">ФІЗИЧНІ ПАРАМЕТРИ</Typography>
-                    <TextField label="Опис вмісту" fullWidth multiline rows={2} value={formData.parcel.contentDescription} onChange={(e) => setFormData({ ...formData, parcel: { ...formData.parcel, contentDescription: e.target.value } })} error={!!fieldErrors['parcel.contentDescription']} helperText={fieldErrors['parcel.contentDescription']} />
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <TextField label="Вага (кг)" fullWidth type="number" value={formData.parcel.actualWeight} onChange={(e) => setFormData({ ...formData, parcel: { ...formData.parcel, actualWeight: e.target.value } })} />
-                        <TextField label="Цінність (₴)" fullWidth type="number" value={formData.parcel.declaredValue} onChange={(e) => setFormData({ ...formData, parcel: { ...formData.parcel, declaredValue: e.target.value } })} />
-                    </Box>
-                </Box>
-            );
-            case 1: return (
-                <Box component={motion.div} key="s2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} sx={{ pt: 2 }}>
-                    <Typography variant="subtitle2" color="primary" fontWeight="700" sx={{ mb: 2 }}>ФІНАНСОВА ДЕТАЛІЗАЦІЯ</Typography>
-                    <Grid container spacing={2}>
-                        {['delivery', 'weight', 'distance', 'insuranceFee'].map((f) => (
-                            <Grid item xs={6} key={f}>
-                                <TextField label={f} fullWidth type="number" size="small" value={formData.price[f]} onChange={(e) => {
-                                    const p = { ...formData.price, [f]: parseFloat(e.target.value) || 0 };
-                                    setFormData({ ...formData, price: { ...p, total: p.delivery + p.weight + p.distance + p.insuranceFee } });
-                                }} />
+            case 0:
+                return (
+                    <Box component={motion.div} key="s1" custom={direction} variants={variants}
+                        initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}
+                        sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+
+                        <Typography variant="subtitle2" color="primary" fontWeight="700">
+                            <Inventory sx={{ fontSize: 18, mr: 1, verticalAlign: 'middle' }} />
+                            ПАРАМЕТРИ ПОСИЛКИ
+                        </Typography>
+
+                        <TextField
+                            label="Опис вмісту"
+                            fullWidth
+                            multiline
+                            rows={2}
+                            value={formData.parcel.contentDescription}
+                            onChange={(e) => setFormData({
+                                ...formData,
+                                parcel: { ...formData.parcel, contentDescription: e.target.value }
+                            })}
+                            error={!!fieldErrors['parcel.contentDescription']}
+                            helperText={fieldErrors['parcel.contentDescription']}
+                            placeholder="Наприклад: Одяг, Документи, Електроніка..."
+                        />
+
+                        <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                                <TextField
+                                    label="Вага (кг)"
+                                    fullWidth
+                                    type="number"
+                                    value={formData.parcel.actualWeight}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        parcel: { ...formData.parcel, actualWeight: e.target.value }
+                                    })}
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position="start">⚖️</InputAdornment>
+                                    }}
+                                    error={!!fieldErrors['parcel.actualWeight']}
+                                    helperText={fieldErrors['parcel.actualWeight']}
+                                />
                             </Grid>
-                        ))}
-                    </Grid>
-                </Box>
-            );
-            case 2: return (
-                <Box component={motion.div} key="s3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                    <Typography variant="subtitle2" color="primary" fontWeight="700">УЧАСНИКИ ТА СЕРВІС</Typography>
-                    <Autocomplete options={clients} getOptionLabel={(o) => o.fullName || ''} onChange={(_, v) => setFormData({ ...formData, senderId: v?.id })} renderInput={(p) => <TextField {...p} label="Відправник" />} />
-                    <Autocomplete options={clients} getOptionLabel={(o) => o.fullName || ''} onChange={(_, v) => setFormData({ ...formData, recipientId: v?.id })} renderInput={(p) => <TextField {...p} label="Отримувач" />} />
-                </Box>
-            );
-            default: return null;
+                            <Grid item xs={6}>
+                                <TextField
+                                    label="Оголошена вартість"
+                                    fullWidth
+                                    type="number"
+                                    value={formData.parcel.declaredValue}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        parcel: { ...formData.parcel, declaredValue: e.target.value }
+                                    })}
+                                    InputProps={{
+                                        endAdornment: <InputAdornment position="end">₴</InputAdornment>
+                                    }}
+                                    error={!!fieldErrors['parcel.declaredValue']}
+                                    helperText={fieldErrors['parcel.declaredValue']}
+                                />
+                            </Grid>
+                        </Grid>
+
+                        <Autocomplete
+                            options={parcelTypes}
+                            getOptionLabel={(o) => o.name || ''}
+                            onChange={(_, v) => setFormData({
+                                ...formData,
+                                parcel: { ...formData.parcel, parcelTypeId: v?.id }
+                            })}
+                            renderInput={(p) => (
+                                <TextField
+                                    {...p}
+                                    label="Тип посилки"
+                                    error={!!fieldErrors['parcel.parcelTypeId']}
+                                    helperText={fieldErrors['parcel.parcelTypeId']}
+                                />
+                            )}
+                        />
+
+                        <Autocomplete
+                            multiple
+                            options={storageConditions}
+                            getOptionLabel={(o) => o.name || ''}
+                            value={storageConditions.filter(sc => formData.parcel.storageConditionIds.includes(sc.id))}
+                            onChange={(_, v) => setFormData({
+                                ...formData,
+                                parcel: { ...formData.parcel, storageConditionIds: v.map(i => i.id) }
+                            })}
+                            renderInput={(p) => (
+                                <TextField {...p} label="Умови зберігання" placeholder="Крихкий, Холод..." />
+                            )}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => (
+                                    <Chip
+                                        label={option.name}
+                                        {...getTagProps({ index })}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                        key={option.id}
+                                    />
+                                ))
+                            }
+                        />
+
+                        <Divider sx={{ my: 1 }} />
+
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={formData.box.useBox}
+                                    onChange={(e) => setFormData({
+                                        ...formData,
+                                        box: { ...formData.box, useBox: e.target.checked }
+                                    })}
+                                />
+                            }
+                            label="Потрібна коробка"
+                        />
+
+                        {formData.box.useBox && (
+                            <Autocomplete
+                                options={boxVariants}
+                                getOptionLabel={(o) => `${o.name || ''} (${o.length}x${o.width}x${o.height} см) - ${o.price || 0} ₴`}
+                                onChange={(_, v) => setFormData({
+                                    ...formData,
+                                    box: { ...formData.box, boxVariantId: v?.id }
+                                })}
+                                renderInput={(p) => <TextField {...p} label="Розмір коробки" />}
+                            />
+                        )}
+                    </Box>
+                );
+
+            case 1:
+                return (
+                    <Box component={motion.div} key="s2" custom={direction} variants={variants}
+                        initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}
+                        sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+                        <Typography variant="subtitle2" color="primary" fontWeight="700">
+                            <Person sx={{ fontSize: 18, mr: 1, verticalAlign: 'middle' }} />
+                            УЧАСНИКИ
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                                <Autocomplete
+                                    options={clients}
+                                    getOptionLabel={(o) => `${o.fullName || ''} (${o.phoneNumber || ''})`}
+                                    onChange={(_, v) => setFormData({ ...formData, senderId: v?.id })}
+                                    renderInput={(p) => (
+                                        <TextField
+                                            {...p}
+                                            label="Відправник (ПІБ та телефон)"
+                                            error={!!fieldErrors.senderId}
+                                            helperText={fieldErrors.senderId}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Autocomplete
+                                    options={clients}
+                                    getOptionLabel={(o) => `${o.fullName || ''} (${o.phoneNumber || ''})`}
+                                    onChange={(_, v) => setFormData({ ...formData, recipientId: v?.id })}
+                                    renderInput={(p) => (
+                                        <TextField
+                                            {...p}
+                                            label="Отримувач (ПІБ та телефон)"
+                                            error={!!fieldErrors.recipientId}
+                                            helperText={fieldErrors.recipientId}
+                                        />
+                                    )}
+                                />
+                            </Grid>
+                        </Grid>
+
+                        <Divider />
+
+                        <DeliveryPointSelector
+                            point={formData.origin}
+                            onChange={(newOrigin) => setFormData({ ...formData, origin: newOrigin })}
+                            label="ЗВІДКИ (ВІДПРАВЛЕННЯ)"
+                        />
+
+                        <Divider />
+
+                        <DeliveryPointSelector
+                            point={formData.destination}
+                            onChange={(newDest) => setFormData({ ...formData, destination: newDest })}
+                            label="КУДИ (ПРИЗНАЧЕННЯ)"
+                        />
+
+                        <Divider />
+
+                        <Autocomplete
+                            options={shipmentTypes}
+                            getOptionLabel={(o) => o.name || ''}
+                            onChange={(_, v) => setFormData({ ...formData, shipmentTypeId: v?.id })}
+                            renderInput={(p) => (
+                                <TextField
+                                    {...p}
+                                    label="Тип доставки"
+                                    error={!!fieldErrors.shipmentTypeId}
+                                    helperText={fieldErrors.shipmentTypeId}
+                                />
+                            )}
+                        />
+                    </Box>
+                );
+
+            case 2:
+                return (
+                    <Box component={motion.div} key="s3" custom={direction} variants={variants}
+                        initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}
+                        sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+
+                        <Typography variant="subtitle2" color="primary" fontWeight="700">
+                            <Calculate sx={{ fontSize: 18, mr: 1, verticalAlign: 'middle' }} />
+                            РОЗРАХУНОК ВАРТОСТІ
+                        </Typography>
+
+                        <Card variant="outlined" sx={{ bgcolor: alpha(mainColor, 0.03) }}>
+                            <CardContent>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={6}>
+                                        <Typography variant="caption" color="text.secondary">Базовий тариф:</Typography>
+                                        <Typography variant="body1" fontWeight="700">{formData.price.deliveryPrice.toFixed(2)} ₴</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="caption" color="text.secondary">Доплата за вагу:</Typography>
+                                        <Typography variant="body1" fontWeight="700">{formData.price.weightPrice.toFixed(2)} ₴</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="caption" color="text.secondary">Доплата відстань:</Typography>
+                                        <Typography variant="body1" fontWeight="700">{formData.price.distancePrice.toFixed(2)} ₴</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="caption" color="text.secondary">Коробка:</Typography>
+                                        <Typography variant="body1" fontWeight="700">{formData.price.boxVariantPrice.toFixed(2)} ₴</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="caption" color="text.secondary">Спец. пакування:</Typography>
+                                        <Typography variant="body1" fontWeight="700">{formData.price.specialPackagingPrice.toFixed(2)} ₴</Typography>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Typography variant="caption" color="text.secondary">Страховка:</Typography>
+                                        <Typography variant="body1" fontWeight="700">{formData.price.insuranceFee.toFixed(2)} ₴</Typography>
+                                    </Grid>
+                                </Grid>
+
+                                <Divider sx={{ my: 2 }} />
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="h6" color="primary" fontWeight="800">ЗАГАЛЬНА ВАРТІСТЬ:</Typography>
+                                    <Typography variant="h5" color="primary" fontWeight="900">
+                                        {formData.price.totalPrice.toFixed(2)} ₴
+                                    </Typography>
+                                </Box>
+                            </CardContent>
+                        </Card>
+
+                        <Divider />
+
+                        <Typography variant="subtitle2" color="text.secondary" fontWeight="700">УМОВИ ОПЛАТИ</Typography>
+
+                        <RadioGroup
+                            value={formData.senderPay ? 'sender' : 'recipient'}
+                            onChange={(e) => setFormData({ ...formData, senderPay: e.target.value === 'sender' })}
+                        >
+                            <FormControlLabel value="sender" control={<Radio />} label="Оплачує відправник" />
+                            <FormControlLabel value="recipient" control={<Radio />} label="Оплачує отримувач" />
+                        </RadioGroup>
+
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={formData.partiallyPaid}
+                                    onChange={(e) => setFormData({ ...formData, partiallyPaid: e.target.checked })}
+                                />
+                            }
+                            label="Часткова оплата"
+                        />
+                    </Box>
+                );
+
+            default:
+                return null;
         }
     };
 
@@ -317,37 +1020,99 @@ const ShipmentsPage = () => {
             />
 
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', bgcolor: 'white', p: 1, borderRadius: 2 }}>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))} />
+                <TablePagination
+                    component="div"
+                    count={totalElements}
+                    page={page}
+                    onPageChange={(e, n) => setPage(n)}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+                />
             </Box>
 
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 4 } }}>
-                <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>
-                    <Receipt sx={{ color: mainColor, fontSize: 35, mb: 1 }} />
-                    <Typography variant="h6" fontWeight="700">Оформлення ТТН</Typography>
+            <Dialog
+                open={open}
+                onClose={() => setOpen(false)}
+                fullWidth
+                maxWidth="md"
+                PaperProps={{ sx: { borderRadius: 4, maxHeight: '90vh' } }}
+            >
+                <DialogTitle sx={{ textAlign: 'center', pt: 4, pb: 2 }}>
+                    <Receipt sx={{ color: mainColor, fontSize: 40, mb: 1 }} />
+                    <Typography variant="body1" fontWeight="700" sx={{ fontSize: '1.5rem' }}>
+                        Оформлення ТТН
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Крок {activeStep + 1} з {steps.length}
+                    </Typography>
                     <Stepper activeStep={activeStep} alternativeLabel sx={{ pt: 3 }}>
-                        {steps.map(label => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
+                        {steps.map(label => (
+                            <Step key={label}>
+                                <StepLabel>{label}</StepLabel>
+                            </Step>
+                        ))}
                     </Stepper>
                 </DialogTitle>
-                <DialogContent sx={{ minHeight: 380 }}>
+
+                <DialogContent sx={{ minHeight: 400, overflow: 'auto' }}>
                     <AnimatePresence mode="wait">
                         {renderStepContent(activeStep)}
                     </AnimatePresence>
                 </DialogContent>
+
                 <DialogActions sx={{ p: 3, borderTop: '1px solid #eee', justifyContent: 'space-between' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ fontWeight: 'bold' }}>Скасувати</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ fontWeight: 'bold' }}>
+                        Скасувати
+                    </Button>
                     <Box sx={{ display: 'flex', gap: 1.5 }}>
-                        {activeStep > 0 && <Button onClick={() => setActiveStep(activeStep - 1)}>Назад</Button>}
-                        {activeStep < 2 ? (
-                            <Button variant="contained" onClick={() => setActiveStep(activeStep + 1)}>Далі</Button>
+                        {activeStep > 0 && (
+                            <Button
+                                onClick={() => {
+                                    setDirection(-1);
+                                    setActiveStep(activeStep - 1);
+                                }}
+                                variant="outlined"
+                            >
+                                Назад
+                            </Button>
+                        )}
+                        {activeStep < steps.length - 1 ? (
+                            <Button
+                                variant="contained"
+                                onClick={() => {
+                                    setDirection(1);
+                                    setActiveStep(activeStep + 1);
+                                }}
+                            >
+                                Далі
+                            </Button>
                         ) : (
-                            <Button variant="contained" color="success" onClick={handleSaveShipment}>Оформити</Button>
+                            <Button
+                                variant="contained"
+                                color="success"
+                                onClick={handleSaveShipment}
+                                startIcon={<CheckCircle />}
+                            >
+                                Оформити ТТН
+                            </Button>
                         )}
                     </Box>
                 </DialogActions>
             </Dialog>
 
-            <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })}>
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>{notification.message}</Alert>
+            <Snackbar
+                open={notification.open}
+                autoHideDuration={4000}
+                onClose={() => setNotification({ ...notification, open: false })}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            >
+                <Alert
+                    severity={notification.severity}
+                    variant="filled"
+                    sx={{ borderRadius: 3 }}
+                >
+                    {notification.message}
+                </Alert>
             </Snackbar>
         </Box>
     );
