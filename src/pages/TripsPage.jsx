@@ -19,96 +19,125 @@ import {
     LocationOn,
     ExpandLess,
     ArrowRightAlt,
-    Straighten
+    Straighten,
+    PendingActions,
+    MoveToInbox,
+    WarningAmber
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
-const LeafletMap = ({ origin, destination, waypoints = [] }) => {
-    const mapRef = useRef(null);
-    const instanceRef = useRef(null);
+const LeafletMap = ({ trip }) => {
+    const mapRef = useRef(null); // Посилання на статичний div
+    const mapInstanceRef = useRef(null);
+    const [isMapReady, setIsMapReady] = useState(false);
 
     useEffect(() => {
-        if (!window.L || !mapRef.current) return;
-        if (instanceRef.current) { instanceRef.current.remove(); }
+        // Перевіряємо наявність бібліотеки та посилання на елемент
+        if (!window.L || !mapRef.current || !trip) return;
 
-        const allPoints = [origin, ...waypoints, destination].filter(Boolean);
-        if (!allPoints.length) return;
-
-        const map = window.L.map(mapRef.current, { zoomControl: true });
-        instanceRef.current = map;
-
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        const CITY_COORDS = {
-            'Київ': [50.45, 30.52], 'київ': [50.45, 30.52], 'місто київ': [50.45, 30.52],
-            'Львів': [49.84, 24.02], 'львів': [49.84, 24.02], 'місто львів': [49.84, 24.02],
-            'Харків': [49.99, 36.23], 'харків': [49.99, 36.23],
-            'Одеса': [46.48, 30.72], 'одеса': [46.48, 30.72],
-            'Дніпро': [48.46, 35.04], 'дніпро': [48.46, 35.04],
-            'Запоріжжя': [47.85, 35.12], 'запоріжжя': [47.85, 35.12],
-            'Вінниця': [49.23, 28.47], 'вінниця': [49.23, 28.47],
-            'Миколаїв': [46.97, 32.00], 'миколаїв': [46.97, 32.00], 'місто миколаїв': [46.97, 32.00],
-            'Херсон': [46.64, 32.62], 'херсон': [46.64, 32.62],
-            'Полтава': [49.59, 34.54], 'полтава': [49.59, 34.54],
-            'Суми': [50.91, 34.80], 'суми': [50.91, 34.80],
-            'Чернігів': [51.49, 31.29], 'чернігів': [51.49, 31.29],
-            'Черкаси': [49.44, 32.06], 'черкаси': [49.44, 32.06],
-            'Рівне': [50.62, 26.25], 'рівне': [50.62, 26.25], 'місто рівне': [50.62, 26.25],
-            'Луцьк': [50.75, 25.34], 'луцьк': [50.75, 25.34],
-            'Тернопіль': [49.55, 25.59], 'тернопіль': [49.55, 25.59],
-            'Хмельницький': [49.42, 26.99], 'хмельницький': [49.42, 26.99],
-            'Івано-Франківськ': [48.92, 24.71], 'івано-франківськ': [48.92, 24.71],
-            'Ужгород': [48.62, 22.30], 'ужгород': [48.62, 22.30],
-            'Чернівці': [48.29, 25.94], 'чернівці': [48.29, 25.94],
-            'Житомир': [50.25, 28.66], 'житомир': [50.25, 28.66],
-            'Кропивницький': [48.51, 32.27], 'кропивницький': [48.51, 32.27],
-        };
-
-        const getCoords = (cityName) => {
-            if (!cityName) return null;
-            const lower = cityName.toLowerCase().trim();
-            for (const [key, val] of Object.entries(CITY_COORDS)) {
-                if (lower.includes(key.toLowerCase())) return val;
-            }
-            return null;
-        };
-
-        const coords = allPoints.map(p => getCoords(p.cityName || p)).filter(Boolean);
-        if (coords.length < 2) {
-            map.setView([49.0, 31.0], 6);
-            return;
+        // ✅ 1. Якщо карта вже була ініціалізована — видаляємо її правильно
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.remove();
+            mapInstanceRef.current = null;
         }
 
-        const svgIcon = (color, label) => window.L.divIcon({
-            html: `<div style="background:${color};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${label}</div>`,
-            className: '', iconSize: [32, 32], iconAnchor: [16, 16]
-        });
+        try {
+            // ✅ 2. Ініціалізуємо карту прямо в ref-диві (без innerHTML і appendChild)
+            const map = window.L.map(mapRef.current, {
+                zoomControl: true,
+                attributionControl: false
+            });
+            mapInstanceRef.current = map;
 
-        coords.forEach((coord, idx) => {
-            const isFirst = idx === 0;
-            const isLast = idx === coords.length - 1;
-            const color = isFirst ? '#4CAF50' : isLast ? '#F44336' : '#2196F3';
-            const label = isFirst ? 'A' : isLast ? 'B' : String(idx);
-            window.L.marker(coord, { icon: svgIcon(color, label) })
-                .addTo(map)
-                .bindPopup(allPoints[idx]?.cityName || allPoints[idx] || `Вузол ${idx}`);
-        });
+            window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18
+            }).addTo(map);
 
-        window.L.polyline(coords, {
-            color: '#1976d2', weight: 3, opacity: 0.8, dashArray: '8, 6'
-        }).addTo(map);
+            const allPoints = [];
+            if (trip.originCoordinates?.latitude) {
+                allPoints.push({
+                    lat: trip.originCoordinates.latitude,
+                    lng: trip.originCoordinates.longitude,
+                    name: trip.originCity,
+                    type: 'origin'
+                });
+            }
+            // ... (додавання решти точок: waypoints, destination) ...
+            if (trip.destinationCoordinates?.latitude) {
+                allPoints.push({
+                    lat: trip.destinationCoordinates.latitude,
+                    lng: trip.destinationCoordinates.longitude,
+                    name: trip.destinationCity,
+                    type: 'destination'
+                });
+            }
 
-        const bounds = window.L.latLngBounds(coords);
-        map.fitBounds(bounds, { padding: [40, 40] });
+            if (allPoints.length === 0) {
+                map.setView([49.0, 31.0], 6);
+                setIsMapReady(true);
+            } else {
+                const coords = allPoints.map(p => [p.lat, p.lng]);
+                
+                // Додаємо маркери
+                allPoints.forEach((point, idx) => {
+                    const color = point.type === 'origin' ? '#4CAF50' : point.type === 'destination' ? '#F44336' : '#2196F3';
+                    const label = point.type === 'origin' ? 'A' : point.type === 'destination' ? 'B' : (idx).toString();
+                    
+                    const icon = window.L.divIcon({
+                        html: `<div style="background:${color};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${label}</div>`,
+                        className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+                    });
 
-        return () => { if (instanceRef.current) instanceRef.current.remove(); };
-    }, [origin, destination, waypoints]);
+                    window.L.marker([point.lat, point.lng], { icon }).addTo(map).bindPopup(point.name);
+                });
 
-    return <div ref={mapRef} style={{ width: '100%', height: '420px', borderRadius: 8, zIndex: 0 }} />;
+                // Малюємо лінію
+                if (coords.length >= 2) {
+                    window.L.polyline(coords, { color: '#1976d2', weight: 3, dashArray: '10, 10' }).addTo(map);
+                    map.fitBounds(window.L.latLngBounds(coords), { padding: [50, 50] });
+                } else {
+                    map.setView(coords[0], 12);
+                }
+            }
+
+            // Змушуємо карту підлаштуватися під розмір контейнера
+            setTimeout(() => {
+                map.invalidateSize();
+                setIsMapReady(true);
+            }, 200);
+
+        } catch (error) {
+            console.error('Map error:', error);
+            setIsMapReady(true);
+        }
+
+        // ✅ 3. Cleanup функція: видаляємо карту, щоб React не конфліктував
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, [trip]); // Перезапуск при зміні рейсу
+
+    return (
+        <Box sx={{ position: 'relative', width: '100%', height: '420px' }}>
+            <div 
+                ref={mapRef} 
+                style={{ width: '100%', height: '100%', borderRadius: '0 0 16px 16px' }} 
+            />
+            {!isMapReady && (
+                <Box sx={{ 
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: '#f5f5f5', zIndex: 1000 
+                }}>
+                    <CircularProgress size={30} />
+                </Box>
+            )}
+        </Box>
+    );
 };
 
 const StatusChip = ({ status }) => {
@@ -553,11 +582,7 @@ const TripsPage = () => {
                 </DialogTitle>
                 <DialogContent sx={{ p: 0, height: 450 }}>
                     {leafletReady && mapTrip ? (
-                        <LeafletMap
-                            origin={{ cityName: mapTrip.originCity }}
-                            destination={{ cityName: mapTrip.destinationCity }}
-                            waypoints={mapTrip.waypoints || []}
-                        />
+                        <LeafletMap trip={mapTrip} />
                     ) : (
                         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                             <CircularProgress sx={{ color: mainColor }} />
