@@ -78,7 +78,7 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
             if (type === 'branch') res = await DictionaryApi.getByParam('branches', 'cityId', cityId);
             else if (type === 'postomat') res = await DictionaryApi.getByParam('postomats', 'cityId', cityId);
             else if (type === 'address') res = await DictionaryApi.getByParam('streets', 'cityId', cityId);
-            
+
             const data = res?.data?.content || res?.data || [];
             setLeafItems(data);
         } catch (e) {
@@ -151,9 +151,25 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
     };
 
     const handleLeafChange = (_, v) => {
-        if (point.type === 'branch') onChange({ ...point, branchId: v?.id ?? null });
-        else if (point.type === 'postomat') onChange({ ...point, postomatId: v?.id ?? null });
-        else if (point.type === 'address') onChange({ ...point, streetId: v?.id ?? null });
+        if (point.type === 'branch') {
+            onChange({
+                ...point,
+                branchId: v?.id ?? null,
+                deliveryPointId: v?.deliveryPointId || v?.deliveryPoint?.id || null
+            });
+        } else if (point.type === 'postomat') {
+            onChange({
+                ...point,
+                postomatId: v?.id ?? null,
+                deliveryPointId: v?.deliveryPointId || v?.deliveryPoint?.id || null
+            });
+        } else if (point.type === 'address') {
+            onChange({
+                ...point,
+                streetId: v?.id ?? null,
+                deliveryPointId: null
+            });
+        }
     };
 
     const getLeafValue = () => {

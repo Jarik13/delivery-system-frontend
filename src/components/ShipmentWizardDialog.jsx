@@ -31,15 +31,15 @@ const ColorlibStepIcon = (props) => {
 const initialFormData = {
     parcel: { declaredValue: '', actualWeight: '', contentDescription: '', parcelTypeId: null, storageConditionIds: [] },
     box: { useBox: false, boxVariantId: null },
-    origin: { type: 'branch', branchId: null, postomatId: null, cityId: null, streetId: null, houseNumber: '', apartmentNumber: '' },
-    destination: { type: 'branch', branchId: null, postomatId: null, cityId: null, streetId: null, houseNumber: '', apartmentNumber: '' },
+    origin: { type: 'branch', deliveryPointId: null, cityId: null, streetId: null, houseNumber: '', apartmentNumber: '' },
+    destination: { type: 'branch', deliveryPointId: null, cityId: null, streetId: null, houseNumber: '', apartmentNumber: '' },
     senderId: null, recipientId: null, shipmentTypeId: null,
     price: { deliveryPrice: 0, weightPrice: 0, distancePrice: 0, boxVariantPrice: 0, specialPackagingPrice: 0, insuranceFee: 0, totalPrice: 0 },
     senderPay: true, partiallyPaid: false, partialAmount: ''
 };
 
 const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references }) => {
-    const { statuses, clients, shipmentTypes, parcelTypes, storageConditions, boxVariants } = references;
+    const { clients, shipmentTypes, parcelTypes, storageConditions, boxVariants } = references;
     const [activeStep, setActiveStep] = useState(0);
     const [direction, setDirection] = useState(0);
     const [fieldErrors, setFieldErrors] = useState({});
@@ -94,14 +94,14 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                 shipmentTypeId: formData.shipmentTypeId,
                 origin: {
                     type: formData.origin.type.toUpperCase(),
-                    deliveryPointId: formData.origin.branchId || formData.origin.postomatId,
+                    deliveryPointId: formData.origin.deliveryPointId,
                     streetId: formData.origin.streetId,
                     houseNumber: formData.origin.houseNumber,
                     apartmentNumber: parseInt(formData.origin.apartmentNumber) || null
                 },
                 destination: {
                     type: formData.destination.type.toUpperCase(),
-                    deliveryPointId: formData.destination.branchId || formData.destination.postomatId,
+                    deliveryPointId: formData.destination.deliveryPointId,
                     streetId: formData.destination.streetId,
                     houseNumber: formData.destination.houseNumber,
                     apartmentNumber: parseInt(formData.destination.apartmentNumber) || null
@@ -172,8 +172,28 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                     <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та тип доставки
                                 </Typography>
                                 <Grid container spacing={2}>
-                                    <Grid item xs={4}><Autocomplete options={clients} getOptionLabel={(o) => o.fullName} onChange={(_, v) => setFormData({ ...formData, senderId: v?.id })} renderInput={(p) => <TextField {...p} label="Відправник" size="small" />} /></Grid>
-                                    <Grid item xs={4}><Autocomplete options={clients} getOptionLabel={(o) => o.fullName} onChange={(_, v) => setFormData({ ...formData, recipientId: v?.id })} renderInput={(p) => <TextField {...p} label="Отримувач" size="small" />} /></Grid>
+                                    <Grid item xs={4}>
+                                        <Autocomplete
+                                            options={clients}
+                                            getOptionLabel={(o) => {
+                                                const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
+                                                const phone = o.phoneNumber ? ` (${o.phoneNumber})` : '';
+                                                return name + phone || '';
+                                            }}
+                                            onChange={(_, v) => setFormData({ ...formData, senderId: v?.id })}
+                                            renderInput={(p) => <TextField {...p} label="Відправник" size="small" />} />
+                                    </Grid>
+                                    <Grid item xs={4}>
+                                        <Autocomplete
+                                            options={clients}
+                                            getOptionLabel={(o) => {
+                                                const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
+                                                const phone = o.phoneNumber ? ` (${o.phoneNumber})` : '';
+                                                return name + phone || '';
+                                            }}
+                                            onChange={(_, v) => setFormData({ ...formData, recipientId: v?.id })}
+                                            renderInput={(p) => <TextField {...p} label="Отримувач" size="small" />} />
+                                    </Grid>
                                     <Grid item xs={4}><Autocomplete options={shipmentTypes} getOptionLabel={(o) => o.name} onChange={(_, v) => setFormData({ ...formData, shipmentTypeId: v?.id })} renderInput={(p) => <TextField {...p} label="Тип доставки" size="small" />} /></Grid>
                                 </Grid>
                                 <Divider />

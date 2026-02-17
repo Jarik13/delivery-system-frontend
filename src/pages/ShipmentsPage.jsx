@@ -112,6 +112,18 @@ const ShipmentsPage = () => {
         setExpandedHistory(prev => ({ ...prev, [shipmentId]: true }));
     };
 
+    const handleClearFilters = () => {
+        setFilters({
+            trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',    
+            createdAtFrom: '', createdAtTo: '', issuedAtFrom: '', issuedAtTo: '',
+            weightMin: stats?.minWeight || 0, weightMax: stats?.maxWeight || 100, totalPriceMin: stats?.minTotalPrice || 0, totalPriceMax: stats?.maxTotalPrice || 10000,
+            deliveryPriceMin: 0, deliveryPriceMax: 5000, weightPriceMin: 0, weightPriceMax: 2000,
+            distancePriceMin: 0, distancePriceMax: 2000, boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
+            specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000, insuranceFeeMin: 0, insuranceFeeMax: 1000
+        });
+        setPage(0);
+    }
+
     const handleDelete = async (id) => {
         if (window.confirm('Видалити це відправлення?')) {
             try {
@@ -154,7 +166,7 @@ const ShipmentsPage = () => {
             <DataFilters 
                 filters={filters} 
                 onChange={(k, v) => setFilters(p => ({...p, [k]: v}))} 
-                onClear={() => {}} 
+                onClear={handleClearFilters} 
                 fields={filterFields} 
                 searchPlaceholder="Трек-номер..."
                 quickFilters={['shipmentStatusId', 'shipmentTypeId']}
