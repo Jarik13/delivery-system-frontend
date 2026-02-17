@@ -58,6 +58,8 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
     const calculatePrice = useCallback(() => {
         const weight = parseFloat(formData.parcel.actualWeight) || 0;
         const declaredValue = parseFloat(formData.parcel.declaredValue) || 0;
+        
+        // Базова логіка розрахунку (можна коригувати залежно від типу доставки)
         let deliveryPrice = 50;
         let weightPrice = weight > 5 ? (weight - 5) * 10 : 0;
         let boxVariantPrice = 0;
@@ -67,13 +69,20 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
             const selectedBox = boxVariants.find(b => b.id === formData.box.boxVariantId);
             if (selectedBox) boxVariantPrice = selectedBox.price || 0;
         }
+
+        // Якщо обрано специфічний тип доставки, можна додати логіку зміни ціни тут
+        if (formData.shipmentTypeId) {
+            const type = shipmentTypes.find(t => t.id === formData.shipmentTypeId);
+            if (type?.name?.toLowerCase().includes('експрес')) deliveryPrice += 30;
+        }
+
         const totalPrice = deliveryPrice + weightPrice + boxVariantPrice + insuranceFee;
 
         setFormData(prev => ({
             ...prev,
             price: { ...prev.price, deliveryPrice, weightPrice, boxVariantPrice, insuranceFee, totalPrice }
         }));
-    }, [formData.parcel, formData.box, boxVariants]);
+    }, [formData.parcel, formData.box, formData.shipmentTypeId, boxVariants, shipmentTypes]);
 
     useEffect(() => {
         if (activeStep === 2) calculatePrice();
@@ -186,6 +195,15 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <Divider />
                                 <DeliveryPointSelector point={formData.origin} label="Звідки" onChange={(val) => setFormData({...formData, origin: val})} />
                                 <DeliveryPointSelector point={formData.destination} label="Куди" onChange={(val) => setFormData({...formData, destination: val})} />
+                                
+                                {/* ТИП ВІДПРАВЛЕННЯ (Експрес / Стандарт тощо) */}
+                                <Autocomplete 
+                                    options={shipmentTypes} 
+                                    getOptionLabel={(o) => o.name || ''}
+                                    value={shipmentTypes.find(t => t.id === formData.shipmentTypeId) || null}
+                                    onChange={(_, v) => setFormData({...formData, shipmentTypeId: v?.id})}
+                                    renderInput={(p) => <TextField {...p} label="Тип доставки" />}
+                                />
                             </Box>
                         </motion.div>
                     )}
@@ -199,7 +217,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <Card variant="outlined" sx={{ border: `1px solid #eee`, bgcolor: '#fafafa', borderRadius: 3 }}>
                                     <CardContent>
                                         <Grid container spacing={2}>
-                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Доставка:</Typography><Typography fontWeight="700">50.00 ₴</Typography></Grid>
+                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Доставка:</Typography><Typography fontWeight="700">{formData.price.deliveryPrice.toFixed(2)} ₴</Typography></Grid>
                                             <Grid item xs={6}><Typography variant="caption" color="text.secondary">За вагу:</Typography><Typography fontWeight="700">{formData.price.weightPrice.toFixed(2)} ₴</Typography></Grid>
                                             <Grid item xs={6}><Typography variant="caption" color="text.secondary">Коробка:</Typography><Typography fontWeight="700">{formData.price.boxVariantPrice.toFixed(2)} ₴</Typography></Grid>
                                             <Grid item xs={6}><Typography variant="caption" color="text.secondary">Страховка:</Typography><Typography fontWeight="700">{formData.price.insuranceFee.toFixed(2)} ₴</Typography></Grid>
@@ -211,10 +229,26 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                         </Box>
                                     </CardContent>
                                 </Card>
-                                <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'} onChange={(e) => setFormData({...formData, senderPay: e.target.value === 'sender'})}>
-                                    <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Оплачує відправник" />
-                                    <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Оплачує отримувач" />
-                                </RadioGroup>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>Хто оплачує:</Typography>
+                                    <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'} onChange={(e) => setFormData({...formData, senderPay: e.target.value === 'sender'})}>
+                                        <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Відправник" />
+                                        <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }} />} label="Отримувач" />
+                                    </RadioGroup>
+                                </Box>
+
+                                {/* ЧАСТКОВА ОПЛАТА */}
+                                <FormControlLabel 
+                                    control={
+                                        <Checkbox 
+                                            sx={{ '&.Mui-checked': { color: mainColor } }} 
+                                            checked={formData.partiallyPaid} 
+                                            onChange={(e) => setFormData({...formData, partiallyPaid: e.target.checked})} 
+                                        />
+                                    } 
+                                    label="Дозволити часткову оплату (кредит / аванс)" 
+                                />
                             </Box>
                         </motion.div>
                     )}
