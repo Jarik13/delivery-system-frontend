@@ -11,8 +11,7 @@ import {
 } from '@mui/material';
 import {
     LocalShipping, Close, Map as MapIcon, Schedule, CheckCircle,
-    RadioButtonUnchecked, ArrowForward, Person, DirectionsCar,
-    Inventory, Add, Edit, Delete,
+    RadioButtonUnchecked, Add, Edit, Delete,
     ExpandMore,
     AccessTime,
     Scale,
@@ -29,22 +28,21 @@ import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
 const LeafletMap = ({ trip }) => {
-    const mapRef = useRef(null); // Посилання на статичний div
+    const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const [isMapReady, setIsMapReady] = useState(false);
 
     useEffect(() => {
-        // Перевіряємо наявність бібліотеки та посилання на елемент
         if (!window.L || !mapRef.current || !trip) return;
 
-        // ✅ 1. Якщо карта вже була ініціалізована — видаляємо її правильно
+        console.log("📍 Координати точок:", trip.waypointCoordinates);
+
         if (mapInstanceRef.current) {
             mapInstanceRef.current.remove();
             mapInstanceRef.current = null;
         }
 
         try {
-            // ✅ 2. Ініціалізуємо карту прямо в ref-диві (без innerHTML і appendChild)
             const map = window.L.map(mapRef.current, {
                 zoomControl: true,
                 attributionControl: false
@@ -56,83 +54,100 @@ const LeafletMap = ({ trip }) => {
             }).addTo(map);
 
             const allPoints = [];
+
             if (trip.originCoordinates?.latitude) {
                 allPoints.push({
                     lat: trip.originCoordinates.latitude,
                     lng: trip.originCoordinates.longitude,
-                    name: trip.originCity,
+                    name: trip.originCity || 'Старт',
                     type: 'origin'
                 });
             }
-            // ... (додавання решти точок: waypoints, destination) ...
+
+            if (trip.waypointCoordinates && Array.isArray(trip.waypointCoordinates)) {
+                trip.waypointCoordinates.forEach((wp, index) => {
+                    const isLast = index === trip.waypointCoordinates.length - 1;
+                    const isDest = wp.latitude === trip.destinationCoordinates?.latitude;
+                    
+                    if (wp.latitude && wp.longitude && (!isLast || !isDest)) {
+                        allPoints.push({
+                            lat: wp.latitude,
+                            lng: wp.longitude,
+                            name: wp.cityName || `Зупинка ${index + 1}`,
+                            type: 'waypoint'
+                        });
+                    }
+                });
+            }
+
             if (trip.destinationCoordinates?.latitude) {
                 allPoints.push({
                     lat: trip.destinationCoordinates.latitude,
                     lng: trip.destinationCoordinates.longitude,
-                    name: trip.destinationCity,
+                    name: trip.destinationCity || 'Фініш',
                     type: 'destination'
                 });
             }
 
             if (allPoints.length === 0) {
                 map.setView([49.0, 31.0], 6);
-                setIsMapReady(true);
             } else {
                 const coords = allPoints.map(p => [p.lat, p.lng]);
                 
-                // Додаємо маркери
                 allPoints.forEach((point, idx) => {
-                    const color = point.type === 'origin' ? '#4CAF50' : point.type === 'destination' ? '#F44336' : '#2196F3';
-                    const label = point.type === 'origin' ? 'A' : point.type === 'destination' ? 'B' : (idx).toString();
+                    let color = '#2196F3';
+                    let label = idx.toString();
+
+                    if (point.type === 'origin') { color = '#4CAF50'; label = 'A'; }
+                    else if (point.type === 'destination') { color = '#F44336'; label = 'B'; }
                     
                     const icon = window.L.divIcon({
-                        html: `<div style="background:${color};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${label}</div>`,
-                        className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+                        html: `<div style="background:${color};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${label}</div>`,
+                        className: '', iconSize: [28, 28], iconAnchor: [14, 14]
                     });
 
-                    window.L.marker([point.lat, point.lng], { icon }).addTo(map).bindPopup(point.name);
+                    window.L.marker([point.lat, point.lng], { icon })
+                        .addTo(map)
+                        .bindPopup(`<b>${point.name}</b>`);
                 });
 
-                // Малюємо лінію
                 if (coords.length >= 2) {
-                    window.L.polyline(coords, { color: '#1976d2', weight: 3, dashArray: '10, 10' }).addTo(map);
-                    map.fitBounds(window.L.latLngBounds(coords), { padding: [50, 50] });
+                    window.L.polyline(coords, { 
+                        color: '#1976d2', 
+                        weight: 3, 
+                        opacity: 0.7,
+                        dashArray: '8, 8'
+                    }).addTo(map);
+                    
+                    map.fitBounds(window.L.latLngBounds(coords), { padding: [40, 40] });
                 } else {
                     map.setView(coords[0], 12);
                 }
             }
 
-            // Змушуємо карту підлаштуватися під розмір контейнера
             setTimeout(() => {
                 map.invalidateSize();
                 setIsMapReady(true);
-            }, 200);
+            }, 250);
 
         } catch (error) {
             console.error('Map error:', error);
             setIsMapReady(true);
         }
 
-        // ✅ 3. Cleanup функція: видаляємо карту, щоб React не конфліктував
         return () => {
             if (mapInstanceRef.current) {
                 mapInstanceRef.current.remove();
                 mapInstanceRef.current = null;
             }
         };
-    }, [trip]); // Перезапуск при зміні рейсу
+    }, [trip]);
 
     return (
-        <Box sx={{ position: 'relative', width: '100%', height: '420px' }}>
-            <div 
-                ref={mapRef} 
-                style={{ width: '100%', height: '100%', borderRadius: '0 0 16px 16px' }} 
-            />
+        <Box sx={{ position: 'relative', width: '100%', height: '420px', bgcolor: '#f0f0f0' }}>
+            <div ref={mapRef} style={{ width: '100%', height: '100%', borderRadius: '0 0 16px 16px' }} />
             {!isMapReady && (
-                <Box sx={{ 
-                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                    display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: '#f5f5f5', zIndex: 1000 
-                }}>
+                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.7)', zIndex: 1000 }}>
                     <CircularProgress size={30} />
                 </Box>
             )}
