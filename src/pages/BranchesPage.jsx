@@ -10,6 +10,7 @@ import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import DataPagination from '../components/pagination/DataPagination';
 
 const BranchesPage = () => {
     const theme = useTheme();
@@ -205,7 +206,14 @@ const BranchesPage = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={handleChangePage} rowsPerPage={rowsPerPage} onRowsPerPageChange={handleChangeRowsPerPage} labelRowsPerPage="Рядків:" />
+                <DataPagination
+                    count={totalElements}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    onPageChange={(e, n) => setPage(newPage)}
+                    onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                    label="Відділень:"
+                />
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>

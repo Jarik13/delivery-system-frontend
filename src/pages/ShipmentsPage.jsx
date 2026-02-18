@@ -6,19 +6,20 @@ import DataFilters from '../components/DataFilters';
 import ShipmentGrid from '../components/ShipmentGrid';
 import ShipmentWizardDialog from '../components/ShipmentWizardDialog';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import DataPagination from '../components/pagination/DataPagination';
 
 const STATUS_COLORS = {
-    'Створено': '#2196f3', 
-    'Очікує надходження': '#90caf9', 
+    'Створено': '#2196f3',
+    'Очікує надходження': '#90caf9',
     'Прийнято у відділенні': '#673ab7',
-    'Сортування термінал': '#00bcd4', 
-    'У дорозі': '#ff9800', 
+    'Сортування термінал': '#00bcd4',
+    'У дорозі': '#ff9800',
     'Прибув у відділення': '#8bc34a',
-    'Видано кур\'єру': '#e91e63', 
-    'Доставлено': '#2e7d32', 
+    'Видано кур\'єру': '#e91e63',
+    'Доставлено': '#2e7d32',
     'Відмова': '#f44336',
-    'Втрачено': '#b71c1c', 
-    'Утилізовано': '#616161', 
+    'Втрачено': '#b71c1c',
+    'Утилізовано': '#616161',
     'default': '#9e9e9e'
 };
 
@@ -114,7 +115,7 @@ const ShipmentsPage = () => {
 
     const handleClearFilters = () => {
         setFilters({
-            trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',    
+            trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',
             createdAtFrom: '', createdAtTo: '', issuedAtFrom: '', issuedAtTo: '',
             weightMin: stats?.minWeight || 0, weightMax: stats?.maxWeight || 100, totalPriceMin: stats?.minTotalPrice || 0, totalPriceMax: stats?.maxTotalPrice || 10000,
             deliveryPriceMin: 0, deliveryPriceMax: 5000, weightPriceMin: 0, weightPriceMax: 2000,
@@ -157,17 +158,17 @@ const ShipmentsPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування логістичними маршрутами</Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }} 
+                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
                     startIcon={<Add />} onClick={() => setOpenWizard(true)}>
                     Створити ТТН
                 </Button>
             </Paper>
 
-            <DataFilters 
-                filters={filters} 
-                onChange={(k, v) => setFilters(p => ({...p, [k]: v}))} 
-                onClear={handleClearFilters} 
-                fields={filterFields} 
+            <DataFilters
+                filters={filters}
+                onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))}
+                onClear={handleClearFilters}
+                fields={filterFields}
                 searchPlaceholder="Трек-номер..."
                 quickFilters={['shipmentStatusId', 'shipmentTypeId']}
             />
@@ -179,10 +180,14 @@ const ShipmentsPage = () => {
                 onToggleFinance={(id) => setExpandedFinance(prev => ({ ...prev, [id]: !prev[id] }))}
             />
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)}
-                    rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))} />
-            </Box>
+            <DataPagination
+                count={totalElements}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={(e, n) => setPage(n)}
+                onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                label="Відправлень:"
+            />
 
             <ShipmentWizardDialog
                 open={openWizard}
@@ -195,7 +200,7 @@ const ShipmentsPage = () => {
                 }}
             />
 
-            <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({...notification, open: false})} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+            <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
                 <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>{notification.message}</Alert>
             </Snackbar>
         </Box>

@@ -6,6 +6,7 @@ import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import TripsList from '../components/trips/TripsList';
 import LeafletMap from '../components/trips/LeafletMap';
+import DataPagination from '../components/pagination/DataPagination';
 
 const TripsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['trips']] || '#1976d2';
@@ -79,23 +80,14 @@ const TripsPage = () => {
                 <TripsList trips={trips} mainColor={mainColor} onMap={setMapTrip} onDelete={(id) => console.log('Delete', id)} />
             )}
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <TablePagination
-                    component="div"
-                    count={totalElements}
-                    page={page}
-                    onPageChange={(e, n) => setPage(n)}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={(e) => {
-                        setRowsPerPage(parseInt(e.target.value, 10));
-                        setPage(0);
-                    }}
-                    labelRowsPerPage="Показувати по:"
-                    labelDisplayedRows={({ from, to, count }) =>
-                        `${from}–${to} з ${count !== -1 ? count : `більше ніж ${to}`}`
-                    }
-                />
-            </Box>
+            <DataPagination
+                count={totalElements}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={(e, n) => setPage(n)}
+                onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                label="Рейсів::"
+            />
 
             <Dialog open={!!mapTrip} onClose={() => setMapTrip(null)} fullWidth maxWidth="md">
                 <DialogTitle sx={{ bgcolor: mainColor, color: 'white', display: 'flex', justifyContent: 'space-between' }}>

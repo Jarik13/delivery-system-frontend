@@ -11,6 +11,7 @@ import {
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import DataPagination from '../components/pagination/DataPagination';
 
 const ParcelsPage = () => {
     const theme = useTheme();
@@ -301,14 +302,14 @@ const ParcelsPage = () => {
                 ))}
             </Grid>
 
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', bgcolor: 'white', borderRadius: 2, p: 1 }}>
-                <TablePagination
-                    component="div" count={totalElements} page={page}
-                    onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-                    labelRowsPerPage="Посилок:"
-                />
-            </Box>
+            <DataPagination
+                count={totalElements}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={(e, n) => setPage(n)}
+                onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                label="Посилок:"
+            />
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 4 } }}>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>

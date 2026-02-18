@@ -16,6 +16,7 @@ import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import RouteBranchSelector from '../components/RouteBranchSelector';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import DataPagination from '../components/pagination/DataPagination';
 
 const RoutesPage = () => {
     const theme = useTheme();
@@ -221,7 +222,14 @@ const RoutesPage = () => {
                         ))}
                     </TableBody>
                 </Table>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))} labelRowsPerPage="Рядків:" />
+                <DataPagination
+                    count={totalElements}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    onPageChange={(e, n) => setPage(n)}
+                    onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                    label="Маршрутів:"
+                />
             </TableContainer>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 4, maxWidth: '1050px', width: '100%' } }}>

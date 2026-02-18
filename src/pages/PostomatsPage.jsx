@@ -10,6 +10,7 @@ import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import DataPagination from '../components/pagination/DataPagination';
 
 const PostomatsPage = () => {
     const theme = useTheme();
@@ -203,7 +204,16 @@ const PostomatsPage = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }} labelRowsPerPage="Рядків:" />
+                <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0' }}>
+                    <DataPagination
+                        count={totalElements}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        onPageChange={(e, n) => setPage(n)}
+                        onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                        label="Поштоматів:"
+                    />
+                </Box>
             </Paper>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
