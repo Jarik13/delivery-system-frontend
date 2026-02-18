@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, Button, CircularProgress, TablePagination, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, alpha } from '@mui/material';
+import {
+    Box, Paper, Typography, Button, CircularProgress,
+    Snackbar, Alert, Dialog, DialogTitle, DialogContent,
+    IconButton, alpha
+} from '@mui/material';
 import { LocalShipping, Add, Map as MapIcon, Close } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -17,7 +21,9 @@ const TripsPage = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
+
     const [mapTrip, setMapTrip] = useState(null);
+
     const [filters, setFilters] = useState({ tripNumber: '', tripStatusId: '' });
 
     useEffect(() => {
@@ -43,18 +49,13 @@ const TripsPage = () => {
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    const handleCloseMap = () => {
+        setMapTrip(null);
+    };
+
     const filterFields = [
-        {
-            name: 'tripNumber',
-            label: 'Номер рейсу',
-            type: 'text'
-        },
-        {
-            name: 'tripStatusId',
-            label: 'Статус',
-            type: 'select',
-            options: statuses
-        }
+        { name: 'tripNumber', label: 'Номер рейсу', type: 'text' },
+        { name: 'tripStatusId', label: 'Статус', type: 'select', options: statuses }
     ];
 
     return (
@@ -76,7 +77,11 @@ const TripsPage = () => {
                 searchPlaceholder="Пошук за номером..."
             />
 
-            {loading ? <CircularProgress sx={{ display: 'block', mx: 'auto', my: 4 }} /> : (
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                    <CircularProgress sx={{ color: mainColor }} />
+                </Box>
+            ) : (
                 <TripsList trips={trips} mainColor={mainColor} onMap={setMapTrip} onDelete={(id) => console.log('Delete', id)} />
             )}
 
@@ -86,16 +91,34 @@ const TripsPage = () => {
                 rowsPerPage={rowsPerPage}
                 onPageChange={(e, n) => setPage(n)}
                 onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
-                label="Рейсів::"
+                label="Рейсів:"
             />
 
-            <Dialog open={!!mapTrip} onClose={() => setMapTrip(null)} fullWidth maxWidth="md">
-                <DialogTitle sx={{ bgcolor: mainColor, color: 'white', display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography>Маршрут №{mapTrip?.tripNumber}</Typography>
-                    <IconButton onClick={() => setMapTrip(null)} color="inherit"><Close /></IconButton>
+            <Dialog
+                open={!!mapTrip}
+                onClose={handleCloseMap}
+                fullWidth
+                maxWidth="md"
+            >
+                <DialogTitle sx={{
+                    bgcolor: mainColor,
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <MapIcon />
+                        <Typography fontWeight="bold">Маршрут рейсу №{mapTrip?.tripNumber}</Typography>
+                    </Box>
+                    <IconButton onClick={handleCloseMap} color="inherit">
+                        <Close />
+                    </IconButton>
                 </DialogTitle>
-                <DialogContent sx={{ p: 0, height: 450 }}>
-                    {mapTrip && <LeafletMap trip={mapTrip} />}
+                <DialogContent sx={{ p: 0, height: 450, position: 'relative', overflow: 'hidden' }}>
+                    {mapTrip && (
+                        <LeafletMap trip={mapTrip} />
+                    )}
                 </DialogContent>
             </Dialog>
         </Box>
