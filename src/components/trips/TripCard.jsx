@@ -1,78 +1,236 @@
 import React, { useState } from 'react';
 import { 
     Box, Card, CardContent, Typography, Divider, Stack, 
-    IconButton, Collapse, Grid, Button, Chip, alpha 
+    IconButton, Collapse, Grid, Button, Chip, alpha, Paper 
 } from '@mui/material';
 import { 
     ExpandMore, ExpandLess, ArrowRightAlt, Scale, 
     Straighten, LocationOn, AccessTime, LocalShipping, 
-    Map as MapIcon, Delete 
+    Map as MapIcon, Delete, Person, DirectionsCar, 
+    Inventory2, Room
 } from '@mui/icons-material';
 import StatusChip from './StatusChip';
 
 const TripCard = ({ trip, color, onMap, onDelete }) => {
     const [expanded, setExpanded] = useState(false);
-    const formatTime = (dateStr) => dateStr ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+
+    const formatTime = (dateStr) => 
+        dateStr ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+    
+    const formatDate = (dateStr) => 
+        dateStr ? new Date(dateStr).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }) : '';
 
     return (
         <Card sx={{
-            mb: 2, ml: { xs: 0, sm: 6.5 }, borderRadius: 4, border: '1px solid #eee',
-            transition: 'all 0.2s ease-in-out',
-            '&:hover': { boxShadow: '0 6px 16px rgba(0,0,0,0.08)', borderColor: alpha(color, 0.3) }
+            mb: 2, 
+            ml: { xs: 0, sm: 6.5 }, 
+            borderRadius: 4, 
+            border: '1px solid',
+            borderColor: 'divider',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&:hover': { 
+                boxShadow: `0 12px 24px ${alpha(color, 0.15)}`, 
+                borderColor: alpha(color, 0.4),
+                transform: 'translateY(-2px)'
+            },
+            '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                bgcolor: color,
+                opacity: 0.8
+            }
         }} elevation={0}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, flex: 1 }}>
-                        <Box sx={{ minWidth: 65, textAlign: 'center' }}>
-                            <Typography variant="h6" fontWeight="900" sx={{ color, lineHeight: 1 }}>№{trip.tripNumber}</Typography>
-                            <Box sx={{ mt: 0.5 }}>
-                                <Typography variant="caption" display="block" fontWeight="800" sx={{ fontSize: '0.7rem' }}>{formatTime(trip.scheduledDepartureTime)}</Typography>
-                                <Typography variant="caption" display="block" color="text.disabled" fontWeight="600" sx={{ fontSize: '0.6rem' }}>{formatTime(trip.scheduledArrivalTime)}</Typography>
-                            </Box>
-                        </Box>
-                        <Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed' }} />
-                        <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" fontWeight="800" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                {trip.originCity} <ArrowRightAlt sx={{ fontSize: 16, color: 'text.disabled' }} /> {trip.destinationCity}
+            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                        <Box sx={{ textAlign: 'center', minWidth: 70 }}>
+                            <Typography variant="caption" fontWeight="bold" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                                Рейс
                             </Typography>
-                            <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}><Scale sx={{ fontSize: 13 }} /><Typography variant="caption" fontWeight="600">{trip.totalWeight} кг</Typography></Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}><Straighten sx={{ fontSize: 13 }} /><Typography variant="caption" fontWeight="600">{trip.distanceKm} км</Typography></Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}><LocationOn sx={{ fontSize: 13 }} /><Typography variant="caption" fontWeight="600">{trip.waypoints?.length || 0} точок</Typography></Box>
+                            <Typography variant="h5" fontWeight="900" sx={{ color, lineHeight: 1.1 }}>
+                                {trip.tripNumber.toString().slice(-4)}
+                            </Typography>
+                        </Box>
+
+                        <Divider orientation="vertical" flexItem sx={{ borderStyle: 'dashed', my: 0.5 }} />
+
+                        <Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', border: `2px solid ${color}` }} />
+                                    <Box sx={{ width: 2, height: 15, bgcolor: 'divider', my: 0.3 }} />
+                                    <Box sx={{ width: 10, height: 10, bgcolor: color, borderRadius: '2px' }} />
+                                </Box>
+                                <Box>
+                                    <Typography variant="body1" fontWeight="800" sx={{ lineHeight: 1.2 }}>
+                                        {trip.originCity}
+                                    </Typography>
+                                    <Typography variant="body1" fontWeight="800" sx={{ lineHeight: 1.8 }}>
+                                        {trip.destinationCity}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            
+                            <Stack direction="row" spacing={1}>
+                                <Chip 
+                                    icon={<Scale sx={{ fontSize: '14px !important' }} />} 
+                                    label={`${trip.totalWeight?.toLocaleString()} кг`} 
+                                    size="small" 
+                                    sx={{ bgcolor: alpha(color, 0.05), fontWeight: 600, fontSize: '0.7rem' }} 
+                                />
+                                <Chip 
+                                    icon={<Straighten sx={{ fontSize: '14px !important' }} />} 
+                                    label={`${trip.distanceKm} км`} 
+                                    size="small" 
+                                    sx={{ bgcolor: '#f5f5f5', fontWeight: 600, fontSize: '0.7rem' }} 
+                                />
+                                <Chip 
+                                    icon={<LocationOn sx={{ fontSize: '14px !important' }} />} 
+                                    label={`${trip.waypoints?.length || 0} точок`} 
+                                    size="small" 
+                                    sx={{ bgcolor: '#f5f5f5', fontWeight: 600, fontSize: '0.7rem' }} 
+                                />
                             </Stack>
                         </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <StatusChip status={trip.status} />
-                            <IconButton size="small" onClick={() => setExpanded(!expanded)}>{expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}</IconButton>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', minHeight: 80 }}>
+                        <StatusChip status={trip.status} />
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 'auto' }}>
+                            <Box sx={{ textAlign: 'right', mr: 1 }}>
+                                <Typography variant="caption" display="block" fontWeight="700" color="text.primary">
+                                    {trip.vehiclePlate}
+                                </Typography>
+                                <Typography variant="caption" display="block" color="text.disabled" fontWeight="600">
+                                    {trip.driverName?.split(' ')[0]}
+                                </Typography>
+                            </Box>
+                            <IconButton 
+                                size="small" 
+                                onClick={() => setExpanded(!expanded)}
+                                sx={{ 
+                                    bgcolor: expanded ? alpha(color, 0.1) : '#f8f9fa',
+                                    color: expanded ? color : 'inherit',
+                                    '&:hover': { bgcolor: alpha(color, 0.2) }
+                                }}
+                            >
+                                {expanded ? <ExpandLess /> : <ExpandMore />}
+                            </IconButton>
                         </Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight="600">{trip.vehiclePlate} • {trip.driverName?.split(' ')[0]}</Typography>
                     </Box>
                 </Box>
 
                 <Collapse in={expanded} timeout="auto" unmountOnExit>
-                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #f0f0f0' }}>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={4}>
-                                <Typography variant="caption" fontWeight="800" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, textTransform: 'uppercase' }}><AccessTime sx={{ fontSize: 16 }} /> Час</Typography>
-                                <Typography variant="body2">Виїзд: {formatTime(trip.actualDepartureTime) || '—'}</Typography>
-                                <Typography variant="body2">Прибуття: {formatTime(trip.actualArrivalTime) || '—'}</Typography>
+                    <Box sx={{ mt: 3 }}>
+                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#f8f9fa', 0.5), borderStyle: 'dashed' }}>
+                            <Grid container spacing={3}>
+                                <Grid item xs={12} sm={4}>
+                                    <Stack spacing={1.5}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <AccessTime sx={{ color, fontSize: 18 }} />
+                                            <Typography variant="subtitle2" fontWeight="800" sx={{ textTransform: 'uppercase', fontSize: '0.7rem', color: 'text.secondary' }}>
+                                                Таймінг (План)
+                                            </Typography>
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled" display="block">Відправлення</Typography>
+                                            <Typography variant="body2" fontWeight="700">{formatDate(trip.scheduledDepartureTime)}, {formatTime(trip.scheduledDepartureTime)}</Typography>
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled" display="block">Прибуття</Typography>
+                                            <Typography variant="body2" fontWeight="700">{formatDate(trip.scheduledArrivalTime)}, {formatTime(trip.scheduledArrivalTime)}</Typography>
+                                        </Box>
+                                    </Stack>
+                                </Grid>
+
+                                <Grid item xs={12} sm={4}>
+                                    <Stack spacing={1.5}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <DirectionsCar sx={{ color, fontSize: 18 }} />
+                                            <Typography variant="subtitle2" fontWeight="800" sx={{ textTransform: 'uppercase', fontSize: '0.7rem', color: 'text.secondary' }}>
+                                                Ресурси
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Person sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                            <Typography variant="body2" fontWeight="600">{trip.driverName}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Inventory2 sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                            <Typography variant="body2" fontWeight="600">{trip.shipmentsCount?.toLocaleString()} відправлень</Typography>
+                                        </Box>
+                                    </Stack>
+                                </Grid>
+
+                                <Grid item xs={12} sm={4}>
+                                    <Stack spacing={1.5}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Room sx={{ color, fontSize: 18 }} />
+                                            <Typography variant="subtitle2" fontWeight="800" sx={{ textTransform: 'uppercase', fontSize: '0.7rem', color: 'text.secondary' }}>
+                                                Зупинки
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.6 }}>
+                                            {trip.waypoints?.length > 0 ? (
+                                                trip.waypoints.map((wp, i) => (
+                                                    <Chip 
+                                                        key={i} 
+                                                        label={wp} 
+                                                        size="small" 
+                                                        variant="filled"
+                                                        sx={{ 
+                                                            fontSize: '0.65rem', 
+                                                            height: 22, 
+                                                            bgcolor: 'white',
+                                                            border: '1px solid #e0e0e0',
+                                                            fontWeight: 600 
+                                                        }} 
+                                                    />
+                                                ))
+                                            ) : (
+                                                <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                                                    Прямий рейс без зупинок
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </Stack>
+                                </Grid>
                             </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Typography variant="caption" fontWeight="800" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, textTransform: 'uppercase' }}><LocalShipping sx={{ fontSize: 16 }} /> Вантаж</Typography>
-                                <Typography variant="body2">{trip.shipmentsCount} посилок / {trip.totalWeight} кг</Typography>
-                            </Grid>
-                            <Grid item xs={12} md={4}>
-                                <Typography variant="caption" fontWeight="800" color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, textTransform: 'uppercase' }}><LocationOn sx={{ fontSize: 16 }} /> Зупинки</Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {trip.waypoints?.map((wp, i) => <Chip key={i} label={wp} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.6rem' }} />)}
-                                </Box>
-                            </Grid>
-                        </Grid>
-                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                            <Button size="small" startIcon={<MapIcon />} onClick={() => onMap(trip)}>Карта</Button>
-                            <Button size="small" color="error" startIcon={<Delete />} onClick={() => onDelete(trip.id)}>Видалити</Button>
+                        </Paper>
+
+                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+                            <Button 
+                                variant="text" 
+                                size="small" 
+                                startIcon={<Delete />} 
+                                color="error"
+                                onClick={() => onDelete(trip.id)}
+                                sx={{ fontWeight: 700, borderRadius: 2 }}
+                            >
+                                Видалити
+                            </Button>
+                            <Button 
+                                variant="contained" 
+                                size="small" 
+                                startIcon={<MapIcon />} 
+                                onClick={() => onMap(trip)}
+                                sx={{ 
+                                    bgcolor: color, 
+                                    fontWeight: 700, 
+                                    borderRadius: 2,
+                                    px: 3,
+                                    '&:hover': { bgcolor: alpha(color, 0.8) } 
+                                }}
+                            >
+                                Карта маршруту
+                            </Button>
                         </Box>
                     </Box>
                 </Collapse>

@@ -3,9 +3,9 @@ import { Box, Paper, Typography, Button, CircularProgress, TablePagination, Snac
 import { LocalShipping, Add, Map as MapIcon, Close } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
+import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import TripsList from '../components/trips/TripsList';
 import LeafletMap from '../components/trips/LeafletMap';
-import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 
 const TripsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['trips']] || '#1976d2';
