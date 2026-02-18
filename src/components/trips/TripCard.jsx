@@ -4,21 +4,20 @@ import {
     IconButton, Collapse, Grid, Button, Chip, alpha, Paper 
 } from '@mui/material';
 import { 
-    ExpandMore, ExpandLess, ArrowRightAlt, Scale, 
+    ExpandMore, ExpandLess, Scale, 
     Straighten, LocationOn, AccessTime, LocalShipping, 
     Map as MapIcon, Delete, Person, DirectionsCar, 
-    Inventory2, Room
+    Inventory2, Room, History
 } from '@mui/icons-material';
 import StatusChip from './StatusChip';
 
 const TripCard = ({ trip, color, onMap, onDelete }) => {
     const [expanded, setExpanded] = useState(false);
 
-    const formatTime = (dateStr) => 
-        dateStr ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+    const formatTime = (dateStr) => dateStr ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
     
     const formatDate = (dateStr) => 
-        dateStr ? new Date(dateStr).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' }) : '';
+        dateStr ? new Date(dateStr).toLocaleDateString('uk-UA', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
     return (
         <Card sx={{
@@ -49,12 +48,12 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-                        <Box sx={{ textAlign: 'center', minWidth: 70 }}>
+                        <Box sx={{ textAlign: 'center', minWidth: 80 }}>
                             <Typography variant="caption" fontWeight="bold" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
                                 Рейс
                             </Typography>
                             <Typography variant="h5" fontWeight="900" sx={{ color, lineHeight: 1.1 }}>
-                                {trip.tripNumber.toString().slice(-4)}
+                                {trip.tripNumber}
                             </Typography>
                         </Box>
 
@@ -129,32 +128,59 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
 
                 <Collapse in={expanded} timeout="auto" unmountOnExit>
                     <Box sx={{ mt: 3 }}>
-                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 3, bgcolor: alpha('#f8f9fa', 0.5), borderStyle: 'dashed' }}>
+                        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha('#f8f9fa', 0.5), borderStyle: 'dashed' }}>
                             <Grid container spacing={3}>
-                                <Grid item xs={12} sm={4}>
-                                    <Stack spacing={1.5}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <Stack spacing={1}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                             <AccessTime sx={{ color, fontSize: 18 }} />
-                                            <Typography variant="subtitle2" fontWeight="800" sx={{ textTransform: 'uppercase', fontSize: '0.7rem', color: 'text.secondary' }}>
-                                                Таймінг (План)
+                                            <Typography variant="subtitle2" fontWeight="800" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                                                Відправлення
                                             </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography variant="caption" color="text.disabled" display="block">Відправлення</Typography>
-                                            <Typography variant="body2" fontWeight="700">{formatDate(trip.scheduledDepartureTime)}, {formatTime(trip.scheduledDepartureTime)}</Typography>
+                                            <Typography variant="caption" color="text.disabled">План:</Typography>
+                                            <Typography variant="body2" fontWeight="700">
+                                                {formatDate(trip.scheduledDepartureTime)} {formatTime(trip.scheduledDepartureTime)}
+                                            </Typography>
                                         </Box>
                                         <Box>
-                                            <Typography variant="caption" color="text.disabled" display="block">Прибуття</Typography>
-                                            <Typography variant="body2" fontWeight="700">{formatDate(trip.scheduledArrivalTime)}, {formatTime(trip.scheduledArrivalTime)}</Typography>
+                                            <Typography variant="caption" color="text.disabled">Факт:</Typography>
+                                            <Typography variant="body2" fontWeight="700" color={trip.actualDepartureTime ? "success.main" : "text.secondary"}>
+                                                {trip.actualDepartureTime ? `${formatDate(trip.actualDepartureTime)} ${formatTime(trip.actualDepartureTime)}` : "Очікується"}
+                                            </Typography>
                                         </Box>
                                     </Stack>
                                 </Grid>
 
-                                <Grid item xs={12} sm={4}>
-                                    <Stack spacing={1.5}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <Stack spacing={1}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                            <History sx={{ color, fontSize: 18 }} />
+                                            <Typography variant="subtitle2" fontWeight="800" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                                                Прибуття
+                                            </Typography>
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled">План:</Typography>
+                                            <Typography variant="body2" fontWeight="700">
+                                                {formatDate(trip.scheduledArrivalTime)} {formatTime(trip.scheduledArrivalTime)}
+                                            </Typography>
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="caption" color="text.disabled">Факт:</Typography>
+                                            <Typography variant="body2" fontWeight="700" color={trip.actualArrivalTime ? "success.main" : "text.secondary"}>
+                                                {trip.actualArrivalTime ? `${formatDate(trip.actualArrivalTime)} ${formatTime(trip.actualArrivalTime)}` : "У дорозі"}
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+                                </Grid>
+
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <Stack spacing={1}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                             <DirectionsCar sx={{ color, fontSize: 18 }} />
-                                            <Typography variant="subtitle2" fontWeight="800" sx={{ textTransform: 'uppercase', fontSize: '0.7rem', color: 'text.secondary' }}>
+                                            <Typography variant="subtitle2" fontWeight="800" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.7rem' }}>
                                                 Ресурси
                                             </Typography>
                                         </Box>
@@ -169,11 +195,11 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                     </Stack>
                                 </Grid>
 
-                                <Grid item xs={12} sm={4}>
-                                    <Stack spacing={1.5}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Grid item xs={12} sm={6} md={3}>
+                                    <Stack spacing={1}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                                             <Room sx={{ color, fontSize: 18 }} />
-                                            <Typography variant="subtitle2" fontWeight="800" sx={{ textTransform: 'uppercase', fontSize: '0.7rem', color: 'text.secondary' }}>
+                                            <Typography variant="subtitle2" fontWeight="800" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.7rem' }}>
                                                 Зупинки
                                             </Typography>
                                         </Box>
@@ -184,7 +210,6 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                                         key={i} 
                                                         label={wp} 
                                                         size="small" 
-                                                        variant="filled"
                                                         sx={{ 
                                                             fontSize: '0.65rem', 
                                                             height: 22, 
@@ -196,7 +221,7 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                                 ))
                                             ) : (
                                                 <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-                                                    Прямий рейс без зупинок
+                                                    Прямий рейс
                                                 </Typography>
                                             )}
                                         </Box>
@@ -205,14 +230,14 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                             </Grid>
                         </Paper>
 
-                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+                        <Box sx={{ mt: 2.5, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
                             <Button 
                                 variant="text" 
                                 size="small" 
                                 startIcon={<Delete />} 
                                 color="error"
                                 onClick={() => onDelete(trip.id)}
-                                sx={{ fontWeight: 700, borderRadius: 2 }}
+                                sx={{ fontWeight: 800, borderRadius: 2 }}
                             >
                                 Видалити
                             </Button>
@@ -223,10 +248,10 @@ const TripCard = ({ trip, color, onMap, onDelete }) => {
                                 onClick={() => onMap(trip)}
                                 sx={{ 
                                     bgcolor: color, 
-                                    fontWeight: 700, 
+                                    fontWeight: 800, 
                                     borderRadius: 2,
                                     px: 3,
-                                    '&:hover': { bgcolor: alpha(color, 0.8) } 
+                                    '&:hover': { bgcolor: alpha(color, 0.85) } 
                                 }}
                             >
                                 Карта маршруту
