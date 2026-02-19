@@ -43,10 +43,15 @@ const LeafletMap = ({ trip }) => {
             }
 
             if (Array.isArray(trip.waypointCoordinates)) {
-                trip.waypointCoordinates.forEach((wp, index) => {
-                    const isLast = index === trip.waypointCoordinates.length - 1;
-                    const isDest = wp.latitude === trip.destinationCoordinates?.latitude;
-                    if (wp.latitude && wp.longitude && (!isLast || !isDest)) {
+                const sorted = [...trip.waypointCoordinates]
+                    .sort((a, b) => (a.sequenceNumber ?? 999) - (b.sequenceNumber ?? 999));
+
+                sorted.forEach((wp, index) => {
+                    const isLast = index === sorted.length - 1;
+                    const isDest = wp.latitude === trip.destinationCoordinates?.latitude &&
+                        wp.longitude === trip.destinationCoordinates?.longitude;
+
+                    if (wp.latitude && wp.longitude && !(isLast && isDest)) {
                         allPoints.push({
                             lat: wp.latitude,
                             lng: wp.longitude,
@@ -73,9 +78,20 @@ const LeafletMap = ({ trip }) => {
 
                 allPoints.forEach((point, idx) => {
                     let color = '#2196F3';
-                    let label = String(idx);
-                    if (point.type === 'origin') { color = '#4CAF50'; label = 'A'; }
-                    else if (point.type === 'destination') { color = '#F44336'; label = 'B'; }
+                    let label;
+
+                    if (point.type === 'origin') {
+                        color = '#4CAF50';
+                        label = 'А';
+                    } else if (point.type === 'destination') {
+                        color = '#F44336';
+                        label = 'Б';
+                    } else {
+                        const waypointIdx = allPoints
+                            .slice(0, idx)
+                            .filter(p => p.type === 'waypoint').length + 1;
+                        label = String(waypointIdx);
+                    }
 
                     const icon = L.divIcon({
                         html: `<div style="background:${color};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${label}</div>`,
