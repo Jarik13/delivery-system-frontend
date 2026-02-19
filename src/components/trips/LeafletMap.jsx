@@ -3,7 +3,7 @@ import { Box, CircularProgress } from '@mui/material';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-const LeafletMap = ({ trip }) => {
+const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
     const mapRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const [isMapReady, setIsMapReady] = useState(false);
@@ -77,7 +77,7 @@ const LeafletMap = ({ trip }) => {
                 const coords = allPoints.map(p => [p.lat, p.lng]);
 
                 allPoints.forEach((point, idx) => {
-                    let color = '#2196F3';
+                    let color = mainColor;
                     let label;
 
                     if (point.type === 'origin') {
@@ -87,9 +87,7 @@ const LeafletMap = ({ trip }) => {
                         color = '#F44336';
                         label = 'Б';
                     } else {
-                        const waypointIdx = allPoints
-                            .slice(0, idx)
-                            .filter(p => p.type === 'waypoint').length + 1;
+                        const waypointIdx = allPoints.slice(0, idx).filter(p => p.type === 'waypoint').length + 1;
                         label = String(waypointIdx);
                     }
 
@@ -107,7 +105,7 @@ const LeafletMap = ({ trip }) => {
 
                 if (coords.length >= 2) {
                     L.polyline(coords, {
-                        color: '#1976d2', weight: 3, opacity: 0.7, dashArray: '8, 8'
+                        color: mainColor, weight: 3, opacity: 0.7, dashArray: '8, 8'
                     }).addTo(map);
                     map.fitBounds(L.latLngBounds(coords), { padding: [40, 40] });
                 } else {
