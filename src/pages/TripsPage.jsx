@@ -18,24 +18,46 @@ const TripsPage = () => {
     const [trips, setTrips] = useState([]);
     const [loading, setLoading] = useState(false);
     const [statuses, setStatuses] = useState([]);
+    const [drivers, setDrivers] = useState([]);
+    const [vehicles, setVehicles] = useState([]);
+
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
 
     const [mapTrip, setMapTrip] = useState(null);
 
-    const [filters, setFilters] = useState({ tripNumber: '', tripStatusId: '' });
+    const [filters, setFilters] = useState({
+        tripNumber: '',
+        tripStatusId: '',
+        driverId: '',
+        vehicleId: '',
+        scheduledDepartureFrom: '',
+        scheduledDepartureTo: '',
+        scheduledArrivalFrom: '',
+        scheduledArrivalTo: '',
+        actualDepartureFrom: '',
+        actualDepartureTo: '',
+        actualArrivalFrom: '',
+        actualArrivalTo: '',
+    });
 
     useEffect(() => {
-        const fetchStatuses = async () => {
+        const fetchReferences = async () => {
             try {
-                const res = await DictionaryApi.getAll('trip-statuses', 0, 100);
-                setStatuses(res.data.content || []);
+                const [statusRes, driverRes, vehicleRes] = await Promise.all([
+                    DictionaryApi.getAll('trip-statuses', 0, 100),
+                    DictionaryApi.getAll('drivers', 0, 1000),
+                    DictionaryApi.getAll('vehicles', 0, 1000),
+                ]);
+                setStatuses(statusRes.data.content || []);
+                setDrivers(driverRes.data.content || []);
+                setVehicles(vehicleRes.data.content || []);
             } catch (err) {
-                console.error("Помилка завантаження статусів", err);
+                console.error("Помилка завантаження довідників", err);
             }
         };
-        fetchStatuses();
+        fetchReferences();
     }, []);
 
     const loadData = useCallback(async () => {
@@ -54,8 +76,18 @@ const TripsPage = () => {
     };
 
     const filterFields = [
-        { name: 'tripNumber', label: 'Номер рейсу', type: 'text' },
-        { name: 'tripStatusId', label: 'Статус', type: 'select', options: statuses }
+        { name: 'tripNumber', label: 'Номер рейсу', type: 'text', md: 3 },
+        { name: 'tripStatusId', label: 'Статус', type: 'select', options: statuses, md: 3 },
+        { name: 'driverId', label: 'Водій', type: 'select', options: drivers, md: 3 },
+        { name: 'vehicleId', label: 'Транспортний засіб', type: 'select', options: vehicles, md: 3 },
+        { name: 'scheduledDepartureFrom', label: 'Плановий виїзд (від)', type: 'datetime', md: 3 },
+        { name: 'scheduledDepartureTo', label: 'Плановий виїзд (до)', type: 'datetime', md: 3 },
+        { name: 'scheduledArrivalFrom', label: 'Планове прибуття (від)', type: 'datetime', md: 3 },
+        { name: 'scheduledArrivalTo', label: 'Планове прибуття (до)', type: 'datetime', md: 3 },
+        { name: 'actualDepartureFrom', label: 'Фактичний виїзд (від)', type: 'datetime', md: 3 },
+        { name: 'actualDepartureTo', label: 'Фактичний виїзд (до)', type: 'datetime', md: 3 },
+        { name: 'actualArrivalFrom', label: 'Фактичне прибуття (від)', type: 'datetime', md: 3 },
+        { name: 'actualArrivalTo', label: 'Фактичне прибуття (до)', type: 'datetime', md: 3 },
     ];
 
     return (
@@ -81,7 +113,20 @@ const TripsPage = () => {
             <DataFilters
                 filters={filters}
                 onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))}
-                onClear={() => setFilters({ tripNumber: '', tripStatusId: '' })}
+                onClear={() => setFilters({ 
+                    tripNumber: '', 
+                    tripStatusId: '', 
+                    driverId: '', 
+                    vehicleId: '', 
+                    scheduledDepartureFrom: '', 
+                    scheduledDepartureTo: '', 
+                    scheduledArrivalFrom: '', 
+                    scheduledArrivalTo: '', 
+                    actualDepartureFrom: '', 
+                    actualDepartureTo: '', 
+                    actualArrivalFrom: '', 
+                    actualArrivalTo: '' 
+                })}
                 fields={filterFields}
                 quickFilters={['tripStatusId']}
                 searchPlaceholder="Пошук за номером..."
