@@ -11,6 +11,7 @@ import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import TripsList from '../components/trips/TripsList';
 import LeafletMap from '../components/trips/LeafletMap';
 import DataPagination from '../components/pagination/DataPagination';
+import TripWizardDialog from '../components/trips/TripWizardDialog';
 
 const TripsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['trips']] || '#1976d2';
@@ -41,6 +42,8 @@ const TripsPage = () => {
         actualArrivalFrom: '',
         actualArrivalTo: '',
     });
+
+    const [openWizard, setOpenWizard] = useState(false);
 
     useEffect(() => {
         const fetchReferences = async () => {
@@ -104,7 +107,7 @@ const TripsPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування маршрутами та рейсами</Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
+                <Button onClick={() => setOpenWizard(true)} variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
                     startIcon={<Add />}>
                     Новий рейс
                 </Button>
@@ -113,19 +116,19 @@ const TripsPage = () => {
             <DataFilters
                 filters={filters}
                 onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))}
-                onClear={() => setFilters({ 
-                    tripNumber: '', 
-                    tripStatusId: '', 
-                    driverId: '', 
-                    vehicleId: '', 
-                    scheduledDepartureFrom: '', 
-                    scheduledDepartureTo: '', 
-                    scheduledArrivalFrom: '', 
-                    scheduledArrivalTo: '', 
-                    actualDepartureFrom: '', 
-                    actualDepartureTo: '', 
-                    actualArrivalFrom: '', 
-                    actualArrivalTo: '' 
+                onClear={() => setFilters({
+                    tripNumber: '',
+                    tripStatusId: '',
+                    driverId: '',
+                    vehicleId: '',
+                    scheduledDepartureFrom: '',
+                    scheduledDepartureTo: '',
+                    scheduledArrivalFrom: '',
+                    scheduledArrivalTo: '',
+                    actualDepartureFrom: '',
+                    actualDepartureTo: '',
+                    actualArrivalFrom: '',
+                    actualArrivalTo: ''
                 })}
                 fields={filterFields}
                 quickFilters={['tripStatusId']}
@@ -147,6 +150,16 @@ const TripsPage = () => {
                 onPageChange={(e, n) => setPage(n)}
                 onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
                 label="Рейсів:"
+            />
+
+            <TripWizardDialog
+                open={openWizard}
+                onClose={() => setOpenWizard(false)}
+                mainColor={mainColor}
+                references={{ drivers, vehicles }}
+                onSuccess={(msg) => {
+                    loadData();
+                }}
             />
 
             <Dialog
