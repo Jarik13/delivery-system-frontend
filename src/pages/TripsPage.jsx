@@ -60,12 +60,22 @@ const TripsPage = () => {
 
     return (
         <Box sx={{ px: 2, pb: 4 }}>
-            <Paper sx={{ p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', bgcolor: mainColor, color: 'white', borderRadius: 3 }}>
+            <Paper elevation={0} sx={{
+                p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                color: 'white', borderRadius: 3
+            }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <LocalShipping />
-                    <Typography variant="h6" fontWeight="bold">Магістральні рейси ({totalElements})</Typography>
+                    <LocalShipping fontSize="large" />
+                    <Box>
+                        <Typography variant="h6" fontWeight="bold">Магістральні рейси</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування маршрутами та рейсами</Typography>
+                    </Box>
                 </Box>
-                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor }} startIcon={<Add />}>Новий рейс</Button>
+                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
+                    startIcon={<Add />}>
+                    Новий рейс
+                </Button>
             </Paper>
 
             <DataFilters
