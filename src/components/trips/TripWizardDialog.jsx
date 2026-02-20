@@ -9,12 +9,32 @@ import {
 import {
     LocalShipping, CheckCircle, ChevronLeft,
     DirectionsCar, AccessTime, Map as MapIcon,
-    Add, Delete, Close, Schedule, Route
+    Add, Delete, Close, Schedule, Route, DragIndicator
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+
+// dnd-kit imports
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragOverlay,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
 import { DictionaryApi } from '../../api/dictionaries';
 import LocationSelector from '../LocationSelector';
 
@@ -25,7 +45,6 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-// Обрізає префікси типу "місто", "село", "смт"
 const cleanCityName = (name) => {
     if (!name) return '';
     return name
@@ -33,12 +52,10 @@ const cleanCityName = (name) => {
         .trim();
 };
 
-// ✅ Виправлений fetchCoordinates — НЕ мішаємо q з country/city
 const fetchCoordinates = async (cityName) => {
     const clean = cleanCityName(cityName);
     if (!clean) return null;
 
-    // Спроба 1: structured query — city + countrycodes (БЕЗ q)
     try {
         const params = new URLSearchParams({
             city: clean,
@@ -50,15 +67,12 @@ const fetchCoordinates = async (cityName) => {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
         if (res.ok) {
             const data = await res.json();
-            if (data.length > 0) {
-                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-            }
+            if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         }
     } catch (e) {
         console.warn('Nominatim structured failed:', e);
     }
 
-    // Спроба 2: q-запит — БЕЗ country параметра, лише назва + "Україна" в рядку
     try {
         const params = new URLSearchParams({
             q: `${clean}, Україна`,
@@ -69,9 +83,7 @@ const fetchCoordinates = async (cityName) => {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
         if (res.ok) {
             const data = await res.json();
-            if (data.length > 0) {
-                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-            }
+            if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         }
     } catch (e) {
         console.warn('Nominatim q-query failed:', e);
@@ -135,6 +147,101 @@ const ColorlibStepIcon = ({ active, completed, icon, mainColor }) => {
     );
 };
 
+// ─── Sortable segment item ───────────────────────────────────────────────────
+
+const SortableSegmentItem = ({ seg, idx, total, mainColor, onCityChange, onRemove }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: seg.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+        position: 'relative',
+        zIndex: isDragging ? 1 : 'auto',
+    };
+
+    const chipColor = idx === 0 ? '#4caf50' : idx === total - 1 ? '#f44336' : mainColor;
+    const chipLabel = idx === 0 ? 'А' : idx === total - 1 ? 'Б' : String(idx);
+    const segmentLabel = idx === 0
+        ? 'Місто відправлення'
+        : idx === total - 1
+        ? 'Місто призначення'
+        : `Проміжна зупинка ${idx}`;
+
+    return (
+        <Paper
+            ref={setNodeRef}
+            style={style}
+            variant="outlined"
+            sx={{
+                p: 1.5, mb: 1.5, borderRadius: 2,
+                borderColor: seg.cityId ? mainColor : '#e0e0e0',
+                bgcolor: seg.cityId ? alpha(mainColor, 0.02) : 'white',
+                boxShadow: isDragging ? 4 : 0,
+                transition: 'box-shadow 0.2s ease',
+            }}
+        >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                {/* Drag handle */}
+                <Box
+                    {...attributes}
+                    {...listeners}
+                    sx={{
+                        display: 'flex', alignItems: 'center',
+                        cursor: 'grab',
+                        color: '#bbb',
+                        '&:hover': { color: mainColor },
+                        '&:active': { cursor: 'grabbing' },
+                        touchAction: 'none',
+                        mr: -0.5,
+                    }}
+                >
+                    <DragIndicator fontSize="small" />
+                </Box>
+
+                <Chip
+                    label={chipLabel}
+                    size="small"
+                    sx={{ bgcolor: chipColor, color: 'white', fontWeight: 700, minWidth: 28 }}
+                />
+                <Typography variant="caption" fontWeight={700} color="text.secondary">
+                    {segmentLabel}
+                </Typography>
+                <Box sx={{ flexGrow: 1 }} />
+                {seg.cityName && (
+                    <Chip
+                        label={seg.cityName} size="small"
+                        sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 600 }}
+                    />
+                )}
+                {seg.lat && (
+                    <Chip label="📍" size="small" title="Координати знайдено"
+                        sx={{ bgcolor: '#e8f5e9', color: '#2e7d32' }} />
+                )}
+                <IconButton size="small" onClick={() => onRemove(seg.id)}
+                    disabled={total <= 2}
+                    sx={{ color: '#f44336' }}>
+                    <Delete fontSize="small" />
+                </IconButton>
+            </Box>
+
+            <LocationSelector
+                selectedCityId={seg.cityId}
+                onCityChange={(cityId, cityName) => onCityChange(seg.id, cityId, cityName)}
+            />
+        </Paper>
+    );
+};
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
 const initialForm = {
     driverId: null,
     vehicleId: null,
@@ -142,10 +249,17 @@ const initialForm = {
     scheduledArrival: '',
 };
 
-const initialSegments = [
-    { cityId: null, cityName: '', sequenceNumber: 1, lat: null, lng: null },
-    { cityId: null, cityName: '', sequenceNumber: 2, lat: null, lng: null },
-];
+let segIdCounter = 0;
+const makeSegment = (overrides = {}) => ({
+    id: `seg-${++segIdCounter}`,
+    cityId: null,
+    cityName: '',
+    lat: null,
+    lng: null,
+    ...overrides,
+});
+
+const initialSegments = () => [makeSegment(), makeSegment()];
 
 const STEPS = [
     { label: 'Екіпаж', icon: 1 },
@@ -167,54 +281,66 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
     const [form, setForm] = useState(initialForm);
     const [mapSelectMode, setMapSelectMode] = useState(false);
     const [segments, setSegments] = useState(initialSegments);
+    const [activeDragId, setActiveDragId] = useState(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
 
     useEffect(() => {
         if (!open) {
             setActiveStep(0);
             setForm(initialForm);
             setMapSelectMode(false);
-            setSegments(initialSegments);
+            setSegments(initialSegments());
         }
     }, [open]);
 
-    const addSegment = () => setSegments(prev => [
-        ...prev, { cityId: null, cityName: '', sequenceNumber: prev.length + 1, lat: null, lng: null }
-    ]);
+    const addSegment = () => setSegments(prev => [...prev, makeSegment()]);
 
-    const removeSegment = (idx) => setSegments(prev => prev.filter((_, i) => i !== idx));
+    const removeSegment = (id) => setSegments(prev => prev.filter(s => s.id !== id));
 
     const go = (next) => {
         setDirection(next > activeStep ? 1 : -1);
         setActiveStep(next);
     };
 
-    const handleCitySelect = useCallback(async (idx, cityId, cityName) => {
+    const handleCityChange = useCallback(async (id, cityId, cityName) => {
         if (!cityId || !cityName) {
-            setSegments(prev => prev.map((s, i) => i === idx
+            setSegments(prev => prev.map(s => s.id === id
                 ? { ...s, cityId: null, cityName: '', lat: null, lng: null } : s));
             return;
         }
 
-        // Одразу зберігаємо назву без координат
-        setSegments(prev => prev.map((s, i) => i === idx
+        setSegments(prev => prev.map(s => s.id === id
             ? { ...s, cityId, cityName, lat: null, lng: null } : s));
 
-        // Шукаємо координати
         const coords = await fetchCoordinates(cityName);
         if (coords) {
-            setSegments(prev => prev.map((s, i) => i === idx
+            setSegments(prev => prev.map(s => s.id === id
                 ? { ...s, lat: coords.lat, lng: coords.lng } : s));
         }
     }, []);
+
+    const handleDragStart = ({ active }) => setActiveDragId(active.id);
+
+    const handleDragEnd = ({ active, over }) => {
+        setActiveDragId(null);
+        if (!over || active.id === over.id) return;
+        setSegments(prev => {
+            const oldIdx = prev.findIndex(s => s.id === active.id);
+            const newIdx = prev.findIndex(s => s.id === over.id);
+            return arrayMove(prev, oldIdx, newIdx);
+        });
+    };
 
     const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
         try {
             const params = new URLSearchParams({
-                lat: latlng.lat,
-                lon: latlng.lng,
-                format: 'json',
-                'accept-language': 'uk',
+                lat: latlng.lat, lon: latlng.lng,
+                format: 'json', 'accept-language': 'uk',
             });
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
             const data = await res.json();
@@ -225,21 +351,18 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
             const found = citiesRes.data.content?.[0];
 
-            setSegments(prev => [...prev, {
+            setSegments(prev => [...prev, makeSegment({
                 cityId: found?.id || null,
                 cityName: found?.name || cityName,
-                sequenceNumber: prev.length + 1,
                 lat: latlng.lat,
-                lng: latlng.lng
-            }]);
+                lng: latlng.lng,
+            })]);
         } catch {
-            setSegments(prev => [...prev, {
-                cityId: null,
+            setSegments(prev => [...prev, makeSegment({
                 cityName: `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
-                sequenceNumber: prev.length + 1,
                 lat: latlng.lat,
-                lng: latlng.lng
-            }]);
+                lng: latlng.lng,
+            })]);
         }
     }, [mapSelectMode]);
 
@@ -252,8 +375,8 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                 scheduledArrivalTime: form.scheduledArrival,
                 waypoints: segments.map((seg, idx) => ({
                     cityId: seg.cityId,
-                    sequenceNumber: idx + 1
-                }))
+                    sequenceNumber: idx + 1,
+                })),
             };
             await DictionaryApi.create('trips', payload);
             onSuccess?.('Рейс створено успішно!');
@@ -265,6 +388,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
 
     const segmentsWithCoords = segments.filter(s => s.lat && s.lng);
     const mapCoords = segmentsWithCoords.map(s => ({ lat: s.lat, lng: s.lng }));
+    const activeSeg = activeDragId ? segments.find(s => s.id === activeDragId) : null;
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md"
@@ -390,54 +514,55 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                     </Box>
                                 </Box>
 
-                                {/* Список через LocationSelector */}
+                                {/* Drag-and-drop список */}
                                 {!mapSelectMode && (
-                                    <Box sx={{ maxHeight: 360, overflowY: 'auto', pr: 0.5 }}>
-                                        {segments.map((seg, idx) => (
-                                            <Paper key={idx} variant="outlined" sx={{
-                                                p: 1.5, mb: 1.5, borderRadius: 2,
-                                                borderColor: seg.cityId ? mainColor : '#e0e0e0',
-                                                bgcolor: seg.cityId ? alpha(mainColor, 0.02) : 'white'
-                                            }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                    <Chip
-                                                        label={idx === 0 ? 'А' : idx === segments.length - 1 ? 'Б' : idx}
-                                                        size="small"
-                                                        sx={{
-                                                            bgcolor: idx === 0 ? '#4caf50'
-                                                                : idx === segments.length - 1 ? '#f44336'
-                                                                : mainColor,
-                                                            color: 'white', fontWeight: 700, minWidth: 28
-                                                        }}
+                                    <DndContext
+                                        sensors={sensors}
+                                        collisionDetection={closestCenter}
+                                        onDragStart={handleDragStart}
+                                        onDragEnd={handleDragEnd}
+                                    >
+                                        <SortableContext
+                                            items={segments.map(s => s.id)}
+                                            strategy={verticalListSortingStrategy}
+                                        >
+                                            <Box sx={{ maxHeight: 360, overflowY: 'auto', pr: 0.5 }}>
+                                                {segments.map((seg, idx) => (
+                                                    <SortableSegmentItem
+                                                        key={seg.id}
+                                                        seg={seg}
+                                                        idx={idx}
+                                                        total={segments.length}
+                                                        mainColor={mainColor}
+                                                        onCityChange={handleCityChange}
+                                                        onRemove={removeSegment}
                                                     />
-                                                    <Typography variant="caption" fontWeight={700} color="text.secondary">
-                                                        {idx === 0 ? 'Місто відправлення'
-                                                            : idx === segments.length - 1 ? 'Місто призначення'
-                                                            : `Проміжна зупинка ${idx}`}
-                                                    </Typography>
-                                                    <Box sx={{ flexGrow: 1 }} />
-                                                    {seg.cityName && (
-                                                        <Chip label={seg.cityName} size="small"
-                                                            sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 600 }} />
-                                                    )}
-                                                    {seg.lat && (
-                                                        <Chip label="📍" size="small"
-                                                            title="Координати знайдено"
-                                                            sx={{ bgcolor: '#e8f5e9', color: '#2e7d32' }} />
-                                                    )}
-                                                    <IconButton size="small" onClick={() => removeSegment(idx)}
-                                                        disabled={segments.length <= 2}
-                                                        sx={{ color: '#f44336' }}>
-                                                        <Delete fontSize="small" />
-                                                    </IconButton>
-                                                </Box>
-                                                <LocationSelector
-                                                    selectedCityId={seg.cityId}
-                                                    onCityChange={(cityId, cityName) => handleCitySelect(idx, cityId, cityName)}
-                                                />
-                                            </Paper>
-                                        ))}
-                                    </Box>
+                                                ))}
+                                            </Box>
+                                        </SortableContext>
+
+                                        {/* Ghost while dragging */}
+                                        <DragOverlay>
+                                            {activeSeg && (
+                                                <Paper variant="outlined" sx={{
+                                                    p: 1.5, borderRadius: 2,
+                                                    borderColor: mainColor,
+                                                    bgcolor: alpha(mainColor, 0.05),
+                                                    boxShadow: 8,
+                                                    opacity: 0.95,
+                                                }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <DragIndicator sx={{ color: mainColor }} />
+                                                        <Chip
+                                                            label={activeSeg.cityName || '…'}
+                                                            size="small"
+                                                            sx={{ bgcolor: alpha(mainColor, 0.15), color: mainColor, fontWeight: 700 }}
+                                                        />
+                                                    </Box>
+                                                </Paper>
+                                            )}
+                                        </DragOverlay>
+                                    </DndContext>
                                 )}
 
                                 {/* Карта */}
@@ -467,7 +592,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
 
                                         {segmentsWithCoords.map((seg, posIdx) => (
                                             <Marker
-                                                key={`${seg.cityId}-${posIdx}`}
+                                                key={`${seg.id}-${posIdx}`}
                                                 position={[seg.lat, seg.lng]}
                                                 icon={makeColoredIcon(
                                                     posIdx === 0 ? '#4caf50'
@@ -494,7 +619,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                     <Box sx={{ maxHeight: 120, overflowY: 'auto' }}>
                                         <List dense disablePadding>
                                             {segments.map((seg, idx) => (
-                                                <ListItem key={idx} sx={{ py: 0.25 }}>
+                                                <ListItem key={seg.id} sx={{ py: 0.25 }}>
                                                     <Chip
                                                         label={idx === 0 ? 'А' : idx === segments.length - 1 ? 'Б' : idx}
                                                         size="small"
@@ -507,7 +632,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                                         primary={seg.cityName}
                                                         primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
                                                     />
-                                                    <IconButton size="small" onClick={() => removeSegment(idx)}
+                                                    <IconButton size="small" onClick={() => removeSegment(seg.id)}
                                                         sx={{ color: '#f44336' }}>
                                                         <Delete fontSize="small" />
                                                     </IconButton>
