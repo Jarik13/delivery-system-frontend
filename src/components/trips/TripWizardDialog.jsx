@@ -42,6 +42,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         handleRegionChange, handleDistrictChange, handleCityChange,
         handleDragStart, handleDragEnd,
         handleMapClick,
+        handleMarkerDrag,
         handleSave,
     } = form$;
 
@@ -123,6 +124,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         handleDragStart={handleDragStart}
                                         handleDragEnd={handleDragEnd}
                                         handleMapClick={handleMapClick}
+                                        handleMarkerDrag={handleMarkerDrag}
                                     />
                                 )}
                                 {activeStep === 2 && (
@@ -139,7 +141,6 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                     )}
                 </DialogContent>
 
-                {/* ── Footer ── */}
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #f0f0f0', gap: 1 }}>
                     <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
                     <Box sx={{ flexGrow: 1 }} />

@@ -1,20 +1,25 @@
 import React from 'react';
 import {
     Box, Typography, Button, Paper, Chip, IconButton,
-    List, ListItem, ListItemText, alpha
+    List, ListItem, ListItemText, alpha, Tooltip
 } from '@mui/material';
 import { Add, Map as MapIcon, Route, Delete, DragIndicator, Fullscreen } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline } from 'react-leaflet';
 import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { stepVariants, makeColoredIcon } from '../utils';
-import { MapClickHandler, MapBoundsUpdater } from '../components/MapHelpers';
+import { MapClickHandler, MapBoundsUpdater, DraggableMarker } from '../components/MapHelpers';
 import SortableSegmentItem from '../components/SortableSegmentItem';
+
+const makeDraggableIcon = (color, label) => {
+    const base = makeColoredIcon(color, label);
+    return base;
+};
 
 const StepRoute = ({
     direction, mainColor,
-    segments, activeSeg, activeDragId,
+    segments, activeSeg,
     mapSelectMode, setMapSelectMode,
     mapFullscreen, setMapFullscreen,
     segmentsWithCoords, mapCoords,
@@ -23,8 +28,10 @@ const StepRoute = ({
     handleRegionChange, handleDistrictChange, handleCityChange,
     handleDragStart, handleDragEnd,
     handleMapClick,
+    handleMarkerDrag,
 }) => (
-    <motion.div key="s1" custom={direction} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+    <motion.div key="s1" custom={direction} variants={stepVariants}
+        initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography variant="subtitle2" sx={{
@@ -109,7 +116,20 @@ const StepRoute = ({
                         px: 2, py: 0.5, borderRadius: 2,
                         fontSize: 12, fontWeight: 700, boxShadow: 2, whiteSpace: 'nowrap',
                     }}>
-                        🗺️ Клікніть на карті щоб додати місто
+                        🗺️ Клікніть щоб додати • Перетягніть маркер щоб перемістити
+                    </Box>
+                )}
+
+                {!mapSelectMode && segmentsWithCoords.length > 0 && (
+                    <Box sx={{
+                        position: 'absolute', bottom: 8, left: 8, zIndex: 1000,
+                        bgcolor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)',
+                        px: 1.5, py: 0.5, borderRadius: 1.5,
+                        fontSize: 11, fontWeight: 600, color: '#666',
+                        border: '1px solid #e0e0e0', boxShadow: 1,
+                        pointerEvents: 'none',
+                    }}>
+                        ↕ Перетягніть маркер щоб скоригувати точку
                     </Box>
                 )}
 
@@ -128,13 +148,26 @@ const StepRoute = ({
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapClickHandler onMapClick={handleMapClick} />
                     <MapBoundsUpdater coords={mapCoords} />
-                    {segmentsWithCoords.map((seg, posIdx) => (
-                        <Marker key={`${seg.id}-${posIdx}`} position={[seg.lat, seg.lng]}
-                            icon={makeColoredIcon(
-                                posIdx === 0 ? '#4caf50' : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor,
-                                posIdx === 0 ? 'А' : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx)
-                            )} />
-                    ))}
+
+                    {segmentsWithCoords.map((seg, posIdx) => {
+                        const color = posIdx === 0 ? '#4caf50'
+                            : posIdx === segmentsWithCoords.length - 1 ? '#f44336'
+                                : mainColor;
+                        const label = posIdx === 0 ? 'А'
+                            : posIdx === segmentsWithCoords.length - 1 ? 'Б'
+                                : String(posIdx);
+
+                        return (
+                            <DraggableMarker
+                                key={`${seg.id}-${posIdx}`}
+                                position={[seg.lat, seg.lng]}
+                                icon={makeColoredIcon(color, label)}
+                                draggable={true}
+                                onDragEnd={(latlng) => handleMarkerDrag(seg.id, latlng)}
+                            />
+                        );
+                    })}
+
                     {segmentsWithCoords.length > 1 && (
                         <Polyline positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
                             pathOptions={{ color: mainColor, weight: 3, dashArray: '6 4' }} />

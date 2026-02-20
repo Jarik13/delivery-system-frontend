@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useMap } from 'react-leaflet';
+import { useEffect, useRef, useCallback } from 'react';
+import { useMap, Marker } from 'react-leaflet';
 import L from 'leaflet';
 
 export const MapClickHandler = ({ onMapClick }) => {
@@ -29,4 +29,23 @@ export const MapInvalidateSize = ({ trigger }) => {
         return () => clearTimeout(timer);
     }, [trigger, map]);
     return null;
+};
+
+export const DraggableMarker = ({ position, icon, draggable = true, onDragEnd }) => {
+    const markerRef = useRef(null);
+
+    const handleDragEnd = useCallback(() => {
+        const marker = markerRef.current;
+        if (marker) onDragEnd?.(marker.getLatLng());
+    }, [onDragEnd]);
+
+    return (
+        <Marker
+            ref={markerRef}
+            position={position}
+            icon={icon}
+            draggable={draggable}
+            eventHandlers={draggable ? { dragend: handleDragEnd } : {}}
+        />
+    );
 };

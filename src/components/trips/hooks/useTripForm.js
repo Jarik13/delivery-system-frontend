@@ -4,7 +4,10 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { DictionaryApi } from '../../../api/dictionaries';
-import { initialForm, initialSegments, makeSegment, fetchCoordinates, toDatetimeLocal } from '../utils';
+import {
+    initialForm, initialSegments, makeSegment,
+    fetchCoordinates, toDatetimeLocal,
+} from '../utils';
 
 const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     const isEditMode = Boolean(tripToEdit);
@@ -23,6 +26,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
+    // ── Reset / load on open ──────────────────────────────────────────────────
     useEffect(() => {
         if (!open) {
             setActiveStep(0);
@@ -83,6 +87,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         loadTrip();
     }, [open, tripToEdit]);
 
+    // ── Segment helpers ───────────────────────────────────────────────────────
     const updateSeg = useCallback((id, patch) =>
         setSegments(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s)), []);
 
@@ -107,6 +112,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         if (coords) updateSeg(id, { lat: coords.lat, lng: coords.lng });
     }, [updateSeg]);
 
+    // ── Drag & drop ───────────────────────────────────────────────────────────
     const handleDragStart = useCallback(({ active }) => setActiveDragId(active.id), []);
     const handleDragEnd = useCallback(({ active, over }) => {
         setActiveDragId(null);
@@ -118,6 +124,33 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         });
     }, []);
 
+    // ── Marker drag ───────────────────────────────────────────────────────────
+    // Оновлює координати сегмента після перетягування маркера на карті.
+    // Також робить reverse geocoding щоб оновити назву міста для точок без cityId.
+    const handleMarkerDrag = useCallback(async (segId, latlng) => {
+        // Спершу оновлюємо координати — карта одразу реагує
+        updateSeg(segId, { lat: latlng.lat, lng: latlng.lng });
+
+        // Reverse geocoding — оновлюємо назву тільки якщо немає прив'язаного cityId
+        const seg = segments.find(s => s.id === segId);
+        if (seg && !seg.cityId) {
+            try {
+                const params = new URLSearchParams({
+                    lat: latlng.lat, lon: latlng.lng, format: 'json', 'accept-language': 'uk'
+                });
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
+                const data = await res.json();
+                const cityName = data.address?.city || data.address?.town
+                    || data.address?.village || data.address?.hamlet
+                    || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+                updateSeg(segId, { cityName });
+            } catch {
+                updateSeg(segId, { cityName: `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}` });
+            }
+        }
+    }, [updateSeg, segments]);
+
+    // ── Map click ─────────────────────────────────────────────────────────────
     const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
         try {
@@ -144,6 +177,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         }
     }, [mapSelectMode]);
 
+    // ── Save ──────────────────────────────────────────────────────────────────
     const handleSave = useCallback(async () => {
         const payload = {
             driverId: form.driverId,
@@ -164,16 +198,19 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         } catch (e) { console.error(e); }
     }, [form, segments, isEditMode, tripToEdit, onSuccess, onClose]);
 
+    // ── Navigation ────────────────────────────────────────────────────────────
     const go = useCallback((next) => {
         setDirection(next > activeStep ? 1 : -1);
         setActiveStep(next);
     }, [activeStep]);
 
+    // ── Derived ───────────────────────────────────────────────────────────────
     const segmentsWithCoords = segments.filter(s => s.lat && s.lng);
     const mapCoords = segmentsWithCoords.map(s => ({ lat: s.lat, lng: s.lng }));
     const activeSeg = activeDragId ? segments.find(s => s.id === activeDragId) : null;
 
     return {
+        // state
         isEditMode,
         activeStep,
         direction,
@@ -186,6 +223,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         loadingTrip,
         segmentsWithCoords,
         mapCoords,
+        // handlers
         sensors,
         go,
         addSegment,
@@ -196,6 +234,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         handleDragStart,
         handleDragEnd,
         handleMapClick,
+        handleMarkerDrag,
         handleSave,
     };
 };
