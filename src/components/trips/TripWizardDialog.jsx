@@ -42,7 +42,10 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         handleRegionChange, handleDistrictChange, handleCityChange,
         handleDragStart, handleDragEnd,
         handleMapClick,
-        handleMarkerDrag,
+        markerRefs,
+        draggingSegId,
+        handleMarkerDragStart,
+        handleMarkerDragEnd,
         handleSave,
     } = form$;
 
@@ -56,6 +59,10 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                 mapCoords={mapCoords}
                 onMapClick={handleMapClick}
                 mapSelectMode={mapSelectMode}
+                markerRefs={markerRefs}
+                draggingSegId={draggingSegId}
+                onMarkerDragStart={handleMarkerDragStart}
+                onMarkerDragEnd={handleMarkerDragEnd}
             />
 
             <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
@@ -124,7 +131,10 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         handleDragStart={handleDragStart}
                                         handleDragEnd={handleDragEnd}
                                         handleMapClick={handleMapClick}
-                                        handleMarkerDrag={handleMarkerDrag}
+                                        markerRefs={markerRefs}
+                                        draggingSegId={draggingSegId}
+                                        handleMarkerDragStart={handleMarkerDragStart}
+                                        handleMarkerDragEnd={handleMarkerDragEnd}
                                     />
                                 )}
                                 {activeStep === 2 && (

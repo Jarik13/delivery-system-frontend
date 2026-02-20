@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
     useSensor, useSensors, PointerSensor, KeyboardSensor,
 } from '@dnd-kit/core';
@@ -26,7 +26,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     );
 
-    // ── Reset / load on open ──────────────────────────────────────────────────
     useEffect(() => {
         if (!open) {
             setActiveStep(0);
@@ -87,7 +86,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         loadTrip();
     }, [open, tripToEdit]);
 
-    // ── Segment helpers ───────────────────────────────────────────────────────
     const updateSeg = useCallback((id, patch) =>
         setSegments(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s)), []);
 
@@ -112,7 +110,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         if (coords) updateSeg(id, { lat: coords.lat, lng: coords.lng });
     }, [updateSeg]);
 
-    // ── Drag & drop ───────────────────────────────────────────────────────────
     const handleDragStart = useCallback(({ active }) => setActiveDragId(active.id), []);
     const handleDragEnd = useCallback(({ active, over }) => {
         setActiveDragId(null);
@@ -124,14 +121,22 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         });
     }, []);
 
-    // ── Marker drag ───────────────────────────────────────────────────────────
-    // Оновлює координати сегмента після перетягування маркера на карті.
-    // Також робить reverse geocoding щоб оновити назву міста для точок без cityId.
-    const handleMarkerDrag = useCallback(async (segId, latlng) => {
-        // Спершу оновлюємо координати — карта одразу реагує
+    const markerRefs = useRef({});
+    const [draggingSegId, setDraggingSegId] = useState(null);
+
+    const handleMarkerDragStart = useCallback((segId) => {
+        setDraggingSegId(segId);
+    }, []);
+
+    const handleMarkerDragEnd = useCallback(async (segId, latlng) => {
+        setDraggingSegId(null);
         updateSeg(segId, { lat: latlng.lat, lng: latlng.lng });
 
-        // Reverse geocoding — оновлюємо назву тільки якщо немає прив'язаного cityId
+        setSegments(prev => {
+            const seg = prev.find(s => s.id === segId);
+            if (!seg || seg.cityId) return prev;
+            return prev;
+        });
         const seg = segments.find(s => s.id === segId);
         if (seg && !seg.cityId) {
             try {
@@ -150,7 +155,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         }
     }, [updateSeg, segments]);
 
-    // ── Map click ─────────────────────────────────────────────────────────────
     const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
         try {
@@ -177,7 +181,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         }
     }, [mapSelectMode]);
 
-    // ── Save ──────────────────────────────────────────────────────────────────
     const handleSave = useCallback(async () => {
         const payload = {
             driverId: form.driverId,
@@ -198,19 +201,16 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         } catch (e) { console.error(e); }
     }, [form, segments, isEditMode, tripToEdit, onSuccess, onClose]);
 
-    // ── Navigation ────────────────────────────────────────────────────────────
     const go = useCallback((next) => {
         setDirection(next > activeStep ? 1 : -1);
         setActiveStep(next);
     }, [activeStep]);
 
-    // ── Derived ───────────────────────────────────────────────────────────────
     const segmentsWithCoords = segments.filter(s => s.lat && s.lng);
     const mapCoords = segmentsWithCoords.map(s => ({ lat: s.lat, lng: s.lng }));
     const activeSeg = activeDragId ? segments.find(s => s.id === activeDragId) : null;
 
     return {
-        // state
         isEditMode,
         activeStep,
         direction,
@@ -223,7 +223,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         loadingTrip,
         segmentsWithCoords,
         mapCoords,
-        // handlers
         sensors,
         go,
         addSegment,
@@ -234,7 +233,10 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         handleDragStart,
         handleDragEnd,
         handleMapClick,
-        handleMarkerDrag,
+        markerRefs,
+        draggingSegId,
+        handleMarkerDragStart,
+        handleMarkerDragEnd,
         handleSave,
     };
 };

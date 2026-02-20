@@ -1,21 +1,16 @@
 import React from 'react';
 import {
     Box, Typography, Button, Paper, Chip, IconButton,
-    List, ListItem, ListItemText, alpha, Tooltip
+    List, ListItem, ListItemText, alpha
 } from '@mui/material';
 import { Add, Map as MapIcon, Route, Delete, DragIndicator, Fullscreen } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { MapContainer, TileLayer, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { stepVariants, makeColoredIcon } from '../utils';
-import { MapClickHandler, MapBoundsUpdater, DraggableMarker } from '../components/MapHelpers';
+import { MapClickHandler, MapBoundsUpdater, DraggableMarker, LivePolyline } from '../components/MapHelpers';
 import SortableSegmentItem from '../components/SortableSegmentItem';
-
-const makeDraggableIcon = (color, label) => {
-    const base = makeColoredIcon(color, label);
-    return base;
-};
 
 const StepRoute = ({
     direction, mainColor,
@@ -28,7 +23,10 @@ const StepRoute = ({
     handleRegionChange, handleDistrictChange, handleCityChange,
     handleDragStart, handleDragEnd,
     handleMapClick,
-    handleMarkerDrag,
+    markerRefs,
+    draggingSegId,
+    handleMarkerDragStart,
+    handleMarkerDragEnd,
 }) => (
     <motion.div key="s1" custom={direction} variants={stepVariants}
         initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
@@ -64,18 +62,14 @@ const StepRoute = ({
             </Box>
 
             {!mapSelectMode && (
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                >
+                <DndContext sensors={sensors} collisionDetection={closestCenter}
+                    onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                     <SortableContext items={segments.map(s => s.id)} strategy={verticalListSortingStrategy}>
                         <Box sx={{ maxHeight: 360, overflowY: 'auto', pr: 0.5 }}>
                             {segments.map((seg, idx) => (
                                 <SortableSegmentItem
-                                    key={seg.id}
-                                    seg={seg} idx={idx} total={segments.length} mainColor={mainColor}
+                                    key={seg.id} seg={seg} idx={idx} total={segments.length}
+                                    mainColor={mainColor}
                                     onRegionChange={handleRegionChange}
                                     onDistrictChange={handleDistrictChange}
                                     onCityChange={handleCityChange}
@@ -84,7 +78,6 @@ const StepRoute = ({
                             ))}
                         </Box>
                     </SortableContext>
-
                     <DragOverlay>
                         {activeSeg && (
                             <Paper variant="outlined" sx={{
@@ -119,20 +112,17 @@ const StepRoute = ({
                         🗺️ Клікніть щоб додати • Перетягніть маркер щоб перемістити
                     </Box>
                 )}
-
                 {!mapSelectMode && segmentsWithCoords.length > 0 && (
                     <Box sx={{
                         position: 'absolute', bottom: 8, left: 8, zIndex: 1000,
                         bgcolor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(4px)',
                         px: 1.5, py: 0.5, borderRadius: 1.5,
                         fontSize: 11, fontWeight: 600, color: '#666',
-                        border: '1px solid #e0e0e0', boxShadow: 1,
-                        pointerEvents: 'none',
+                        border: '1px solid #e0e0e0', boxShadow: 1, pointerEvents: 'none',
                     }}>
                         ↕ Перетягніть маркер щоб скоригувати точку
                     </Box>
                 )}
-
                 <Box onClick={() => setMapFullscreen(true)} title="Розгорнути карту на весь екран" sx={{
                     position: 'absolute', bottom: 8, right: 8, zIndex: 1000,
                     width: 32, height: 32, borderRadius: 1.5,
@@ -149,29 +139,31 @@ const StepRoute = ({
                     <MapClickHandler onMapClick={handleMapClick} />
                     <MapBoundsUpdater coords={mapCoords} />
 
+                    <LivePolyline
+                        coords={segmentsWithCoords.map(s => ({ segId: s.id, lat: s.lat, lng: s.lng }))}
+                        markerRefs={markerRefs}
+                        draggingSegId={draggingSegId}
+                        color={mainColor}
+                    />
+
                     {segmentsWithCoords.map((seg, posIdx) => {
                         const color = posIdx === 0 ? '#4caf50'
-                            : posIdx === segmentsWithCoords.length - 1 ? '#f44336'
-                                : mainColor;
+                            : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor;
                         const label = posIdx === 0 ? 'А'
-                            : posIdx === segmentsWithCoords.length - 1 ? 'Б'
-                                : String(posIdx);
-
+                            : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx);
                         return (
                             <DraggableMarker
-                                key={`${seg.id}-${posIdx}`}
+                                key={seg.id}
+                                segId={seg.id}
                                 position={[seg.lat, seg.lng]}
                                 icon={makeColoredIcon(color, label)}
                                 draggable={true}
-                                onDragEnd={(latlng) => handleMarkerDrag(seg.id, latlng)}
+                                markerRefs={markerRefs}
+                                onDragStart={handleMarkerDragStart}
+                                onDragEnd={handleMarkerDragEnd}
                             />
                         );
                     })}
-
-                    {segmentsWithCoords.length > 1 && (
-                        <Polyline positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
-                            pathOptions={{ color: mainColor, weight: 3, dashArray: '6 4' }} />
-                    )}
                 </MapContainer>
             </Box>
 

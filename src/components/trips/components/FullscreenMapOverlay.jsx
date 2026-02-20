@@ -1,11 +1,19 @@
 import React, { useEffect } from 'react';
 import { Box, Typography, Chip, IconButton } from '@mui/material';
 import { Map as MapIcon, FullscreenExit } from '@mui/icons-material';
-import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import { makeColoredIcon } from '../utils';
-import { MapClickHandler, MapBoundsUpdater, MapInvalidateSize } from './MapHelpers';
+import { MapClickHandler, MapBoundsUpdater, MapInvalidateSize, DraggableMarker, LivePolyline } from './MapHelpers';
 
-const FullscreenMapOverlay = ({ open, onClose, mainColor, segmentsWithCoords, mapCoords, onMapClick, mapSelectMode }) => {
+const FullscreenMapOverlay = ({
+    open, onClose, mainColor,
+    segmentsWithCoords, mapCoords,
+    onMapClick, mapSelectMode,
+    markerRefs,
+    draggingSegId,
+    onMarkerDragStart,
+    onMarkerDragEnd,
+}) => {
     useEffect(() => {
         const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
         if (open) document.addEventListener('keydown', handleKey);
@@ -15,7 +23,11 @@ const FullscreenMapOverlay = ({ open, onClose, mainColor, segmentsWithCoords, ma
     if (!open) return null;
 
     return (
-        <Box sx={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{
+            position: 'fixed', top: 0, left: 0,
+            width: '100vw', height: '100vh',
+            zIndex: 9999, display: 'flex', flexDirection: 'column',
+        }}>
             <Box sx={{
                 position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -27,10 +39,12 @@ const FullscreenMapOverlay = ({ open, onClose, mainColor, segmentsWithCoords, ma
                     <Typography variant="subtitle2" sx={{ color: 'white', fontWeight: 700 }}>
                         Карта маршруту
                     </Typography>
-                    {mapSelectMode && (
-                        <Chip label="🗺️ Клікніть щоб додати місто" size="small"
+                    {mapSelectMode
+                        ? <Chip label="🗺️ Клікніть щоб додати • Перетягніть маркер щоб перемістити" size="small"
                             sx={{ bgcolor: mainColor, color: 'white', fontWeight: 700, ml: 1 }} />
-                    )}
+                        : <Chip label="↕ Перетягніть маркер щоб скоригувати точку" size="small"
+                            sx={{ bgcolor: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 600, ml: 1 }} />
+                    }
                 </Box>
                 <IconButton onClick={onClose} sx={{
                     color: 'white', bgcolor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
@@ -66,17 +80,32 @@ const FullscreenMapOverlay = ({ open, onClose, mainColor, segmentsWithCoords, ma
                 <MapClickHandler onMapClick={onMapClick} />
                 <MapBoundsUpdater coords={mapCoords} />
                 <MapInvalidateSize trigger={open} />
-                {segmentsWithCoords.map((seg, posIdx) => (
-                    <Marker key={`fs-${seg.id}-${posIdx}`} position={[seg.lat, seg.lng]}
-                        icon={makeColoredIcon(
-                            posIdx === 0 ? '#4caf50' : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor,
-                            posIdx === 0 ? 'А' : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx)
-                        )} />
-                ))}
-                {segmentsWithCoords.length > 1 && (
-                    <Polyline positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
-                        pathOptions={{ color: mainColor, weight: 4, dashArray: '8 5' }} />
-                )}
+
+                <LivePolyline
+                    coords={segmentsWithCoords.map(s => ({ segId: s.id, lat: s.lat, lng: s.lng }))}
+                    markerRefs={markerRefs}
+                    draggingSegId={draggingSegId}
+                    color={mainColor}
+                />
+
+                {segmentsWithCoords.map((seg, posIdx) => {
+                    const color = posIdx === 0 ? '#4caf50'
+                        : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor;
+                    const label = posIdx === 0 ? 'А'
+                        : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx);
+                    return (
+                        <DraggableMarker
+                            key={seg.id}
+                            segId={seg.id}
+                            position={[seg.lat, seg.lng]}
+                            icon={makeColoredIcon(color, label)}
+                            draggable={true}
+                            markerRefs={markerRefs}
+                            onDragStart={onMarkerDragStart}
+                            onDragEnd={onMarkerDragEnd}
+                        />
+                    );
+                })}
             </MapContainer>
         </Box>
     );
