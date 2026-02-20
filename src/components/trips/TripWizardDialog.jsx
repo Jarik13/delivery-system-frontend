@@ -1,19 +1,18 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Dialog, DialogContent, DialogActions, TextField, Box,
     Typography, Button, Stepper, Step, StepLabel, Grid,
-    Autocomplete, Divider, Chip, IconButton, Tooltip,
-    List, ListItem, ListItemText, ListItemSecondaryAction,
+    Autocomplete, Divider, Chip, IconButton,
+    List, ListItem, ListItemText,
     alpha, Paper
 } from '@mui/material';
 import {
     LocalShipping, CheckCircle, ChevronLeft,
     DirectionsCar, AccessTime, Map as MapIcon,
-    Add, Delete, DragIndicator, MyLocation, Close,
-    Schedule, Route
+    Add, Delete, Close, Schedule, Route
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DictionaryApi } from '../../api/dictionaries';
@@ -25,6 +24,61 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
+
+// Обрізає префікси типу "місто", "село", "смт"
+const cleanCityName = (name) => {
+    if (!name) return '';
+    return name
+        .replace(/^(місто|м\.|село|с\.|смт\.?|селище міського типу|селище|сmt\.?)\s+/i, '')
+        .trim();
+};
+
+// ✅ Виправлений fetchCoordinates — НЕ мішаємо q з country/city
+const fetchCoordinates = async (cityName) => {
+    const clean = cleanCityName(cityName);
+    if (!clean) return null;
+
+    // Спроба 1: structured query — city + countrycodes (БЕЗ q)
+    try {
+        const params = new URLSearchParams({
+            city: clean,
+            countrycodes: 'ua',
+            format: 'json',
+            limit: '1',
+            'accept-language': 'uk',
+        });
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.length > 0) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            }
+        }
+    } catch (e) {
+        console.warn('Nominatim structured failed:', e);
+    }
+
+    // Спроба 2: q-запит — БЕЗ country параметра, лише назва + "Україна" в рядку
+    try {
+        const params = new URLSearchParams({
+            q: `${clean}, Україна`,
+            format: 'json',
+            limit: '1',
+            'accept-language': 'uk',
+        });
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.length > 0) {
+                return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+            }
+        }
+    } catch (e) {
+        console.warn('Nominatim q-query failed:', e);
+    }
+
+    return null;
+};
 
 const makeColoredIcon = (color, label) => L.divIcon({
     className: '',
@@ -38,7 +92,26 @@ const makeColoredIcon = (color, label) => L.divIcon({
 });
 
 const MapClickHandler = ({ onMapClick }) => {
-    useMapEvents({ click: (e) => onMapClick(e.latlng) });
+    const map = useMap();
+    useEffect(() => {
+        const handler = (e) => onMapClick(e.latlng);
+        map.on('click', handler);
+        return () => map.off('click', handler);
+    }, [map, onMapClick]);
+    return null;
+};
+
+const MapBoundsUpdater = ({ coords }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (!coords || coords.length === 0) return;
+        if (coords.length === 1) {
+            map.setView([coords[0].lat, coords[0].lng], 10);
+        } else {
+            const bounds = L.latLngBounds(coords.map(c => [c.lat, c.lng]));
+            map.fitBounds(bounds, { padding: [40, 40] });
+        }
+    }, [JSON.stringify(coords)]);
     return null;
 };
 
@@ -67,8 +140,12 @@ const initialForm = {
     vehicleId: null,
     scheduledDeparture: '',
     scheduledArrival: '',
-    waypoints: [],
 };
+
+const initialSegments = [
+    { cityId: null, cityName: '', sequenceNumber: 1, lat: null, lng: null },
+    { cityId: null, cityName: '', sequenceNumber: 2, lat: null, lng: null },
+];
 
 const STEPS = [
     { label: 'Екіпаж', icon: 1 },
@@ -89,59 +166,60 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
     const [direction, setDirection] = useState(1);
     const [form, setForm] = useState(initialForm);
     const [mapSelectMode, setMapSelectMode] = useState(false);
-    const [manualInput, setManualInput] = useState({ lat: '', lng: '', label: '' });
-    const [inputMode, setInputMode] = useState('manual');
-
-    const [cities, setCities] = useState([]);
-    const [citySearch, setCitySearch] = useState('');
-    const [segments, setSegments] = useState([{ cityId: null, cityName: '', sequenceNumber: 1 }]);
-
+    const [segments, setSegments] = useState(initialSegments);
 
     useEffect(() => {
         if (!open) {
             setActiveStep(0);
             setForm(initialForm);
             setMapSelectMode(false);
-            setManualInput({ lat: '', lng: '', label: '' });
-            setInputMode('manual');
+            setSegments(initialSegments);
         }
     }, [open]);
 
-    useEffect(() => {
-        if (citySearch.length < 2) return;
-        const timer = setTimeout(() => {
-            DictionaryApi.getAll('cities', 0, 30, { name: citySearch })
-                .then(r => setCities(r.data.content || []));
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [citySearch]);
-
     const addSegment = () => setSegments(prev => [
-        ...prev, { cityId: null, cityName: '', sequenceNumber: prev.length + 1 }
+        ...prev, { cityId: null, cityName: '', sequenceNumber: prev.length + 1, lat: null, lng: null }
     ]);
 
     const removeSegment = (idx) => setSegments(prev => prev.filter((_, i) => i !== idx));
-
-    const updateSegment = (idx, cityId, cityName, lat, lng) => setSegments(prev =>
-        prev.map((s, i) => i === idx ? { ...s, cityId, cityName, lat, lng } : s)
-    );
 
     const go = (next) => {
         setDirection(next > activeStep ? 1 : -1);
         setActiveStep(next);
     };
 
-    async (latlng) => {
+    const handleCitySelect = useCallback(async (idx, cityId, cityName) => {
+        if (!cityId || !cityName) {
+            setSegments(prev => prev.map((s, i) => i === idx
+                ? { ...s, cityId: null, cityName: '', lat: null, lng: null } : s));
+            return;
+        }
+
+        // Одразу зберігаємо назву без координат
+        setSegments(prev => prev.map((s, i) => i === idx
+            ? { ...s, cityId, cityName, lat: null, lng: null } : s));
+
+        // Шукаємо координати
+        const coords = await fetchCoordinates(cityName);
+        if (coords) {
+            setSegments(prev => prev.map((s, i) => i === idx
+                ? { ...s, lat: coords.lat, lng: coords.lng } : s));
+        }
+    }, []);
+
+    const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
         try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?lat=${latlng.lat}&lon=${latlng.lng}&format=json&accept-language=uk`
-            );
+            const params = new URLSearchParams({
+                lat: latlng.lat,
+                lon: latlng.lng,
+                format: 'json',
+                'accept-language': 'uk',
+            });
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
             const data = await res.json();
-            const cityName = data.address?.city
-                || data.address?.town
-                || data.address?.village
-                || data.address?.hamlet
+            const cityName = data.address?.city || data.address?.town
+                || data.address?.village || data.address?.hamlet
                 || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
 
             const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
@@ -163,7 +241,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                 lng: latlng.lng
             }]);
         }
-    }
+    }, [mapSelectMode]);
 
     const handleSave = async () => {
         try {
@@ -185,8 +263,14 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         }
     };
 
+    const segmentsWithCoords = segments.filter(s => s.lat && s.lng);
+    const mapCoords = segmentsWithCoords.map(s => ({ lat: s.lat, lng: s.lng }));
+
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md"
+            PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
+
+            {/* Header */}
             <Box sx={{
                 p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
@@ -214,10 +298,11 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                 </Stepper>
 
                 <AnimatePresence mode="wait" custom={direction}>
+
+                    {/* STEP 0 — Екіпаж */}
                     {activeStep === 0 && (
                         <motion.div key="s0" custom={direction} variants={variants}
-                            initial="enter" animate="center" exit="exit"
-                            transition={{ duration: 0.25 }}>
+                            initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                 <Typography variant="subtitle2" sx={{
                                     color: '#666', fontWeight: 800, textTransform: 'uppercase',
@@ -269,11 +354,12 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                         </motion.div>
                     )}
 
+                    {/* STEP 1 — Маршрут */}
                     {activeStep === 1 && (
                         <motion.div key="s1" custom={direction} variants={variants}
-                            initial="enter" animate="center" exit="exit"
-                            transition={{ duration: 0.25 }}>
+                            initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Typography variant="subtitle2" sx={{
                                         color: '#666', fontWeight: 800, textTransform: 'uppercase',
@@ -282,12 +368,14 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         <Route sx={{ color: mainColor, fontSize: 18 }} /> Міста маршруту
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Button size="small" variant={!mapSelectMode ? 'contained' : 'outlined'}
+                                        <Button size="small"
+                                            variant={!mapSelectMode ? 'contained' : 'outlined'}
                                             onClick={() => setMapSelectMode(false)}
                                             sx={{ bgcolor: !mapSelectMode ? mainColor : undefined }}>
                                             Список
                                         </Button>
-                                        <Button size="small" variant={mapSelectMode ? 'contained' : 'outlined'}
+                                        <Button size="small"
+                                            variant={mapSelectMode ? 'contained' : 'outlined'}
                                             startIcon={<MapIcon />}
                                             onClick={() => setMapSelectMode(true)}
                                             sx={{ bgcolor: mapSelectMode ? mainColor : undefined }}>
@@ -302,9 +390,9 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                     </Box>
                                 </Box>
 
-                                {/* Режим: вибір зі списку через LocationSelector */}
+                                {/* Список через LocationSelector */}
                                 {!mapSelectMode && (
-                                    <Box sx={{ maxHeight: 420, overflowY: 'auto', pr: 0.5 }}>
+                                    <Box sx={{ maxHeight: 360, overflowY: 'auto', pr: 0.5 }}>
                                         {segments.map((seg, idx) => (
                                             <Paper key={idx} variant="outlined" sx={{
                                                 p: 1.5, mb: 1.5, borderRadius: 2,
@@ -318,19 +406,24 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                                         sx={{
                                                             bgcolor: idx === 0 ? '#4caf50'
                                                                 : idx === segments.length - 1 ? '#f44336'
-                                                                    : mainColor,
+                                                                : mainColor,
                                                             color: 'white', fontWeight: 700, minWidth: 28
                                                         }}
                                                     />
                                                     <Typography variant="caption" fontWeight={700} color="text.secondary">
                                                         {idx === 0 ? 'Місто відправлення'
                                                             : idx === segments.length - 1 ? 'Місто призначення'
-                                                                : `Проміжна зупинка ${idx}`}
+                                                            : `Проміжна зупинка ${idx}`}
                                                     </Typography>
                                                     <Box sx={{ flexGrow: 1 }} />
                                                     {seg.cityName && (
                                                         <Chip label={seg.cityName} size="small"
                                                             sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 600 }} />
+                                                    )}
+                                                    {seg.lat && (
+                                                        <Chip label="📍" size="small"
+                                                            title="Координати знайдено"
+                                                            sx={{ bgcolor: '#e8f5e9', color: '#2e7d32' }} />
                                                     )}
                                                     <IconButton size="small" onClick={() => removeSegment(idx)}
                                                         disabled={segments.length <= 2}
@@ -338,39 +431,18 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                                         <Delete fontSize="small" />
                                                     </IconButton>
                                                 </Box>
-                                                <LocationSelector 
+                                                <LocationSelector
                                                     selectedCityId={seg.cityId}
-                                                    onCityChange={async (cityId) => {
-                                                        if (!cityId) {
-                                                            updateSegment(idx, null, '', null, null);
-                                                            return;
-                                                        }
-                                                        try {
-                                                            const cityRes = await DictionaryApi.getById('cities', cityId);
-                                                            const cityName = cityRes.data.name;
-                                                            updateSegment(idx, cityId, cityName, null, null);
-
-                                                            // Координати через Nominatim
-                                                            const res = await fetch(
-                                                                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)}&country=Ukraine&format=json&limit=1&accept-language=uk`
-                                                            );
-                                                            const data = await res.json();
-                                                            if (data.length > 0) {
-                                                                updateSegment(idx, cityId, cityName, parseFloat(data[0].lat), parseFloat(data[0].lon));
-                                                            }
-                                                        } catch {
-                                                            updateSegment(idx, cityId, '', null, null);
-                                                        }
-                                                    }}
+                                                    onCityChange={(cityId, cityName) => handleCitySelect(idx, cityId, cityName)}
                                                 />
                                             </Paper>
                                         ))}
                                     </Box>
                                 )}
 
-                                {/* Карта — завжди видима */}
+                                {/* Карта */}
                                 <Box sx={{
-                                    height: mapSelectMode ? 340 : 160,
+                                    height: mapSelectMode ? 340 : 200,
                                     borderRadius: 2, overflow: 'hidden', position: 'relative',
                                     border: mapSelectMode ? `2px solid ${mainColor}` : '1px solid #e0e0e0',
                                     transition: 'height 0.3s ease'
@@ -387,80 +459,56 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                             🗺️ Клікніть на карті щоб додати місто
                                         </Box>
                                     )}
-                                    <MapContainer center={[49.0, 31.0]} zoom={6} style={{ height: '100%', width: '100%' }}>
+                                    <MapContainer center={[49.0, 31.0]} zoom={6}
+                                        style={{ height: '100%', width: '100%' }}>
                                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                        <MapClickHandler onMapClick={async (latlng) => {
-                                            if (!mapSelectMode) return;
-                                            try {
-                                                const res = await fetch(
-                                                    `https://nominatim.openstreetmap.org/reverse?lat=${latlng.lat}&lon=${latlng.lng}&format=json&accept-language=uk`
-                                                );
-                                                const data = await res.json();
-                                                const cityName = data.address?.city || data.address?.town
-                                                    || data.address?.village || data.address?.hamlet
-                                                    || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+                                        <MapClickHandler onMapClick={handleMapClick} />
+                                        <MapBoundsUpdater coords={mapCoords} />
 
-                                                const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
-                                                const found = citiesRes.data.content?.[0];
+                                        {segmentsWithCoords.map((seg, posIdx) => (
+                                            <Marker
+                                                key={`${seg.cityId}-${posIdx}`}
+                                                position={[seg.lat, seg.lng]}
+                                                icon={makeColoredIcon(
+                                                    posIdx === 0 ? '#4caf50'
+                                                        : posIdx === segmentsWithCoords.length - 1 ? '#f44336'
+                                                        : mainColor,
+                                                    posIdx === 0 ? 'А'
+                                                        : posIdx === segmentsWithCoords.length - 1 ? 'Б'
+                                                        : String(posIdx)
+                                                )}
+                                            />
+                                        ))}
 
-                                                setSegments(prev => [...prev, {
-                                                    cityId: found?.id || null,
-                                                    cityName: found?.name || cityName,
-                                                    sequenceNumber: prev.length + 1,
-                                                    lat: latlng.lat,
-                                                    lng: latlng.lng
-                                                }]);
-                                            } catch {
-                                                setSegments(prev => [...prev, {
-                                                    cityId: null,
-                                                    cityName: `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
-                                                    sequenceNumber: prev.length + 1,
-                                                    lat: latlng.lat,
-                                                    lng: latlng.lng
-                                                }]);
-                                            }
-                                        }} />
-
-                                        {segments.filter(s => s.lat).map((seg, idx) => {
-                                            const withCoords = segments.filter(s => s.lat);
-                                            const posIdx = withCoords.indexOf(seg);
-                                            return (
-                                                <Marker key={idx} position={[seg.lat, seg.lng]}
-                                                    icon={makeColoredIcon(
-                                                        posIdx === 0 ? '#4caf50'
-                                                            : posIdx === withCoords.length - 1 ? '#f44336'
-                                                                : mainColor,
-                                                        posIdx === 0 ? 'А'
-                                                            : posIdx === withCoords.length - 1 ? 'Б'
-                                                                : String(posIdx)
-                                                    )}>
-                                                    <Popup>{seg.cityName}</Popup>
-                                                </Marker>
-                                            );
-                                        })}
-
-                                        {segments.filter(s => s.lat).length > 1 && (
+                                        {segmentsWithCoords.length > 1 && (
                                             <Polyline
-                                                positions={segments.filter(s => s.lat).map(s => [s.lat, s.lng])}
+                                                positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
                                                 pathOptions={{ color: mainColor, weight: 3, dashArray: '6 4' }}
                                             />
                                         )}
                                     </MapContainer>
                                 </Box>
 
-                                {/* Список доданих через карту */}
+                                {/* Список міст доданих через карту */}
                                 {mapSelectMode && segments.filter(s => s.cityName).length > 0 && (
                                     <Box sx={{ maxHeight: 120, overflowY: 'auto' }}>
                                         <List dense disablePadding>
                                             {segments.map((seg, idx) => (
                                                 <ListItem key={idx} sx={{ py: 0.25 }}>
-                                                    <Chip label={idx === 0 ? 'А' : idx === segments.length - 1 ? 'Б' : idx}
+                                                    <Chip
+                                                        label={idx === 0 ? 'А' : idx === segments.length - 1 ? 'Б' : idx}
                                                         size="small"
-                                                        sx={{ bgcolor: idx === 0 ? '#4caf50' : idx === segments.length - 1 ? '#f44336' : mainColor, color: 'white', mr: 1, minWidth: 28 }}
+                                                        sx={{
+                                                            bgcolor: idx === 0 ? '#4caf50' : idx === segments.length - 1 ? '#f44336' : mainColor,
+                                                            color: 'white', mr: 1, minWidth: 28
+                                                        }}
                                                     />
-                                                    <ListItemText primary={seg.cityName}
-                                                        primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }} />
-                                                    <IconButton size="small" onClick={() => removeSegment(idx)} sx={{ color: '#f44336' }}>
+                                                    <ListItemText
+                                                        primary={seg.cityName}
+                                                        primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
+                                                    />
+                                                    <IconButton size="small" onClick={() => removeSegment(idx)}
+                                                        sx={{ color: '#f44336' }}>
                                                         <Delete fontSize="small" />
                                                     </IconButton>
                                                 </ListItem>
@@ -471,7 +519,9 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
 
                                 {segments.filter(s => s.cityName).length >= 2 && (
                                     <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={700}>Маршрут:</Typography>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                                            Маршрут:
+                                        </Typography>
                                         <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
                                             {segments.filter(s => s.cityName).map(s => s.cityName).join(' → ')}
                                         </Typography>
@@ -481,10 +531,10 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                         </motion.div>
                     )}
 
+                    {/* STEP 2 — Розклад */}
                     {activeStep === 2 && (
                         <motion.div key="s2" custom={direction} variants={variants}
-                            initial="enter" animate="center" exit="exit"
-                            transition={{ duration: 0.25 }}>
+                            initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                 <Typography variant="subtitle2" sx={{
                                     color: '#666', fontWeight: 800, textTransform: 'uppercase',
@@ -534,15 +584,13 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                             <Typography variant="body2" color="text.secondary">ТЗ:</Typography>
                                             <Typography variant="body2" fontWeight={600}>
-                                                {vehicles.find(v => v.id === form.vehicleId)?.licensePlate
-                                                    || vehicles.find(v => v.id === form.vehicleId)?.vehicleLicensePlate
-                                                    || '—'}
+                                                {vehicles.find(v => v.id === form.vehicleId)?.licensePlate || '—'}
                                             </Typography>
                                         </Box>
                                         <Divider />
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                             <Typography variant="body2" color="text.secondary">Маршрут:</Typography>
-                                            <Typography variant="body2" fontWeight={600}>
+                                            <Typography variant="body2" fontWeight={600} sx={{ textAlign: 'right', maxWidth: '60%' }}>
                                                 {segments.filter(s => s.cityName).map(s => s.cityName).join(' → ') || '—'}
                                             </Typography>
                                         </Box>
