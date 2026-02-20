@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Dialog, DialogContent, DialogActions, TextField, Box,
     Typography, Button, Stepper, Step, StepLabel, Grid,
@@ -9,7 +9,8 @@ import {
 import {
     LocalShipping, CheckCircle, ChevronLeft,
     DirectionsCar, AccessTime, Map as MapIcon,
-    Add, Delete, Close, Schedule, Route, DragIndicator
+    Add, Delete, Close, Schedule, Route, DragIndicator,
+    Fullscreen, FullscreenExit
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
@@ -42,7 +43,7 @@ L.Icon.Default.mergeOptions({
 const cleanCityName = (name) => {
     if (!name) return '';
     return name
-        .replace(/^(місто|м\.|село|с\.|смт\.?|селище міського типу|селище|сmt\.?)\s+/i, '')
+        .replace(/^(місто|м\.|село|с\.|смт\.?|селище міського типу|селище|smt\.?)\s+/i, '')
         .trim();
 };
 
@@ -94,6 +95,15 @@ const MapBoundsUpdater = ({ coords }) => {
     return null;
 };
 
+const MapInvalidateSize = ({ trigger }) => {
+    const map = useMap();
+    useEffect(() => {
+        const timer = setTimeout(() => map.invalidateSize(), 100);
+        return () => clearTimeout(timer);
+    }, [trigger, map]);
+    return null;
+};
+
 const ColorlibStepIcon = ({ active, completed, icon, mainColor }) => {
     const icons = { 1: <DirectionsCar fontSize="small" />, 2: <Route fontSize="small" />, 3: <Schedule fontSize="small" /> };
     return (
@@ -110,9 +120,124 @@ const ColorlibStepIcon = ({ active, completed, icon, mainColor }) => {
     );
 };
 
-// ─── Sortable segment item ────────────────────────────────────────────────────
-// Отримує повний сег та колбеки на зміну регіону/району/міста окремо,
-// щоб зберігати їх у батьківському стані, а не всередині LocationSelectorControlled.
+const FullscreenMapOverlay = ({ open, onClose, mainColor, segmentsWithCoords, mapCoords, onMapClick, mapSelectMode }) => {
+    useEffect(() => {
+        const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+        if (open) document.addEventListener('keydown', handleKey);
+        return () => document.removeEventListener('keydown', handleKey);
+    }, [open, onClose]);
+
+    if (!open) return null;
+
+    return (
+        <Box sx={{
+            position: 'fixed',
+            top: 0, left: 0,
+            width: '100vw', height: '100vh',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+        }}>
+            <Box sx={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0,
+                zIndex: 1000,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 2, py: 1,
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)',
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <MapIcon sx={{ color: 'white', fontSize: 20 }} />
+                    <Typography variant="subtitle2" sx={{ color: 'white', fontWeight: 700 }}>
+                        Карта маршруту
+                    </Typography>
+                    {mapSelectMode && (
+                        <Chip
+                            label="🗺️ Клікніть щоб додати місто"
+                            size="small"
+                            sx={{ bgcolor: mainColor, color: 'white', fontWeight: 700, ml: 1 }}
+                        />
+                    )}
+                </Box>
+                <IconButton
+                    onClick={onClose}
+                    sx={{
+                        color: 'white',
+                        bgcolor: 'rgba(0,0,0,0.4)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' },
+                    }}
+                >
+                    <FullscreenExit />
+                </IconButton>
+            </Box>
+
+            {/* Route summary bar at bottom */}
+            {mapCoords.length >= 2 && (
+                <Box sx={{
+                    position: 'absolute',
+                    bottom: 0, left: 0, right: 0,
+                    zIndex: 1000,
+                    px: 2, py: 1.5,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    flexWrap: 'wrap',
+                }}>
+                    {segmentsWithCoords.map((seg, idx) => (
+                        <React.Fragment key={seg.id}>
+                            <Chip
+                                label={seg.cityName || '…'}
+                                size="small"
+                                sx={{
+                                    bgcolor: idx === 0 ? '#4caf50' : idx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor,
+                                    color: 'white',
+                                    fontWeight: 700,
+                                    fontSize: 12,
+                                }}
+                            />
+                            {idx < segmentsWithCoords.length - 1 && (
+                                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: 14 }}>→</Typography>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </Box>
+            )}
+
+            {/* Map */}
+            <MapContainer
+                center={[49.0, 31.0]}
+                zoom={6}
+                style={{ height: '100%', width: '100%' }}
+            >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <MapClickHandler onMapClick={onMapClick} />
+                <MapBoundsUpdater coords={mapCoords} />
+                <MapInvalidateSize trigger={open} />
+                {segmentsWithCoords.map((seg, posIdx) => (
+                    <Marker
+                        key={`fs-${seg.id}-${posIdx}`}
+                        position={[seg.lat, seg.lng]}
+                        icon={makeColoredIcon(
+                            posIdx === 0 ? '#4caf50' : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor,
+                            posIdx === 0 ? 'А' : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx)
+                        )}
+                    />
+                ))}
+                {segmentsWithCoords.length > 1 && (
+                    <Polyline
+                        positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
+                        pathOptions={{ color: mainColor, weight: 4, dashArray: '8 5' }}
+                    />
+                )}
+            </MapContainer>
+        </Box>
+    );
+};
 
 const SortableSegmentItem = ({ seg, idx, total, mainColor, onRegionChange, onDistrictChange, onCityChange, onRemove }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: seg.id });
@@ -176,10 +301,6 @@ const SortableSegmentItem = ({ seg, idx, total, mainColor, onRegionChange, onDis
                 </IconButton>
             </Box>
 
-            {/* 
-                regionId, districtId, cityId живуть у сегменті (батьківський стан).
-                LocationSelectorControlled лише відображає та викликає колбеки.
-            */}
             <LocationSelectorControlled
                 regionId={seg.regionId || ''}
                 districtId={seg.districtId || ''}
@@ -193,14 +314,11 @@ const SortableSegmentItem = ({ seg, idx, total, mainColor, onRegionChange, onDis
     );
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const initialForm = { driverId: null, vehicleId: null, scheduledDeparture: '', scheduledArrival: '' };
 
 let segIdCounter = 0;
 const makeSegment = (overrides = {}) => ({
     id: `seg-${++segIdCounter}`,
-    // LocationSelectorControlled state — живе тут, не гине при розмонтуванні
     regionId: null,
     districtId: null,
     cityId: null,
@@ -224,8 +342,6 @@ const variants = {
     exit: (d) => ({ x: d < 0 ? 80 : -80, opacity: 0 }),
 };
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {} }) => {
     const { drivers = [], vehicles = [] } = references;
 
@@ -235,6 +351,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
     const [mapSelectMode, setMapSelectMode] = useState(false);
     const [segments, setSegments] = useState(initialSegments);
     const [activeDragId, setActiveDragId] = useState(null);
+    const [mapFullscreen, setMapFullscreen] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -246,8 +363,13 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             setActiveStep(0);
             setForm(initialForm);
             setMapSelectMode(false);
+            setMapFullscreen(false);
             setSegments(initialSegments());
         }
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) setMapFullscreen(false);
     }, [open]);
 
     const updateSeg = useCallback((id, patch) =>
@@ -256,8 +378,6 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
     const addSegment = () => setSegments(prev => [...prev, makeSegment()]);
     const removeSegment = (id) => setSegments(prev => prev.filter(s => s.id !== id));
     const go = (next) => { setDirection(next > activeStep ? 1 : -1); setActiveStep(next); };
-
-    // ── Handlers для LocationSelectorControlled ──────────────────────────────
 
     const handleRegionChange = useCallback((id, regionId) => {
         updateSeg(id, { regionId, districtId: null, cityId: null, cityName: '', lat: null, lng: null });
@@ -273,12 +393,9 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             return;
         }
         updateSeg(id, { cityId, cityName, lat: null, lng: null });
-
         const coords = await fetchCoordinates(cityName);
         if (coords) updateSeg(id, { lat: coords.lat, lng: coords.lng });
     }, [updateSeg]);
-
-    // ── Drag & drop ──────────────────────────────────────────────────────────
 
     const handleDragStart = ({ active }) => setActiveDragId(active.id);
     const handleDragEnd = ({ active, over }) => {
@@ -290,8 +407,6 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             return arrayMove(prev, oldIdx, newIdx);
         });
     };
-
-    // ── Map click ────────────────────────────────────────────────────────────
 
     const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
@@ -319,8 +434,6 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         }
     }, [mapSelectMode]);
 
-    // ── Save ─────────────────────────────────────────────────────────────────
-
     const handleSave = async () => {
         try {
             await DictionaryApi.create('trips', {
@@ -339,343 +452,372 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
     const mapCoords = segmentsWithCoords.map(s => ({ lat: s.lat, lng: s.lng }));
     const activeSeg = activeDragId ? segments.find(s => s.id === activeDragId) : null;
 
-    // ── Render ────────────────────────────────────────────────────────────────
-
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md"
-            PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
+        <>
+            <FullscreenMapOverlay
+                open={mapFullscreen}
+                onClose={() => setMapFullscreen(false)}
+                mainColor={mainColor}
+                segmentsWithCoords={segmentsWithCoords}
+                mapCoords={mapCoords}
+                onMapClick={handleMapClick}
+                mapSelectMode={mapSelectMode}
+            />
 
-            <Box sx={{
-                p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
-                color: 'white',
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <LocalShipping sx={{ fontSize: 28 }} />
-                    <Box>
-                        <Typography variant="h6" fontWeight={700}>Новий рейс</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8 }}>Створення магістрального рейсу</Typography>
+            <Dialog open={open} onClose={onClose} fullWidth maxWidth="md"
+                PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
+
+                <Box sx={{
+                    p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
+                    color: 'white',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <LocalShipping sx={{ fontSize: 28 }} />
+                        <Box>
+                            <Typography variant="h6" fontWeight={700}>Новий рейс</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>Створення магістрального рейсу</Typography>
+                        </Box>
                     </Box>
+                    <IconButton onClick={onClose} sx={{ color: 'white' }}><Close /></IconButton>
                 </Box>
-                <IconButton onClick={onClose} sx={{ color: 'white' }}><Close /></IconButton>
-            </Box>
 
-            <DialogContent sx={{ minHeight: 520, pt: 3, px: 3 }}>
-                <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-                    {STEPS.map((s) => (
-                        <Step key={s.label}>
-                            <StepLabel StepIconComponent={(p) => <ColorlibStepIcon {...p} mainColor={mainColor} />}>
-                                {s.label}
-                            </StepLabel>
-                        </Step>
-                    ))}
-                </Stepper>
+                <DialogContent sx={{ minHeight: 520, pt: 3, px: 3 }}>
+                    <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+                        {STEPS.map((s) => (
+                            <Step key={s.label}>
+                                <StepLabel StepIconComponent={(p) => <ColorlibStepIcon {...p} mainColor={mainColor} />}>
+                                    {s.label}
+                                </StepLabel>
+                            </Step>
+                        ))}
+                    </Stepper>
 
-                <AnimatePresence mode="wait" custom={direction}>
-
-                    {/* ── STEP 0 — Екіпаж ── */}
-                    {activeStep === 0 && (
-                        <motion.div key="s0" custom={direction} variants={variants}
-                            initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <Typography variant="subtitle2" sx={{
-                                    color: '#666', fontWeight: 800, textTransform: 'uppercase',
-                                    display: 'flex', alignItems: 'center', gap: 1,
-                                }}>
-                                    <DirectionsCar sx={{ color: mainColor, fontSize: 18 }} /> Водій та транспортний засіб
-                                </Typography>
-
-                                <Autocomplete
-                                    options={drivers}
-                                    getOptionLabel={(o) =>
-                                        `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim()
-                                        + (o.licenseNumber ? ` — ${o.licenseNumber}` : '')}
-                                    onChange={(_, v) => setForm(f => ({ ...f, driverId: v?.id }))}
-                                    renderInput={(p) => (
-                                        <TextField {...p} label="Водій" fullWidth
-                                            InputProps={{ ...p.InputProps, startAdornment: <DirectionsCar sx={{ mr: 1, color: mainColor }} /> }} />
-                                    )}
-                                />
-
-                                <Autocomplete
-                                    options={vehicles}
-                                    getOptionLabel={(o) =>
-                                        `${o.licensePlate || ''}` +
-                                        (o.brandName ? ` — ${o.brandName}` : '') +
-                                        (o.bodyTypeName ? `, ${o.bodyTypeName}` : '') +
-                                        (o.loadCapacity ? `, ${o.loadCapacity} т` : '') +
-                                        (o.activityStatusName ? ` [${o.activityStatusName}]` : '')}
-                                    onChange={(_, v) => setForm(f => ({ ...f, vehicleId: v?.id }))}
-                                    renderInput={(p) => (
-                                        <TextField {...p} label="Транспортний засіб" fullWidth
-                                            InputProps={{ ...p.InputProps, startAdornment: <LocalShipping sx={{ mr: 1, color: mainColor }} /> }} />
-                                    )}
-                                />
-
-                                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Примітка</Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                        Водій та транспортний засіб будуть закріплені за рейсом. Розклад та маршрут можна налаштувати на наступних кроках.
-                                    </Typography>
-                                </Paper>
-                            </Box>
-                        </motion.div>
-                    )}
-
-                    {/* ── STEP 1 — Маршрут ── */}
-                    {activeStep === 1 && (
-                        <motion.div key="s1" custom={direction} variants={variants}
-                            initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <AnimatePresence mode="wait" custom={direction}>
+                        {activeStep === 0 && (
+                            <motion.div key="s0" custom={direction} variants={variants}
+                                initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                     <Typography variant="subtitle2" sx={{
                                         color: '#666', fontWeight: 800, textTransform: 'uppercase',
                                         display: 'flex', alignItems: 'center', gap: 1,
                                     }}>
-                                        <Route sx={{ color: mainColor, fontSize: 18 }} /> Міста маршруту
+                                        <DirectionsCar sx={{ color: mainColor, fontSize: 18 }} /> Водій та транспортний засіб
                                     </Typography>
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Button size="small"
-                                            variant={!mapSelectMode ? 'contained' : 'outlined'}
-                                            onClick={() => setMapSelectMode(false)}
-                                            sx={{ bgcolor: !mapSelectMode ? mainColor : undefined }}>
-                                            Список
-                                        </Button>
-                                        <Button size="small"
-                                            variant={mapSelectMode ? 'contained' : 'outlined'}
-                                            startIcon={<MapIcon />}
-                                            onClick={() => setMapSelectMode(true)}
-                                            sx={{ bgcolor: mapSelectMode ? mainColor : undefined }}>
-                                            На карті
-                                        </Button>
-                                        {!mapSelectMode && (
-                                            <Button size="small" variant="contained" startIcon={<Add />}
-                                                onClick={addSegment} sx={{ bgcolor: mainColor }}>
-                                                Місто
-                                            </Button>
+
+                                    <Autocomplete
+                                        options={drivers}
+                                        getOptionLabel={(o) =>
+                                            `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim()
+                                            + (o.licenseNumber ? ` — ${o.licenseNumber}` : '')}
+                                        onChange={(_, v) => setForm(f => ({ ...f, driverId: v?.id }))}
+                                        renderInput={(p) => (
+                                            <TextField {...p} label="Водій" fullWidth
+                                                InputProps={{ ...p.InputProps, startAdornment: <DirectionsCar sx={{ mr: 1, color: mainColor }} /> }} />
                                         )}
-                                    </Box>
-                                </Box>
+                                    />
 
-                                {/* Drag-and-drop список */}
-                                {!mapSelectMode && (
-                                    <DndContext
-                                        sensors={sensors}
-                                        collisionDetection={closestCenter}
-                                        onDragStart={handleDragStart}
-                                        onDragEnd={handleDragEnd}
-                                    >
-                                        <SortableContext items={segments.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                                            <Box sx={{ maxHeight: 360, overflowY: 'auto', pr: 0.5 }}>
-                                                {segments.map((seg, idx) => (
-                                                    <SortableSegmentItem
-                                                        key={seg.id}
-                                                        seg={seg}
-                                                        idx={idx}
-                                                        total={segments.length}
-                                                        mainColor={mainColor}
-                                                        onRegionChange={handleRegionChange}
-                                                        onDistrictChange={handleDistrictChange}
-                                                        onCityChange={handleCityChange}
-                                                        onRemove={removeSegment}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        </SortableContext>
-
-                                        <DragOverlay>
-                                            {activeSeg && (
-                                                <Paper variant="outlined" sx={{
-                                                    p: 1.5, borderRadius: 2,
-                                                    borderColor: mainColor,
-                                                    bgcolor: alpha(mainColor, 0.05),
-                                                    boxShadow: 8, opacity: 0.95,
-                                                }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <DragIndicator sx={{ color: mainColor }} />
-                                                        <Chip label={activeSeg.cityName || '…'} size="small"
-                                                            sx={{ bgcolor: alpha(mainColor, 0.15), color: mainColor, fontWeight: 700 }} />
-                                                    </Box>
-                                                </Paper>
-                                            )}
-                                        </DragOverlay>
-                                    </DndContext>
-                                )}
-
-                                {/* Карта */}
-                                <Box sx={{
-                                    height: mapSelectMode ? 340 : 200,
-                                    borderRadius: 2, overflow: 'hidden', position: 'relative',
-                                    border: mapSelectMode ? `2px solid ${mainColor}` : '1px solid #e0e0e0',
-                                    transition: 'height 0.3s ease',
-                                }}>
-                                    {mapSelectMode && (
-                                        <Box sx={{
-                                            position: 'absolute', top: 8, left: '50%',
-                                            transform: 'translateX(-50%)', zIndex: 1000,
-                                            bgcolor: mainColor, color: 'white',
-                                            px: 2, py: 0.5, borderRadius: 2,
-                                            fontSize: 12, fontWeight: 700, boxShadow: 2, whiteSpace: 'nowrap',
-                                        }}>
-                                            🗺️ Клікніть на карті щоб додати місто
-                                        </Box>
-                                    )}
-                                    <MapContainer center={[49.0, 31.0]} zoom={6} style={{ height: '100%', width: '100%' }}>
-                                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                        <MapClickHandler onMapClick={handleMapClick} />
-                                        <MapBoundsUpdater coords={mapCoords} />
-                                        {segmentsWithCoords.map((seg, posIdx) => (
-                                            <Marker
-                                                key={`${seg.id}-${posIdx}`}
-                                                position={[seg.lat, seg.lng]}
-                                                icon={makeColoredIcon(
-                                                    posIdx === 0 ? '#4caf50' : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor,
-                                                    posIdx === 0 ? 'А' : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx)
-                                                )}
-                                            />
-                                        ))}
-                                        {segmentsWithCoords.length > 1 && (
-                                            <Polyline
-                                                positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
-                                                pathOptions={{ color: mainColor, weight: 3, dashArray: '6 4' }}
-                                            />
+                                    <Autocomplete
+                                        options={vehicles}
+                                        getOptionLabel={(o) =>
+                                            `${o.licensePlate || ''}` +
+                                            (o.brandName ? ` — ${o.brandName}` : '') +
+                                            (o.bodyTypeName ? `, ${o.bodyTypeName}` : '') +
+                                            (o.loadCapacity ? `, ${o.loadCapacity} т` : '') +
+                                            (o.activityStatusName ? ` [${o.activityStatusName}]` : '')}
+                                        onChange={(_, v) => setForm(f => ({ ...f, vehicleId: v?.id }))}
+                                        renderInput={(p) => (
+                                            <TextField {...p} label="Транспортний засіб" fullWidth
+                                                InputProps={{ ...p.InputProps, startAdornment: <LocalShipping sx={{ mr: 1, color: mainColor }} /> }} />
                                         )}
-                                    </MapContainer>
-                                </Box>
+                                    />
 
-                                {/* Список міст (режим карти) */}
-                                {mapSelectMode && segments.filter(s => s.cityName).length > 0 && (
-                                    <Box sx={{ maxHeight: 120, overflowY: 'auto' }}>
-                                        <List dense disablePadding>
-                                            {segments.map((seg, idx) => (
-                                                <ListItem key={seg.id} sx={{ py: 0.25 }}>
-                                                    <Chip
-                                                        label={idx === 0 ? 'А' : idx === segments.length - 1 ? 'Б' : idx}
-                                                        size="small"
-                                                        sx={{
-                                                            bgcolor: idx === 0 ? '#4caf50' : idx === segments.length - 1 ? '#f44336' : mainColor,
-                                                            color: 'white', mr: 1, minWidth: 28,
-                                                        }}
-                                                    />
-                                                    <ListItemText
-                                                        primary={seg.cityName}
-                                                        primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
-                                                    />
-                                                    <IconButton size="small" onClick={() => removeSegment(seg.id)} sx={{ color: '#f44336' }}>
-                                                        <Delete fontSize="small" />
-                                                    </IconButton>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </Box>
-                                )}
-
-                                {segments.filter(s => s.cityName).length >= 2 && (
-                                    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={700}>Маршрут:</Typography>
-                                        <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
-                                            {segments.filter(s => s.cityName).map(s => s.cityName).join(' → ')}
+                                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Примітка</Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                            Водій та транспортний засіб будуть закріплені за рейсом. Розклад та маршрут можна налаштувати на наступних кроках.
                                         </Typography>
                                     </Paper>
-                                )}
-                            </Box>
-                        </motion.div>
-                    )}
+                                </Box>
+                            </motion.div>
+                        )}
 
-                    {/* ── STEP 2 — Розклад ── */}
-                    {activeStep === 2 && (
-                        <motion.div key="s2" custom={direction} variants={variants}
-                            initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <Typography variant="subtitle2" sx={{
-                                    color: '#666', fontWeight: 800, textTransform: 'uppercase',
-                                    display: 'flex', alignItems: 'center', gap: 1,
-                                }}>
-                                    <AccessTime sx={{ color: mainColor, fontSize: 18 }} /> Плановий розклад
-                                </Typography>
+                        {activeStep === 1 && (
+                            <motion.div key="s1" custom={direction} variants={variants}
+                                initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-                                <Grid container spacing={2}>
-                                    <Grid item xs={6}>
-                                        <TextField label="Плановий час виїзду" type="datetime-local" fullWidth
-                                            value={form.scheduledDeparture}
-                                            onChange={(e) => setForm(f => ({ ...f, scheduledDeparture: e.target.value }))}
-                                            InputLabelProps={{ shrink: true }}
-                                            inputProps={{ min: new Date().toISOString().slice(0, 16) }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                        <TextField label="Очікуваний час прибуття" type="datetime-local" fullWidth
-                                            value={form.scheduledArrival}
-                                            onChange={(e) => setForm(f => ({ ...f, scheduledArrival: e.target.value }))}
-                                            InputLabelProps={{ shrink: true }}
-                                            inputProps={{ min: form.scheduledDeparture || new Date().toISOString().slice(0, 16) }}
-                                        />
-                                    </Grid>
-                                </Grid>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Typography variant="subtitle2" sx={{
+                                            color: '#666', fontWeight: 800, textTransform: 'uppercase',
+                                            display: 'flex', alignItems: 'center', gap: 1,
+                                        }}>
+                                            <Route sx={{ color: mainColor, fontSize: 18 }} /> Міста маршруту
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button size="small"
+                                                variant={!mapSelectMode ? 'contained' : 'outlined'}
+                                                onClick={() => setMapSelectMode(false)}
+                                                sx={{ bgcolor: !mapSelectMode ? mainColor : undefined }}>
+                                                Список
+                                            </Button>
+                                            <Button size="small"
+                                                variant={mapSelectMode ? 'contained' : 'outlined'}
+                                                startIcon={<MapIcon />}
+                                                onClick={() => setMapSelectMode(true)}
+                                                sx={{ bgcolor: mapSelectMode ? mainColor : undefined }}>
+                                                На карті
+                                            </Button>
+                                            {!mapSelectMode && (
+                                                <Button size="small" variant="contained" startIcon={<Add />}
+                                                    onClick={addSegment} sx={{ bgcolor: mainColor }}>
+                                                    Місто
+                                                </Button>
+                                            )}
+                                        </Box>
+                                    </Box>
 
-                                <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha(mainColor, 0.03) }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: mainColor, mb: 2 }}>
-                                        Підсумок рейсу
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <Typography variant="body2" color="text.secondary">Водій:</Typography>
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {drivers.find(d => d.id === form.driverId)
-                                                    ? `${drivers.find(d => d.id === form.driverId).lastName} ${drivers.find(d => d.id === form.driverId).firstName}`
-                                                    : '—'}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                            <Typography variant="body2" color="text.secondary">ТЗ:</Typography>
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {vehicles.find(v => v.id === form.vehicleId)?.licensePlate || '—'}
-                                            </Typography>
-                                        </Box>
-                                        <Divider />
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <Typography variant="body2" color="text.secondary">Маршрут:</Typography>
-                                            <Typography variant="body2" fontWeight={600} sx={{ textAlign: 'right', maxWidth: '60%' }}>
-                                                {segments.filter(s => s.cityName).map(s => s.cityName).join(' → ') || '—'}
-                                            </Typography>
-                                        </Box>
-                                        {form.scheduledDeparture && form.scheduledArrival && (
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <Typography variant="body2" color="text.secondary">Тривалість:</Typography>
-                                                <Typography variant="body2" fontWeight={600}>
-                                                    {(() => {
-                                                        const diff = (new Date(form.scheduledArrival) - new Date(form.scheduledDeparture)) / 3600000;
-                                                        return diff > 0 ? `~${diff.toFixed(1)} год` : '—';
-                                                    })()}
-                                                </Typography>
+                                    {!mapSelectMode && (
+                                        <DndContext
+                                            sensors={sensors}
+                                            collisionDetection={closestCenter}
+                                            onDragStart={handleDragStart}
+                                            onDragEnd={handleDragEnd}
+                                        >
+                                            <SortableContext items={segments.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                                                <Box sx={{ maxHeight: 360, overflowY: 'auto', pr: 0.5 }}>
+                                                    {segments.map((seg, idx) => (
+                                                        <SortableSegmentItem
+                                                            key={seg.id}
+                                                            seg={seg}
+                                                            idx={idx}
+                                                            total={segments.length}
+                                                            mainColor={mainColor}
+                                                            onRegionChange={handleRegionChange}
+                                                            onDistrictChange={handleDistrictChange}
+                                                            onCityChange={handleCityChange}
+                                                            onRemove={removeSegment}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            </SortableContext>
+
+                                            <DragOverlay>
+                                                {activeSeg && (
+                                                    <Paper variant="outlined" sx={{
+                                                        p: 1.5, borderRadius: 2,
+                                                        borderColor: mainColor,
+                                                        bgcolor: alpha(mainColor, 0.05),
+                                                        boxShadow: 8, opacity: 0.95,
+                                                    }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <DragIndicator sx={{ color: mainColor }} />
+                                                            <Chip label={activeSeg.cityName || '…'} size="small"
+                                                                sx={{ bgcolor: alpha(mainColor, 0.15), color: mainColor, fontWeight: 700 }} />
+                                                        </Box>
+                                                    </Paper>
+                                                )}
+                                            </DragOverlay>
+                                        </DndContext>
+                                    )}
+
+                                    <Box sx={{
+                                        height: mapSelectMode ? 340 : 200,
+                                        borderRadius: 2, overflow: 'hidden', position: 'relative',
+                                        border: mapSelectMode ? `2px solid ${mainColor}` : '1px solid #e0e0e0',
+                                        transition: 'height 0.3s ease',
+                                    }}>
+                                        {mapSelectMode && (
+                                            <Box sx={{
+                                                position: 'absolute', top: 8, left: '50%',
+                                                transform: 'translateX(-50%)', zIndex: 1000,
+                                                bgcolor: mainColor, color: 'white',
+                                                px: 2, py: 0.5, borderRadius: 2,
+                                                fontSize: 12, fontWeight: 700, boxShadow: 2, whiteSpace: 'nowrap',
+                                            }}>
+                                                🗺️ Клікніть на карті щоб додати місто
                                             </Box>
                                         )}
-                                    </Box>
-                                </Paper>
-                            </Box>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </DialogContent>
 
-            <DialogActions sx={{ p: 2.5, borderTop: '1px solid #f0f0f0', gap: 1 }}>
-                <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
-                <Box sx={{ flexGrow: 1 }} />
-                {activeStep > 0 && (
-                    <Button onClick={() => go(activeStep - 1)} startIcon={<ChevronLeft />}>Назад</Button>
-                )}
-                {activeStep < STEPS.length - 1 ? (
-                    <Button variant="contained" onClick={() => go(activeStep + 1)} sx={{ bgcolor: mainColor, px: 3 }}>
-                        Далі
-                    </Button>
-                ) : (
-                    <Button variant="contained" color="success" onClick={handleSave} startIcon={<CheckCircle />} sx={{ px: 3 }}>
-                        Створити рейс
-                    </Button>
-                )}
-            </DialogActions>
-        </Dialog>
+                                        <Box
+                                            onClick={() => setMapFullscreen(true)}
+                                            title="Розгорнути карту на весь екран"
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: 8, right: 8,
+                                                zIndex: 1000,
+                                                width: 32, height: 32,
+                                                borderRadius: 1.5,
+                                                bgcolor: 'white',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 1px 5px rgba(0,0,0,0.3)',
+                                                border: '1px solid rgba(0,0,0,0.12)',
+                                                transition: 'all 0.2s ease',
+                                                '&:hover': {
+                                                    bgcolor: mainColor,
+                                                    '& svg': { color: 'white' },
+                                                    transform: 'scale(1.08)',
+                                                },
+                                            }}
+                                        >
+                                            <Fullscreen sx={{ fontSize: 18, color: '#555', transition: 'color 0.2s ease' }} />
+                                        </Box>
+
+                                        <MapContainer center={[49.0, 31.0]} zoom={6} style={{ height: '100%', width: '100%' }}>
+                                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                            <MapClickHandler onMapClick={handleMapClick} />
+                                            <MapBoundsUpdater coords={mapCoords} />
+                                            {segmentsWithCoords.map((seg, posIdx) => (
+                                                <Marker
+                                                    key={`${seg.id}-${posIdx}`}
+                                                    position={[seg.lat, seg.lng]}
+                                                    icon={makeColoredIcon(
+                                                        posIdx === 0 ? '#4caf50' : posIdx === segmentsWithCoords.length - 1 ? '#f44336' : mainColor,
+                                                        posIdx === 0 ? 'А' : posIdx === segmentsWithCoords.length - 1 ? 'Б' : String(posIdx)
+                                                    )}
+                                                />
+                                            ))}
+                                            {segmentsWithCoords.length > 1 && (
+                                                <Polyline
+                                                    positions={segmentsWithCoords.map(s => [s.lat, s.lng])}
+                                                    pathOptions={{ color: mainColor, weight: 3, dashArray: '6 4' }}
+                                                />
+                                            )}
+                                        </MapContainer>
+                                    </Box>
+
+                                    {mapSelectMode && segments.filter(s => s.cityName).length > 0 && (
+                                        <Box sx={{ maxHeight: 120, overflowY: 'auto' }}>
+                                            <List dense disablePadding>
+                                                {segments.map((seg, idx) => (
+                                                    <ListItem key={seg.id} sx={{ py: 0.25 }}>
+                                                        <Chip
+                                                            label={idx === 0 ? 'А' : idx === segments.length - 1 ? 'Б' : idx}
+                                                            size="small"
+                                                            sx={{
+                                                                bgcolor: idx === 0 ? '#4caf50' : idx === segments.length - 1 ? '#f44336' : mainColor,
+                                                                color: 'white', mr: 1, minWidth: 28,
+                                                            }}
+                                                        />
+                                                        <ListItemText
+                                                            primary={seg.cityName}
+                                                            primaryTypographyProps={{ fontSize: 13, fontWeight: 600 }}
+                                                        />
+                                                        <IconButton size="small" onClick={() => removeSegment(seg.id)} sx={{ color: '#f44336' }}>
+                                                            <Delete fontSize="small" />
+                                                        </IconButton>
+                                                    </ListItem>
+                                                ))}
+                                            </List>
+                                        </Box>
+                                    )}
+
+                                    {segments.filter(s => s.cityName).length >= 2 && (
+                                        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={700}>Маршрут:</Typography>
+                                            <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
+                                                {segments.filter(s => s.cityName).map(s => s.cityName).join(' → ')}
+                                            </Typography>
+                                        </Paper>
+                                    )}
+                                </Box>
+                            </motion.div>
+                        )}
+
+                        {activeStep === 2 && (
+                            <motion.div key="s2" custom={direction} variants={variants}
+                                initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                    <Typography variant="subtitle2" sx={{
+                                        color: '#666', fontWeight: 800, textTransform: 'uppercase',
+                                        display: 'flex', alignItems: 'center', gap: 1,
+                                    }}>
+                                        <AccessTime sx={{ color: mainColor, fontSize: 18 }} /> Плановий розклад
+                                    </Typography>
+
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={6}>
+                                            <TextField label="Плановий час виїзду" type="datetime-local" fullWidth
+                                                value={form.scheduledDeparture}
+                                                onChange={(e) => setForm(f => ({ ...f, scheduledDeparture: e.target.value }))}
+                                                InputLabelProps={{ shrink: true }}
+                                                inputProps={{ min: new Date().toISOString().slice(0, 16) }}
+                                            />
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <TextField label="Очікуваний час прибуття" type="datetime-local" fullWidth
+                                                value={form.scheduledArrival}
+                                                onChange={(e) => setForm(f => ({ ...f, scheduledArrival: e.target.value }))}
+                                                InputLabelProps={{ shrink: true }}
+                                                inputProps={{ min: form.scheduledDeparture || new Date().toISOString().slice(0, 16) }}
+                                            />
+                                        </Grid>
+                                    </Grid>
+
+                                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha(mainColor, 0.03) }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: mainColor, mb: 2 }}>
+                                            Підсумок рейсу
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2" color="text.secondary">Водій:</Typography>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {drivers.find(d => d.id === form.driverId)
+                                                        ? `${drivers.find(d => d.id === form.driverId).lastName} ${drivers.find(d => d.id === form.driverId).firstName}`
+                                                        : '—'}
+                                                </Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography variant="body2" color="text.secondary">ТЗ:</Typography>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {vehicles.find(v => v.id === form.vehicleId)?.licensePlate || '—'}
+                                                </Typography>
+                                            </Box>
+                                            <Divider />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <Typography variant="body2" color="text.secondary">Маршрут:</Typography>
+                                                <Typography variant="body2" fontWeight={600} sx={{ textAlign: 'right', maxWidth: '60%' }}>
+                                                    {segments.filter(s => s.cityName).map(s => s.cityName).join(' → ') || '—'}
+                                                </Typography>
+                                            </Box>
+                                            {form.scheduledDeparture && form.scheduledArrival && (
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <Typography variant="body2" color="text.secondary">Тривалість:</Typography>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {(() => {
+                                                            const diff = (new Date(form.scheduledArrival) - new Date(form.scheduledDeparture)) / 3600000;
+                                                            return diff > 0 ? `~${diff.toFixed(1)} год` : '—';
+                                                        })()}
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    </Paper>
+                                </Box>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </DialogContent>
+
+                <DialogActions sx={{ p: 2.5, borderTop: '1px solid #f0f0f0', gap: 1 }}>
+                    <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
+                    <Box sx={{ flexGrow: 1 }} />
+                    {activeStep > 0 && (
+                        <Button onClick={() => go(activeStep - 1)} startIcon={<ChevronLeft />}>Назад</Button>
+                    )}
+                    {activeStep < STEPS.length - 1 ? (
+                        <Button variant="contained" onClick={() => go(activeStep + 1)} sx={{ bgcolor: mainColor, px: 3 }}>
+                            Далі
+                        </Button>
+                    ) : (
+                        <Button variant="contained" color="success" onClick={handleSave} startIcon={<CheckCircle />} sx={{ px: 3 }}>
+                            Створити рейс
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
+        </>
     );
 };
 
