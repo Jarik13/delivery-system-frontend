@@ -9,20 +9,32 @@ import {
     fetchCoordinates, toDatetimeLocal,
 } from '../utils';
 
+const extractCityName = (address, fallback) => {
+    return address?.city
+        || address?.town
+        || address?.village
+        || address?.hamlet
+        || address?.suburb
+        || fallback;
+};
+
 const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     const isEditMode = Boolean(tripToEdit);
 
     const [activeStep, setActiveStep] = useState(0);
     const [direction, setDirection] = useState(1);
     const [form, setForm] = useState(initialForm);
-    const [segments, setSegments] = useState(initialSegments);
+    const [segments, setSegments] = useState(() => initialSegments());
     const [activeDragId, setActiveDragId] = useState(null);
     const [mapSelectMode, setMapSelectMode] = useState(false);
     const [mapFullscreen, setMapFullscreen] = useState(false);
     const [loadingTrip, setLoadingTrip] = useState(false);
+    const [draggingSegId, setDraggingSegId] = useState(null);
 
     const segmentsRef = useRef(segments);
     segmentsRef.current = segments;
+    const markerRefs = useRef({});
+    const fsMarkerRefs = useRef({});
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -95,6 +107,19 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     const addSegment = useCallback(() => setSegments(prev => [...prev, makeSegment()]), []);
     const removeSegment = useCallback((id) => setSegments(prev => prev.filter(s => s.id !== id)), []);
 
+    const handleSetMapSelectMode = useCallback((val) => {
+        if (val) {
+            setSegments(prev => prev.filter(s => s.cityName && s.cityName.trim() !== ''));
+        } else {
+            setSegments(prev => {
+                const withCity = prev.filter(s => s.cityName && s.cityName.trim() !== '');
+                if (withCity.length < 2) return initialSegments();
+                return prev;
+            });
+        }
+        setMapSelectMode(val);
+    }, []);
+
     const handleRegionChange = useCallback((id, regionId) => {
         updateSeg(id, { regionId, districtId: null, cityId: null, cityName: '', lat: null, lng: null });
     }, [updateSeg]);
@@ -124,10 +149,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         });
     }, []);
 
-    const markerRefs = useRef({});
-    const fsMarkerRefs = useRef({});
-    const [draggingSegId, setDraggingSegId] = useState(null);
-
     const handleMarkerDragStart = useCallback((segId) => {
         setDraggingSegId(segId);
     }, []);
@@ -150,9 +171,10 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
             });
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
             const data = await res.json();
-            const cityName = data.address?.city || data.address?.town
-                || data.address?.village || data.address?.hamlet
-                || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+            const cityName = extractCityName(
+                data.address,
+                `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`
+            );
 
             if (seg?.cityId) {
                 try {
@@ -169,19 +191,22 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
                 updateSeg(segId, { cityName });
             }
         } catch {
-            
+
         }
     }, [updateSeg]);
 
     const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
         try {
-            const params = new URLSearchParams({ lat: latlng.lat, lon: latlng.lng, format: 'json', 'accept-language': 'uk' });
+            const params = new URLSearchParams({
+                lat: latlng.lat, lon: latlng.lng, format: 'json', 'accept-language': 'uk'
+            });
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
             const data = await res.json();
-            const cityName = data.address?.city || data.address?.town
-                || data.address?.village || data.address?.hamlet
-                || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+            const cityName = extractCityName(
+                data.address,
+                `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`
+            );
 
             const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
             const found = citiesRes.data.content?.[0];
@@ -236,7 +261,8 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         segments,
         activeDragId,
         activeSeg,
-        mapSelectMode, setMapSelectMode,
+        mapSelectMode,
+        setMapSelectMode: handleSetMapSelectMode,
         mapFullscreen, setMapFullscreen,
         loadingTrip,
         segmentsWithCoords,

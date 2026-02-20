@@ -31,7 +31,6 @@ export const MapInvalidateSize = ({ trigger }) => {
     return null;
 };
 
-// ─── LivePolyline ─────────────────────────────────────────────────────────────
 export const LivePolyline = ({ coords, markerRefs, draggingSegId, color }) => {
     const map = useMap();
     const polylineRef = useRef(null);
@@ -85,16 +84,6 @@ export const LivePolyline = ({ coords, markerRefs, draggingSegId, color }) => {
     return null;
 };
 
-// ─── DraggableMarker ──────────────────────────────────────────────────────────
-// ФІКС 1: callback ref — реєстрація в markerRefs одразу коли Leaflet-інстанція
-//          готова, а не після paint як useEffect. Вирішує проблему з fullscreen:
-//          маркери реєструються до першого drag, і не конфліктують між двома
-//          MapContainer-ами якщо кожен отримує окремий markerRefs об'єкт.
-//
-// ФІКС 2: явний виклик marker.dragging.enable() після монтування.
-//          react-leaflet передає draggable як опцію конструктору до addTo(map),
-//          після чого Leaflet може скинути внутрішній DragHandler. Явний enable()
-//          гарантує drag з першого mousedown без "холостого" першого кліку.
 
 export const DraggableMarker = ({
     segId, position, icon,
@@ -114,8 +103,6 @@ export const DraggableMarker = ({
         if (instance) {
             markerRefs.current[segId] = instance;
 
-            // Явно вмикаємо drag після того як маркер додано на карту —
-            // це усуває баг коли перший mousedown не починає drag
             if (draggable && instance.dragging) {
                 instance.dragging.enable();
             }
