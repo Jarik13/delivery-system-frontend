@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box, Paper, Typography, Button, CircularProgress,
-    Snackbar, Alert, Dialog, DialogTitle, DialogContent,
+    Dialog, DialogTitle, DialogContent,
     IconButton, alpha
 } from '@mui/material';
 import { LocalShipping, Add, Map as MapIcon, Close } from '@mui/icons-material';
@@ -28,6 +28,8 @@ const TripsPage = () => {
 
     const [mapTrip, setMapTrip] = useState(null);
 
+    const [wizardTrip, setWizardTrip] = useState(undefined);
+
     const [filters, setFilters] = useState({
         tripNumber: '',
         tripStatusId: '',
@@ -45,8 +47,6 @@ const TripsPage = () => {
         actualArrivalFrom: '',
         actualArrivalTo: '',
     });
-
-    const [openWizard, setOpenWizard] = useState(false);
 
     useEffect(() => {
         const fetchReferences = async () => {
@@ -77,9 +77,15 @@ const TripsPage = () => {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    const handleCloseMap = () => {
-        setMapTrip(null);
-    };
+    const handleCloseMap = () => setMapTrip(null);
+
+    const handleOpenCreate = () => setWizardTrip(null);
+
+    const handleOpenEdit = (trip) => setWizardTrip(trip);
+
+    const handleCloseWizard = () => setWizardTrip(undefined);
+
+    const wizardOpen = wizardTrip !== undefined;
 
     const filterFields = [
         { name: 'tripNumber', label: 'Номер рейсу', type: 'text', md: 3 },
@@ -113,7 +119,8 @@ const TripsPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування маршрутами та рейсами</Typography>
                     </Box>
                 </Box>
-                <Button onClick={() => setOpenWizard(true)} variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
+                <Button onClick={handleOpenCreate} variant="contained"
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
                     startIcon={<Add />}>
                     Новий рейс
                 </Button>
@@ -123,18 +130,11 @@ const TripsPage = () => {
                 filters={filters}
                 onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))}
                 onClear={() => setFilters({
-                    tripNumber: '',
-                    tripStatusId: '',
-                    driverId: '',
-                    vehicleId: '',
-                    scheduledDepartureFrom: '',
-                    scheduledDepartureTo: '',
-                    scheduledArrivalFrom: '',
-                    scheduledArrivalTo: '',
-                    actualDepartureFrom: '',
-                    actualDepartureTo: '',
-                    actualArrivalFrom: '',
-                    actualArrivalTo: ''
+                    tripNumber: '', tripStatusId: '', driverId: '', vehicleId: '',
+                    scheduledDepartureFrom: '', scheduledDepartureTo: '',
+                    scheduledArrivalFrom: '', scheduledArrivalTo: '',
+                    actualDepartureFrom: '', actualDepartureTo: '',
+                    actualArrivalFrom: '', actualArrivalTo: ''
                 })}
                 fields={filterFields}
                 quickFilters={['tripStatusId']}
@@ -146,7 +146,13 @@ const TripsPage = () => {
                     <CircularProgress sx={{ color: mainColor }} />
                 </Box>
             ) : (
-                <TripsList trips={trips} mainColor={mainColor} onMap={setMapTrip} onDelete={(id) => console.log('Delete', id)} />
+                <TripsList
+                    trips={trips}
+                    mainColor={mainColor}
+                    onMap={setMapTrip}
+                    onEdit={handleOpenEdit}
+                    onDelete={(id) => console.log('Delete', id)}
+                />
             )}
 
             <DataPagination
@@ -159,40 +165,27 @@ const TripsPage = () => {
             />
 
             <TripWizardDialog
-                open={openWizard}
-                onClose={() => setOpenWizard(false)}
+                open={wizardOpen}
+                onClose={handleCloseWizard}
                 mainColor={mainColor}
                 references={{ drivers, vehicles }}
-                onSuccess={(msg) => {
-                    loadData();
-                }}
+                tripToEdit={wizardTrip ?? null}
+                onSuccess={(msg) => { loadData(); }}
             />
 
-            <Dialog
-                open={!!mapTrip}
-                onClose={handleCloseMap}
-                fullWidth
-                maxWidth="md"
-            >
+            <Dialog open={!!mapTrip} onClose={handleCloseMap} fullWidth maxWidth="md">
                 <DialogTitle sx={{
-                    bgcolor: mainColor,
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
+                    bgcolor: mainColor, color: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <MapIcon />
                         <Typography fontWeight="bold">Маршрут рейсу №{mapTrip?.tripNumber}</Typography>
                     </Box>
-                    <IconButton onClick={handleCloseMap} color="inherit">
-                        <Close />
-                    </IconButton>
+                    <IconButton onClick={handleCloseMap} color="inherit"><Close /></IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 0, height: 450, position: 'relative', overflow: 'hidden' }}>
-                    {mapTrip && (
-                        <LeafletMap trip={mapTrip} />
-                    )}
+                    {mapTrip && <LeafletMap trip={mapTrip} />}
                 </DialogContent>
             </Dialog>
         </Box>
