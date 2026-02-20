@@ -137,7 +137,7 @@ const StepRoute = ({
                 <MapContainer center={[49.0, 31.0]} zoom={6} style={{ height: '100%', width: '100%' }}>
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                     <MapClickHandler onMapClick={handleMapClick} />
-                    <MapBoundsUpdater coords={mapCoords} />
+                    <MapBoundsUpdater coords={mapCoords} disabled={!!draggingSegId} />
 
                     <LivePolyline
                         coords={segmentsWithCoords.map(s => ({ segId: s.id, lat: s.lat, lng: s.lng }))}

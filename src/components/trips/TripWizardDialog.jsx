@@ -43,6 +43,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         handleDragStart, handleDragEnd,
         handleMapClick,
         markerRefs,
+        fsMarkerRefs,
         draggingSegId,
         handleMarkerDragStart,
         handleMarkerDragEnd,
@@ -59,7 +60,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                 mapCoords={mapCoords}
                 onMapClick={handleMapClick}
                 mapSelectMode={mapSelectMode}
-                markerRefs={markerRefs}
+                markerRefs={fsMarkerRefs}
                 draggingSegId={draggingSegId}
                 onMarkerDragStart={handleMarkerDragStart}
                 onMarkerDragEnd={handleMarkerDragEnd}

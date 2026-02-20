@@ -122,6 +122,8 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     }, []);
 
     const markerRefs = useRef({});
+    const fsMarkerRefs = useRef({});
+
     const [draggingSegId, setDraggingSegId] = useState(null);
 
     const handleMarkerDragStart = useCallback((segId) => {
@@ -132,11 +134,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         setDraggingSegId(null);
         updateSeg(segId, { lat: latlng.lat, lng: latlng.lng });
 
-        setSegments(prev => {
-            const seg = prev.find(s => s.id === segId);
-            if (!seg || seg.cityId) return prev;
-            return prev;
-        });
         const seg = segments.find(s => s.id === segId);
         if (seg && !seg.cityId) {
             try {
@@ -234,6 +231,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         handleDragEnd,
         handleMapClick,
         markerRefs,
+        fsMarkerRefs,
         draggingSegId,
         handleMarkerDragStart,
         handleMarkerDragEnd,
