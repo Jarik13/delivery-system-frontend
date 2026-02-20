@@ -21,6 +21,9 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     const [mapFullscreen, setMapFullscreen] = useState(false);
     const [loadingTrip, setLoadingTrip] = useState(false);
 
+    const segmentsRef = useRef(segments);
+    segmentsRef.current = segments;
+
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -123,7 +126,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
 
     const markerRefs = useRef({});
     const fsMarkerRefs = useRef({});
-
     const [draggingSegId, setDraggingSegId] = useState(null);
 
     const handleMarkerDragStart = useCallback((segId) => {
@@ -132,25 +134,44 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
 
     const handleMarkerDragEnd = useCallback(async (segId, latlng) => {
         setDraggingSegId(null);
-        updateSeg(segId, { lat: latlng.lat, lng: latlng.lng });
 
-        const seg = segments.find(s => s.id === segId);
-        if (seg && !seg.cityId) {
-            try {
-                const params = new URLSearchParams({
-                    lat: latlng.lat, lon: latlng.lng, format: 'json', 'accept-language': 'uk'
-                });
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
-                const data = await res.json();
-                const cityName = data.address?.city || data.address?.town
-                    || data.address?.village || data.address?.hamlet
-                    || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+        updateSeg(segId, {
+            lat: latlng.lat,
+            lng: latlng.lng,
+            cityId: null,
+            cityName: `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`,
+        });
+
+        const seg = segmentsRef.current.find(s => s.id === segId);
+
+        try {
+            const params = new URLSearchParams({
+                lat: latlng.lat, lon: latlng.lng, format: 'json', 'accept-language': 'uk'
+            });
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
+            const data = await res.json();
+            const cityName = data.address?.city || data.address?.town
+                || data.address?.village || data.address?.hamlet
+                || `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+
+            if (seg?.cityId) {
+                try {
+                    const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
+                    const found = citiesRes.data.content?.[0];
+                    updateSeg(segId, {
+                        cityId: found?.id || null,
+                        cityName: found?.name || cityName,
+                    });
+                } catch {
+                    updateSeg(segId, { cityId: null, cityName });
+                }
+            } else {
                 updateSeg(segId, { cityName });
-            } catch {
-                updateSeg(segId, { cityName: `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}` });
             }
+        } catch {
+            
         }
-    }, [updateSeg, segments]);
+    }, [updateSeg]);
 
     const handleMapClick = useCallback(async (latlng) => {
         if (!mapSelectMode) return;
