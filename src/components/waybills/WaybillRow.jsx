@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
-    TableRow, TableCell, IconButton, Chip, Box, Typography, alpha
+    TableRow, TableCell, IconButton, Chip, Box, Typography, alpha,
+    Checkbox
 } from '@mui/material';
 import {
     Receipt, ExpandMore, ExpandLess,
@@ -8,18 +9,34 @@ import {
 } from '@mui/icons-material';
 import WaybillShipmentsPanel from './WaybillShipmentsPanel';
 
-const WaybillRow = ({ waybill, mainColor }) => {
+const WaybillRow = ({ waybill, mainColor, selected, onToggle }) => {
     const [expanded, setExpanded] = useState(false);
+
+    const handleExpandClick = (e) => {
+        e.stopPropagation();
+        setExpanded(!expanded);
+    };
 
     return (
         <>
-            <TableRow hover sx={{
-                cursor: 'pointer',
-                '&:hover': { bgcolor: alpha(mainColor, 0.03) },
-                ...(expanded ? { bgcolor: alpha(mainColor, 0.04) } : {}),
-            }} onClick={() => setExpanded(e => !e)}>
+            <TableRow
+                onClick={onToggle}
+                sx={{
+                    cursor: 'pointer',
+                    bgcolor: selected ? alpha(mainColor, 0.06) : 'inherit',
+                    '&:hover': { bgcolor: alpha(mainColor, 0.02) }
+                }}
+            >
+                <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                        size="small"
+                        checked={selected}
+                        onChange={onToggle}
+                        sx={{ color: alpha(mainColor, 0.4), '&.Mui-checked': { color: mainColor } }}
+                    />
+                </TableCell>
                 <TableCell>
-                    <IconButton size="small" sx={{ color: mainColor }}>
+                    <IconButton size="small" sx={{ color: mainColor }} onClick={handleExpandClick}>
                         {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                     </IconButton>
                 </TableCell>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Box, Paper, Typography, alpha, Snackbar, Alert,
     Button, Menu, MenuItem, ListItemIcon, ListItemText,
-    Divider, LinearProgress, CircularProgress, Tooltip,
+    Divider, LinearProgress, Tooltip, Chip,
 } from '@mui/material';
 import {
     Receipt, Add, FileDownload, Close,
@@ -40,13 +40,8 @@ const formatEta = (seconds) => {
 };
 
 const NO_PROGRESS = {
-    active: false,
-    percent: 0,
-    loaded: 0,
-    total: 0,
-    speed: 0,
-    eta: null,
-    label: '',
+    active: false, percent: 0, loaded: 0,
+    total: 0, speed: 0, eta: null, label: '',
 };
 
 const WaybillsPage = () => {
@@ -63,6 +58,8 @@ const WaybillsPage = () => {
     const [progress, setProgress] = useState(NO_PROGRESS);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
+    const [selectedIds, setSelectedIds] = useState(new Set());
+
     const abortRef = useRef(null);
     const statsRef = useRef({ startTime: 0, lastLoaded: 0, lastTime: 0 });
 
@@ -75,6 +72,7 @@ const WaybillsPage = () => {
             const res = await DictionaryApi.getAll('waybills', page, rowsPerPage, activeFilters);
             setWaybills(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
+            setSelectedIds(new Set());
         } catch (e) {
             console.error(e);
         } finally {
@@ -87,6 +85,24 @@ const WaybillsPage = () => {
         return () => clearTimeout(t);
     }, [load]);
 
+    const handleToggle = useCallback((id) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    }, []);
+
+    const handleToggleAll = useCallback(() => {
+        setSelectedIds(prev =>
+            prev.size === waybills.length
+                ? new Set()
+                : new Set(waybills.map(w => w.id))
+        );
+    }, [waybills]);
+
+    const clearSelection = () => setSelectedIds(new Set());
+
     const cancelExport = () => {
         abortRef.current?.abort();
         setProgress(NO_PROGRESS);
@@ -94,10 +110,8 @@ const WaybillsPage = () => {
 
     const handleExport = async (fmt) => {
         setExportAnchor(null);
-
         abortRef.current?.abort();
         abortRef.current = new AbortController();
-
         statsRef.current = { startTime: Date.now(), lastLoaded: 0, lastTime: Date.now() };
 
         setProgress({ ...NO_PROGRESS, active: true, percent: null, label: fmt.label });
@@ -107,41 +121,24 @@ const WaybillsPage = () => {
                 Object.entries(filters).filter(([_, v]) => v !== '' && v !== null)
             );
 
-            const res = await DictionaryApi.exportFile('waybills/export', {
-                format: fmt.key,
-                ...activeFilters,
-            }, {
-                signal: abortRef.current.signal,
+            const exportParams = selectedIds.size > 0
+                ? { format: fmt.key, ids: [...selectedIds].join(',') }
+                : { format: fmt.key, ...activeFilters };
 
-                onDownloadProgress: (progressEvent) => {
-                    const { loaded, total: rawTotal } = progressEvent;
+            const res = await DictionaryApi.exportFile('waybills/export', exportParams, {
+                signal: abortRef.current.signal,
+                onDownloadProgress: (e) => {
+                    const { loaded, total: rawTotal } = e;
                     const total = rawTotal || 0;
                     const now = Date.now();
                     const { startTime, lastLoaded, lastTime } = statsRef.current;
-
                     const dtMs = now - lastTime;
-                    const dlBytes = loaded - lastLoaded;
-                    const speed = dtMs > 50 ? (dlBytes / dtMs) * 1000 : 0;
-
-                    const eta = speed > 0 && total > 0
-                        ? (total - loaded) / speed
-                        : null;
-
-                    const percent = total > 0
-                        ? Math.min(Math.round((loaded / total) * 100), 99)
-                        : null;
+                    const speed = dtMs > 50 ? ((loaded - lastLoaded) / dtMs) * 1000 : 0;
+                    const eta = speed > 0 && total > 0 ? (total - loaded) / speed : null;
+                    const percent = total > 0 ? Math.min(Math.round((loaded / total) * 100), 99) : null;
 
                     statsRef.current = { startTime, lastLoaded: loaded, lastTime: now };
-
-                    setProgress({
-                        active: true,
-                        percent,
-                        loaded,
-                        total,
-                        speed,
-                        eta,
-                        label: fmt.label,
-                    });
+                    setProgress({ active: true, percent, loaded, total, speed, eta, label: fmt.label });
                 },
             });
 
@@ -158,23 +155,26 @@ const WaybillsPage = () => {
 
             setTimeout(() => setProgress(NO_PROGRESS), 600);
 
-            setNotification({ open: true, message: `Експорт у ${fmt.label} успішно завершено`, severity: 'success' });
+            const scope = selectedIds.size > 0
+                ? `${selectedIds.size} накладн${selectedIds.size === 1 ? 'у' : 'их'}`
+                : 'всі накладні';
+            setNotification({ open: true, message: `Експортовано ${scope} у ${fmt.label}`, severity: 'success' });
 
         } catch (e) {
             setProgress(NO_PROGRESS);
-
-            if (e?.code === 'ERR_CANCELED' || e?.name === 'AbortError' || e?.name === 'CanceledError') {
-                return;
-            }
-
+            if (e?.code === 'ERR_CANCELED' || e?.name === 'AbortError' || e?.name === 'CanceledError') return;
             console.error('Export error:', e);
-            const message = e.response?.data?.message || e.message || 'Невідома помилка';
-            setNotification({ open: true, message: `Помилка експорту: ${message}`, severity: 'error' });
+            setNotification({
+                open: true,
+                message: `Помилка експорту: ${e.response?.data?.message || e.message || 'Невідома помилка'}`,
+                severity: 'error',
+            });
         }
     };
 
     const isIndeterminate = progress.active && progress.percent === null;
     const isDeterminate = progress.active && progress.percent !== null;
+    const selectionCount = selectedIds.size;
 
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
@@ -214,17 +214,23 @@ const WaybillsPage = () => {
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {selectionCount > 0 && !progress.active && (
+                            <Chip
+                                label={`Вибрано: ${selectionCount}`}
+                                size="small"
+                                onDelete={clearSelection}
+                                sx={{
+                                    bgcolor: 'rgba(255,255,255,0.2)',
+                                    color: 'white', fontWeight: 700,
+                                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
+                                }}
+                            />
+                        )}
+
                         {progress.active && (
-                            <Box sx={{
-                                display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-                                minWidth: 160, mr: 0.5,
-                            }}>
-                                <Typography variant="caption" sx={{
-                                    color: 'white', fontWeight: 700, lineHeight: 1.3, fontSize: 12,
-                                }}>
-                                    {isDeterminate
-                                        ? `${progress.percent}%`
-                                        : 'Підготовка файлу...'}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', minWidth: 160 }}>
+                                <Typography variant="caption" sx={{ color: 'white', fontWeight: 700, fontSize: 12 }}>
+                                    {isDeterminate ? `${progress.percent}%` : 'Підготовка...'}
                                     {progress.loaded > 0 && (
                                         <span style={{ fontWeight: 400, marginLeft: 4 }}>
                                             {formatBytes(progress.loaded)}
@@ -232,61 +238,65 @@ const WaybillsPage = () => {
                                         </span>
                                     )}
                                 </Typography>
-                                <Typography variant="caption" sx={{
-                                    color: 'rgba(255,255,255,0.72)', fontSize: 10, lineHeight: 1.3,
-                                }}>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.72)', fontSize: 10 }}>
                                     {progress.speed > 0 && `${formatBytes(Math.round(progress.speed))}/с`}
                                     {progress.eta && `  ·  ще ~${formatEta(progress.eta)}`}
-                                    {!progress.speed && !progress.eta && `Завантаження ${progress.label}...`}
+                                    {!progress.speed && `Завантаження ${progress.label}...`}
                                 </Typography>
                             </Box>
                         )}
 
                         {progress.active ? (
                             <Tooltip title="Скасувати завантаження">
-                                <Button
-                                    variant="contained" size="small"
+                                <Button variant="contained" size="small"
                                     startIcon={<Close fontSize="small" />}
                                     onClick={cancelExport}
                                     sx={{
-                                        bgcolor: 'rgba(255,80,80,0.25)',
-                                        color: 'white',
-                                        border: '1px solid rgba(255,100,100,0.45)',
-                                        fontWeight: 600,
+                                        bgcolor: 'rgba(255,80,80,0.25)', color: 'white',
+                                        border: '1px solid rgba(255,100,100,0.45)', fontWeight: 600,
                                         '&:hover': { bgcolor: 'rgba(255,80,80,0.4)' },
-                                    }}
-                                >
+                                    }}>
                                     Скасувати
                                 </Button>
                             </Tooltip>
                         ) : (
                             <>
-                                <Button
-                                    variant="contained" size="small"
-                                    startIcon={<FileDownload />}
-                                    onClick={(e) => setExportAnchor(e.currentTarget)}
-                                    sx={{
-                                        bgcolor: 'rgba(255,255,255,0.15)', color: 'white',
-                                        border: '1px solid rgba(255,255,255,0.35)', fontWeight: 600,
-                                        backdropFilter: 'blur(4px)',
-                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' },
-                                    }}
-                                >
-                                    Експорт
-                                </Button>
+                                <Tooltip title={selectionCount > 0
+                                    ? `Експортувати ${selectionCount} вибраних`
+                                    : 'Експортувати всі накладні'}>
+                                    <Button variant="contained" size="small"
+                                        startIcon={<FileDownload />}
+                                        onClick={(e) => setExportAnchor(e.currentTarget)}
+                                        sx={{
+                                            bgcolor: selectionCount > 0
+                                                ? 'rgba(255,255,255,0.3)'
+                                                : 'rgba(255,255,255,0.15)',
+                                            color: 'white',
+                                            border: '1px solid rgba(255,255,255,0.35)',
+                                            fontWeight: 600,
+                                            backdropFilter: 'blur(4px)',
+                                            '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                                        }}>
+                                        {selectionCount > 0
+                                            ? `Експорт (${selectionCount})`
+                                            : 'Експорт'}
+                                    </Button>
+                                </Tooltip>
 
                                 <Menu
                                     anchorEl={exportAnchor}
                                     open={Boolean(exportAnchor)}
                                     onClose={() => setExportAnchor(null)}
-                                    PaperProps={{ sx: { mt: 1, borderRadius: 2, minWidth: 200, boxShadow: 4 } }}
+                                    PaperProps={{ sx: { mt: 1, borderRadius: 2, minWidth: 220, boxShadow: 4 } }}
                                     transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                                     anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                                 >
                                     <Box sx={{ px: 2, py: 1 }}>
                                         <Typography variant="caption" color="text.secondary"
                                             fontWeight={700} sx={{ textTransform: 'uppercase', fontSize: 10 }}>
-                                            Оберіть формат
+                                            {selectionCount > 0
+                                                ? `Експорт ${selectionCount} вибраних`
+                                                : 'Експорт всіх накладних'}
                                         </Typography>
                                     </Box>
                                     <Divider />
@@ -304,12 +314,9 @@ const WaybillsPage = () => {
                             </>
                         )}
 
-                        <Button
-                            variant="contained" size="small"
-                            startIcon={<Add />}
+                        <Button variant="contained" size="small" startIcon={<Add />}
                             onClick={() => setOpenWizard(true)}
-                            sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                        >
+                            sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}>
                             Створити накладну
                         </Button>
                     </Box>
@@ -324,7 +331,14 @@ const WaybillsPage = () => {
                 searchPlaceholder="Номер накладної..."
             />
 
-            <WaybillsTable waybills={waybills} loading={loading} mainColor={mainColor} />
+            <WaybillsTable
+                waybills={waybills}
+                loading={loading}
+                mainColor={mainColor}
+                selected={[...selectedIds]}
+                onToggle={handleToggle}
+                onToggleAll={handleToggleAll}
+            />
 
             <DataPagination
                 count={totalElements}
@@ -337,11 +351,9 @@ const WaybillsPage = () => {
             />
 
             <Snackbar
-                open={notification.open}
-                autoHideDuration={4000}
+                open={notification.open} autoHideDuration={4000}
                 onClose={() => setNotification(n => ({ ...n, open: false }))}
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            >
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
                 <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>
                     {notification.message}
                 </Alert>
