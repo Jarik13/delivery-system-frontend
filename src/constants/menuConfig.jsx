@@ -9,7 +9,8 @@ import {
     BuildCircle, SettingsEthernet, SettingsInputComponent, EvStation,
     DirectionsCarFilled, DirectionsCarOutlined,
     Schedule, AccessTime, AllInbox, TrackChanges, AcUnit, HelpOutline,
-    TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage
+    TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage,
+    Receipt
 } from '@mui/icons-material';
 
 export const GROUPS = {
@@ -42,6 +43,7 @@ export const ITEM_GROUP_MAP = {
     "parcels": GROUPS.LOGISTICS,
     "shipments": GROUPS.LOGISTICS,
     "trips": GROUPS.LOGISTICS,
+    "waybills": GROUPS.LOGISTICS,
 
     "branches": GROUPS.NETWORK,
     "postomats": GROUPS.NETWORK,
@@ -108,5 +110,6 @@ export const itemIcons = {
     "clients": <People />,
     "employees": <Badge />,
     "payments": <Payments />,
-    "trips": <DirectionsBus />
+    "trips": <DirectionsBus />,
+    "waybills": <Receipt />, 
 };

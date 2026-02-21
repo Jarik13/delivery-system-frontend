@@ -24,6 +24,12 @@ export const MENU_GROUPS = [
                 isCustomPage: true,
                 endpoint: 'trips'
             },
+            {
+                label: 'Накладні',
+                path: 'waybills',
+                isCustomPage: true,
+                endpoint: 'waybills'
+            },
         ]
     },
     {
