@@ -29,7 +29,11 @@ export const DictionaryApi = {
     update: (endpoint, id, data) => api.put(`/${endpoint}/${id}`, data),
     delete: (endpoint, id) => api.delete(`/${endpoint}/${id}`),
 
-    exportFile: (endpoint, params = {}) => {
-        return api.get(`/${endpoint}`, { params, responseType: 'blob' });
-    }
+    exportFile: (endpoint, params = {}, config = {}) => {
+        return api.get(`/${endpoint}`, {
+            params,
+            responseType: 'blob',
+            ...config,
+        });
+    },
 };
