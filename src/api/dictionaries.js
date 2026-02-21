@@ -14,12 +14,12 @@ export const DictionaryApi = {
     getStatistics: async (entityType) => api.get(`${entityType}/statistics`),
     getMovement: async (shipmentId) => api.get(`shipments/${shipmentId}/movement`),
     getByParam: (endpoint, paramName, paramValue, page = 0, size = 5000) => {
-        return api.get(`/${endpoint}`, { 
-            params: { 
+        return api.get(`/${endpoint}`, {
+            params: {
                 [paramName]: paramValue,
                 page,
                 size
-            } 
+            }
         });
     },
     getById: (endpoint, id) => api.get(`/${endpoint}/${id}`),
@@ -28,4 +28,8 @@ export const DictionaryApi = {
     create: (endpoint, data) => api.post(`/${endpoint}`, data),
     update: (endpoint, id, data) => api.put(`/${endpoint}/${id}`, data),
     delete: (endpoint, id) => api.delete(`/${endpoint}/${id}`),
+
+    exportFile: (endpoint, params = {}) => {
+        return api.get(`/${endpoint}`, { params, responseType: 'blob' });
+    }
 };
