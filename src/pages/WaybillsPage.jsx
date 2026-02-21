@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Paper, Typography, Chip, alpha, Snackbar, Alert } from '@mui/material';
-import { Receipt } from '@mui/icons-material';
+import { Box, Paper, Typography, Chip, alpha, Snackbar, Alert, Button } from '@mui/material';
+import { Receipt, Add } from '@mui/icons-material';
 import WaybillsTable from '../components/waybills/WaybillsTable';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -20,6 +20,7 @@ const WaybillsPage = () => {
     const [rowsPerPage, setRowsPerPage] = useState(15);
     const [totalElements, setTotalElements] = useState(0);
     const [filters, setFilters] = useState({ number: '' });
+    const [openWizard, setOpenWizard] = useState(false);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     const load = useCallback(async () => {
@@ -51,20 +52,30 @@ const WaybillsPage = () => {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
                 color: 'white', borderRadius: 3,
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Receipt fontSize="large" />
+                    <Box sx={{
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        p: 1.5, borderRadius: '16px', display: 'flex'
+                    }}>
+                        <Receipt fontSize="medium" />
+                    </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Транспортні накладні</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
                             Маніфести та перелік відправлень
                         </Typography>
                     </Box>
                 </Box>
-                <Chip
-                    label={`${totalElements} накладних`}
-                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 700 }}
-                />
+                <Button
+                    variant="contained" size="small"
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                    startIcon={<Add />}
+                    onClick={() => setOpenWizard(true)}
+                >
+                    Створити накладну
+                </Button>
             </Paper>
 
             <DataFilters
