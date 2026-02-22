@@ -1,388 +1,500 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-    Box, TextField, Button, Drawer, IconButton,
-    Typography, Divider, Slider, Badge, Tooltip, Paper, Chip, Stack, alpha, InputAdornment,
-    FormGroup, FormControlLabel, Checkbox,
+    Box, Typography, Popover, alpha, Chip, IconButton,
+    Tooltip, Collapse, Divider, Paper,
 } from '@mui/material';
-import { Search, Tune, Close, RestartAlt, FilterList } from '@mui/icons-material';
+import { Search, Close, Add, Check, KeyboardArrowDown } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { StaticDateTimePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 import 'dayjs/locale/uk';
+
+const fmt = (dateStr) => {
+    if (!dateStr) return '';
+    const d = dayjs(dateStr);
+    return d.isValid() ? d.format('DD.MM.YY, HH:mm') : dateStr;
+};
+
+const isActive = (field, filters) => {
+    if (field.type === 'range')
+        return filters[field.minName] > field.min || filters[field.maxName] < field.max;
+    if (field.type === 'checkbox-group') {
+        const v = filters[field.name];
+        return Array.isArray(v) && v.length > 0;
+    }
+    const v = filters[field.name];
+    return v !== '' && v !== null && v !== undefined;
+};
+
+const displayValue = (field, filters) => {
+    if (field.type === 'range')
+        return `${filters[field.minName]}–${filters[field.maxName]}`;
+    if (field.type === 'datetime')
+        return fmt(filters[field.name]);
+    if (field.type === 'checkbox-group') {
+        const ids = filters[field.name] || [];
+        const labels = ids.map(id => {
+            const o = field.options?.find(o => String(o.id) === String(id));
+            return o?.name || o?.label || id;
+        });
+        return labels.length <= 2 ? labels.join(', ') : `${labels[0]}, +${labels.length - 1}`;
+    }
+    return filters[field.name];
+};
+
+const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
+    const [anchor, setAnchor] = useState(null);
+    const active = isActive(field, filters);
+    const val = active ? displayValue(field, filters) : null;
+    const count = counts?.[field.name];
+
+    const handleClear = (e) => {
+        e.stopPropagation();
+        if (field.type === 'range') {
+            onChange(field.minName, field.min);
+            onChange(field.maxName, field.max);
+        } else if (field.type === 'checkbox-group') {
+            onChange(field.name, []);
+        } else {
+            onChange(field.name, '');
+        }
+    };
+
+    const minVal = Number(filters[field.minName] ?? field.min);
+    const maxVal = Number(filters[field.maxName] ?? field.max);
+
+    return (
+        <>
+            <Box
+                onClick={(e) => setAnchor(e.currentTarget)}
+                sx={{
+                    display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                    px: active ? 1.25 : 1.5,
+                    py: 0.6,
+                    borderRadius: '8px',
+                    border: `1.5px solid`,
+                    borderColor: active ? accentColor : '#e2e8f0',
+                    bgcolor: active ? alpha(accentColor, 0.07) : 'white',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                    '&:hover': {
+                        borderColor: accentColor,
+                        bgcolor: active ? alpha(accentColor, 0.1) : alpha(accentColor, 0.04),
+                        transform: 'translateY(-1px)',
+                        boxShadow: `0 4px 12px ${alpha(accentColor, 0.15)}`,
+                    },
+                }}
+            >
+                <Typography
+                    variant="caption"
+                    sx={{
+                        fontWeight: 600,
+                        fontSize: 12.5,
+                        color: active ? accentColor : '#64748b',
+                        letterSpacing: '0.01em',
+                    }}
+                >
+                    {field.label}
+                </Typography>
+
+                {active && (
+                    <>
+                        <Box sx={{ width: 1, height: 12, bgcolor: alpha(accentColor, 0.3) }} />
+                        <Typography variant="caption" sx={{
+                            fontSize: 12, fontWeight: 700, color: accentColor,
+                            maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>
+                            {val}
+                        </Typography>
+                    </>
+                )}
+
+                {count !== undefined && (
+                    <Typography variant="caption" sx={{
+                        fontSize: 11, color: active ? alpha(accentColor, 0.7) : '#94a3b8',
+                        fontWeight: 500,
+                    }}>
+                        ({count})
+                    </Typography>
+                )}
+
+                {active ? (
+                    <Box
+                        onClick={handleClear}
+                        sx={{
+                            ml: 0.25, display: 'flex', alignItems: 'center',
+                            '&:hover .close-icon': { opacity: 1, transform: 'scale(1)' },
+                        }}
+                    >
+                        <Close className="close-icon" sx={{
+                            fontSize: 13, color: accentColor,
+                            opacity: 0.6, transform: 'scale(0.85)',
+                            transition: 'all 0.12s',
+                        }} />
+                    </Box>
+                ) : (
+                    <KeyboardArrowDown sx={{ fontSize: 14, color: '#94a3b8', ml: 0.25 }} />
+                )}
+            </Box>
+
+            <Popover
+                open={Boolean(anchor)}
+                anchorEl={anchor}
+                onClose={() => setAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                PaperProps={{
+                    sx: {
+                        mt: 1, borderRadius: 3, overflow: 'hidden',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.06)',
+                        border: '1px solid #f1f5f9',
+                        minWidth: field.type === 'datetime' ? 340 : field.type === 'checkbox-group' ? 260 : 220,
+                    },
+                }}
+            >
+                <Box sx={{
+                    px: 2, py: 1.5,
+                    bgcolor: alpha(accentColor, 0.04),
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                    <Typography variant="caption" fontWeight={700} color="text.secondary"
+                        sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 10.5 }}>
+                        {field.label}
+                    </Typography>
+                    {active && (
+                        <Box onClick={handleClear}
+                            sx={{
+                                fontSize: 11, color: '#ef4444', cursor: 'pointer',
+                                fontWeight: 600, letterSpacing: '0.02em',
+                                '&:hover': { textDecoration: 'underline' },
+                            }}>
+                            Скинути
+                        </Box>
+                    )}
+                </Box>
+
+                <Box sx={{ p: field.type === 'datetime' ? 0 : 2 }}>
+                    {(!field.type || field.type === 'text') && (
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', gap: 1,
+                            border: `1.5px solid ${alpha(accentColor, 0.3)}`,
+                            borderRadius: 2, px: 1.5, py: 0.75, bgcolor: 'white',
+                        }}>
+                            <Search sx={{ fontSize: 16, color: '#94a3b8' }} />
+                            <input
+                                autoFocus
+                                value={filters[field.name] || ''}
+                                onChange={e => onChange(field.name, e.target.value)}
+                                placeholder={`Фільтр: ${field.label.toLowerCase()}...`}
+                                style={{
+                                    border: 'none', outline: 'none', background: 'transparent',
+                                    fontSize: 13, fontWeight: 500, width: '100%', color: '#1e293b',
+                                }}
+                                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setAnchor(null); }}
+                            />
+                            {filters[field.name] && (
+                                <Close onClick={() => onChange(field.name, '')}
+                                    sx={{ fontSize: 14, color: '#94a3b8', cursor: 'pointer' }} />
+                            )}
+                        </Box>
+                    )}
+
+                    {field.type === 'checkbox-group' && (() => {
+                        const selected = Array.isArray(filters[field.name]) ? filters[field.name] : [];
+                        return (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, maxHeight: 300, overflowY: 'auto',
+                                '&::-webkit-scrollbar': { width: 3 },
+                                '&::-webkit-scrollbar-thumb': { bgcolor: alpha(accentColor, 0.2), borderRadius: 2 },
+                            }}>
+                                {(field.options || []).map(opt => {
+                                    const id = opt.id;
+                                    const checked = selected.includes(id);
+                                    const optCount = counts?.[`${field.name}_${id}`];
+                                    return (
+                                        <Box key={id}
+                                            onClick={() => {
+                                                const next = checked
+                                                    ? selected.filter(x => x !== id)
+                                                    : [...selected, id];
+                                                onChange(field.name, next);
+                                            }}
+                                            sx={{
+                                                display: 'flex', alignItems: 'center',
+                                                gap: 1, px: 1.25, py: 0.9, borderRadius: 2,
+                                                cursor: 'pointer', transition: 'all 0.1s',
+                                                bgcolor: checked ? alpha(accentColor, 0.08) : 'transparent',
+                                                '&:hover': { bgcolor: checked ? alpha(accentColor, 0.12) : '#f8fafc' },
+                                            }}
+                                        >
+                                            <Box sx={{
+                                                width: 16, height: 16, borderRadius: '5px',
+                                                border: `2px solid`, flexShrink: 0,
+                                                borderColor: checked ? accentColor : '#cbd5e1',
+                                                bgcolor: checked ? accentColor : 'white',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                transition: 'all 0.12s',
+                                            }}>
+                                                {checked && <Check sx={{ fontSize: 11, color: 'white' }} />}
+                                            </Box>
+                                            {opt.color && (
+                                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: opt.color, flexShrink: 0 }} />
+                                            )}
+                                            <Typography variant="body2" sx={{
+                                                fontSize: 13, fontWeight: checked ? 600 : 400,
+                                                color: checked ? accentColor : '#374151', flex: 1,
+                                            }}>
+                                                {opt.name || opt.label}
+                                            </Typography>
+                                            {optCount !== undefined && (
+                                                <Typography variant="caption" sx={{
+                                                    fontSize: 11, color: '#94a3b8', fontWeight: 500,
+                                                }}>
+                                                    {optCount}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        );
+                    })()}
+
+                    {field.type === 'range' && (() => {
+                        const pctLeft = ((minVal - field.min) / (field.max - field.min)) * 100;
+                        const pctRight = ((maxVal - field.min) / (field.max - field.min)) * 100;
+                        return (
+                            <Box>
+                                <Box sx={{
+                                    display: 'flex', justifyContent: 'space-between', mb: 2.5,
+                                }}>
+                                    {[
+                                        { label: 'Від', name: field.minName, val: minVal },
+                                        { label: 'До', name: field.maxName, val: maxVal },
+                                    ].map(({ label, name, val: v }) => (
+                                        <Box key={name}>
+                                            <Typography variant="caption" color="text.secondary"
+                                                sx={{ fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                {label}
+                                            </Typography>
+                                            <Box sx={{
+                                                mt: 0.5, px: 1.5, py: 0.75, borderRadius: 2,
+                                                border: `1.5px solid ${alpha(accentColor, 0.3)}`,
+                                                minWidth: 70, textAlign: 'center',
+                                            }}>
+                                                <Typography variant="body2" fontWeight={700} color={accentColor}>
+                                                    {v}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    ))}
+                                </Box>
+
+                                <Box sx={{ px: 0.5, position: 'relative', height: 24, display: 'flex', alignItems: 'center', mb: 1 }}>
+                                    <Box sx={{ position: 'absolute', left: 0, right: 0, height: 4, bgcolor: '#e2e8f0', borderRadius: 2 }} />
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        left: `${pctLeft}%`,
+                                        right: `${100 - pctRight}%`,
+                                        height: 4, bgcolor: accentColor, borderRadius: 2,
+                                    }} />
+                                    {[
+                                        { val: minVal, name: field.minName, z: 2, check: (v) => v <= maxVal },
+                                        { val: maxVal, name: field.maxName, z: 3, check: (v) => v >= minVal },
+                                    ].map(({ val: v, name, z, check }, i) => (
+                                        <input key={name} type="range"
+                                            min={field.min} max={field.max} value={v}
+                                            onChange={e => { const nv = Number(e.target.value); if (check(nv)) onChange(name, nv); }}
+                                            style={{
+                                                position: 'absolute', width: '100%', opacity: 0,
+                                                cursor: 'pointer', height: 24, zIndex: z, margin: 0,
+                                            }}
+                                        />
+                                    ))}
+                                    {[pctLeft, pctRight].map((pct, i) => (
+                                        <Box key={i} sx={{
+                                            position: 'absolute', left: `calc(${pct}% - 10px)`,
+                                            width: 20, height: 20, borderRadius: '50%',
+                                            bgcolor: 'white', border: `2.5px solid ${accentColor}`,
+                                            boxShadow: `0 2px 8px ${alpha(accentColor, 0.35)}`,
+                                            zIndex: 1, pointerEvents: 'none', transition: 'left 0s',
+                                        }} />
+                                    ))}
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="caption" color="text.disabled" fontSize={11}>{field.min}</Typography>
+                                    <Typography variant="caption" color="text.disabled" fontSize={11}>{field.max}</Typography>
+                                </Box>
+                            </Box>
+                        );
+                    })()}
+
+                    {field.type === 'datetime' && (
+                        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="uk">
+                            <StaticDateTimePicker
+                                value={filters[field.name] ? dayjs(filters[field.name]) : null}
+                                onChange={v => onChange(field.name, v?.isValid() ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
+                                ampm={false}
+                                slots={{ actionBar: () => null }}
+                                slotProps={{
+                                    toolbar: { hidden: true },
+                                    actionBar: { actions: [] },
+                                }}
+                                sx={{
+                                    '& .MuiPickersDay-root.Mui-selected': { bgcolor: accentColor },
+                                    '& .MuiClockPointer-root': { bgcolor: accentColor },
+                                    '& .MuiClockPointer-thumb': { borderColor: accentColor },
+                                    '& .MuiClock-pin': { bgcolor: accentColor },
+                                }}
+                            />
+                        </LocalizationProvider>
+                    )}
+                </Box>
+            </Popover>
+        </>
+    );
+};
 
 const DataFilters = ({
     filters,
     onChange,
     onClear,
     fields,
-    searchPlaceholder = "Пошук...",
-    quickFilters = [],
+    searchPlaceholder = 'Пошук...',
     accentColor = '#1976d2',
+    counts = {},
 }) => {
-    const [open, setOpen] = useState(false);
-
     const searchField = fields[0];
-    const quickAccessFields = fields.filter(f => quickFilters.includes(f.name));
-    const advancedFields = fields.filter(f =>
-        f.name !== searchField?.name && !quickFilters.includes(f.name)
-    );
-
-    const formatDisplayDate = (dateStr) => {
-        if (!dateStr) return '';
-        const d = dayjs(dateStr);
-        return d.isValid() ? d.format('DD.MM.YYYY, HH:mm') : dateStr;
-    };
-
-    const getOptionLabel = (field, value) => {
-        if (field.type === 'checkbox-group') {
-            const ids = Array.isArray(value) ? value : [];
-            return ids.map(id => {
-                const o = field.options?.find(o => String(o.id) === String(id));
-                return o ? (o.name || o.label) : id;
-            }).join(', ');
-        }
-        const option = field.options?.find(o => String(o.id) === String(value));
-        return option ? (option.name || option.label) : value;
-    };
-
-    const isFieldActive = (field) => {
-        if (field.type === 'range') {
-            return filters[field.minName] > field.min || filters[field.maxName] < field.max;
-        }
-        if (field.type === 'checkbox-group') {
-            const val = filters[field.name];
-            return Array.isArray(val) && val.length > 0;
-        }
-        const val = filters[field.name];
-        return val !== '' && val !== null && val !== undefined;
-    };
-
-    const activeCount = fields.filter(isFieldActive).length;
-
-    const handleCheckboxToggle = (fieldName, optionId) => {
-        const current = Array.isArray(filters[fieldName]) ? filters[fieldName] : [];
-        const next = current.includes(optionId)
-            ? current.filter(id => id !== optionId)
-            : [...current, optionId];
-        onChange(fieldName, next.length > 0 ? next : []);
-    };
-
-    const renderCheckboxGroup = (field) => {
-        const selected = Array.isArray(filters[field.name]) ? filters[field.name] : [];
-        const options = field.options || [];
-
-        return (
-            <Box key={field.name} sx={{ mb: 2.5, mt: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="body2" fontWeight={600} color="text.secondary">
-                        {field.label}
-                    </Typography>
-                    {selected.length > 0 && (
-                        <IconButton size="small" color="error" onClick={() => onChange(field.name, [])}>
-                            <Close sx={{ fontSize: 14 }} />
-                        </IconButton>
-                    )}
-                </Box>
-                <Box sx={{
-                    border: '1px solid #e0e0e0', borderRadius: 2,
-                    p: 1.5, maxHeight: 220, overflowY: 'auto',
-                    '&::-webkit-scrollbar': { width: 4 },
-                    '&::-webkit-scrollbar-thumb': { bgcolor: alpha(accentColor, 0.3), borderRadius: 2 },
-                }}>
-                    <FormGroup>
-                        {options.map(option => {
-                            const id = option.id;
-                            const label = option.name || option.label;
-                            const checked = selected.includes(id);
-                            return (
-                                <FormControlLabel
-                                    key={id}
-                                    control={
-                                        <Checkbox
-                                            size="small"
-                                            checked={checked}
-                                            onChange={() => handleCheckboxToggle(field.name, id)}
-                                            sx={{
-                                                py: 0.5,
-                                                '&.Mui-checked': { color: accentColor },
-                                            }}
-                                        />
-                                    }
-                                    label={
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {option.color && (
-                                                <Box sx={{
-                                                    width: 8, height: 8, borderRadius: '50%',
-                                                    bgcolor: option.color, flexShrink: 0,
-                                                }} />
-                                            )}
-                                            <Typography variant="body2" sx={{ fontSize: 13 }}>
-                                                {label}
-                                            </Typography>
-                                        </Box>
-                                    }
-                                    sx={{
-                                        mx: 0, px: 0.5,
-                                        borderRadius: 1.5,
-                                        bgcolor: checked ? alpha(accentColor, 0.07) : 'transparent',
-                                        transition: 'background 0.15s',
-                                        '&:hover': { bgcolor: alpha(accentColor, 0.05) },
-                                    }}
-                                />
-                            );
-                        })}
-                        {options.length === 0 && (
-                            <Typography variant="caption" color="text.disabled" sx={{ px: 1 }}>
-                                Завантаження...
-                            </Typography>
-                        )}
-                    </FormGroup>
-                </Box>
-                {selected.length > 0 && (
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
-                        {selected.map(id => {
-                            const o = options.find(o => o.id === id);
-                            return (
-                                <Chip
-                                    key={id}
-                                    label={o?.name || o?.label || id}
-                                    size="small"
-                                    onDelete={() => handleCheckboxToggle(field.name, id)}
-                                    sx={{
-                                        height: 20, fontSize: 11,
-                                        bgcolor: alpha(accentColor, 0.1),
-                                        color: accentColor,
-                                        '& .MuiChip-deleteIcon': { fontSize: 12, color: accentColor },
-                                    }}
-                                />
-                            );
-                        })}
-                    </Stack>
-                )}
-            </Box>
-        );
-    };
-
-    const renderField = (field, isQuick = false) => {
-        if (!field) return null;
-
-        if (field.type === 'checkbox-group') {
-            return renderCheckboxGroup(field);
-        }
-
-        const commonSx = {
-            mb: isQuick ? 0 : 2.5,
-            mt: isQuick ? 0 : 1.5,
-            minWidth: isQuick ? 200 : 'auto',
-            '& .MuiInputLabel-root': {
-                bgcolor: 'white', px: 1, ml: -0.5,
-                fontWeight: 400, color: 'text.secondary',
-            },
-            '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                '& fieldset legend': { fontSize: '0.75rem' },
-            }
-        };
-
-        if (field.type === 'range') {
-            const isModified = filters[field.minName] > field.min || filters[field.maxName] < field.max;
-            return (
-                <Box key={field.label} sx={{ px: 1, mb: 4, mt: isQuick ? 0 : 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                        <Typography variant="body2" fontWeight="400" color="text.secondary">
-                            {field.label}:{' '}
-                            <span style={{ color: accentColor, fontWeight: 600 }}>
-                                {filters[field.minName]} — {filters[field.maxName]}
-                            </span>
-                        </Typography>
-                        {isModified && (
-                            <IconButton size="small" color="error"
-                                onClick={() => { onChange(field.minName, field.min); onChange(field.maxName, field.max); }}>
-                                <Close sx={{ fontSize: 14 }} />
-                            </IconButton>
-                        )}
-                    </Box>
-                    <Slider
-                        size="small"
-                        value={[Number(filters[field.minName] || field.min), Number(filters[field.maxName] || field.max)]}
-                        onChange={(e, v) => { onChange(field.minName, v[0]); onChange(field.maxName, v[1]); }}
-                        min={field.min}
-                        max={field.max}
-                        valueLabelDisplay="auto"
-                        sx={{ color: accentColor }}
-                    />
-                </Box>
-            );
-        }
-
-        if (field.type === 'datetime') {
-            return (
-                <DateTimePicker
-                    key={field.name}
-                    label={field.label}
-                    value={filters[field.name] ? dayjs(filters[field.name]) : null}
-                    onChange={(v) => onChange(field.name, v && v.isValid() ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
-                    ampm={false}
-                    format="DD.MM.YYYY HH:mm"
-                    slotProps={{
-                        textField: {
-                            fullWidth: !isQuick, size: 'small', sx: commonSx,
-                            InputLabelProps: { shrink: true },
-                            InputProps: {
-                                endAdornment: filters[field.name] && (
-                                    <InputAdornment position="end" sx={{ mr: 3 }}>
-                                        <IconButton size="small"
-                                            onClick={(e) => { e.stopPropagation(); onChange(field.name, ''); }}>
-                                            <Close sx={{ fontSize: 16 }} />
-                                        </IconButton>
-                                    </InputAdornment>
-                                )
-                            }
-                        }
-                    }}
-                />
-            );
-        }
-
-        const hasValue = filters[field.name] !== '' && filters[field.name] !== null;
-
-        return (
-            <TextField
-                key={field.name}
-                fullWidth={!isQuick}
-                size="small"
-                label={field.label}
-                value={filters[field.name] || ''}
-                onChange={(e) => onChange(field.name, e.target.value)}
-                sx={commonSx}
-                InputLabelProps={{ shrink: true }}
-                InputProps={{
-                    startAdornment: isQuick && (
-                        <InputAdornment position="start">
-                            <FilterList fontSize="small" color="action" />
-                        </InputAdornment>
-                    ),
-                    endAdornment: hasValue ? (
-                        <InputAdornment position="end">
-                            <IconButton size="small" color="error" onClick={() => onChange(field.name, '')}>
-                                <Close sx={{ fontSize: 16 }} />
-                            </IconButton>
-                        </InputAdornment>
-                    ) : null
-                }}
-            />
-        );
-    };
+    const filterFields = fields.filter(f => f.name !== searchField?.name);
+    const activeCount = filterFields.filter(f => isActive(f, filters)).length;
+    const totalCount = counts?.total;
 
     return (
-        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="uk">
-            <Box sx={{ mb: 3 }}>
-                <Paper elevation={0} sx={{
-                    p: 1.5, borderRadius: 3, display: 'flex', gap: 1.5, alignItems: 'center',
-                    border: '1px solid #e0e0e0', bgcolor: 'white', mb: 1.5, flexWrap: 'wrap'
-                }}>
-                    <TextField
-                        placeholder={searchPlaceholder}
-                        size="small"
+        <Box sx={{ mb: 3 }}>
+            <Box sx={{
+                display: 'flex', alignItems: 'center', gap: 1,
+                p: 1, pl: 1.5,
+                bgcolor: 'white',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: 3,
+                mb: 1,
+                flexWrap: 'wrap',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 200px', minWidth: 160 }}>
+                    <Search sx={{ fontSize: 18, color: '#94a3b8', flexShrink: 0 }} />
+                    <input
                         value={filters[searchField?.name] || ''}
-                        onChange={(e) => onChange(searchField?.name, e.target.value)}
-                        sx={{ flexGrow: 2, minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                        InputProps={{
-                            startAdornment: <Search sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
-                            endAdornment: filters[searchField?.name] ? (
-                                <IconButton size="small" onClick={() => onChange(searchField?.name, '')}>
-                                    <Close sx={{ fontSize: 16 }} />
-                                </IconButton>
-                            ) : null
+                        onChange={e => onChange(searchField?.name, e.target.value)}
+                        placeholder={searchPlaceholder}
+                        style={{
+                            border: 'none', outline: 'none', background: 'transparent',
+                            fontSize: 13.5, fontWeight: 500, width: '100%',
+                            color: '#1e293b', letterSpacing: '0.01em',
                         }}
                     />
-
-                    {quickAccessFields.map(f => renderField(f, true))}
-
-                    <Divider orientation="vertical" flexItem sx={{ mx: 0.5, display: { xs: 'none', md: 'block' } }} />
-
-                    <Badge badgeContent={activeCount} color="primary">
-                        <Button
-                            variant={activeCount > 0 ? "contained" : "outlined"}
-                            startIcon={<Tune />}
-                            onClick={() => setOpen(true)}
-                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, px: 2, height: 40 }}
-                        >
-                            Більше
-                        </Button>
-                    </Badge>
-
-                    {activeCount > 0 && (
-                        <Tooltip title="Скинути все">
-                            <IconButton onClick={onClear} color="error"
-                                sx={{ bgcolor: alpha('#f44336', 0.05), borderRadius: 2 }}>
-                                <RestartAlt />
-                            </IconButton>
-                        </Tooltip>
+                    {filters[searchField?.name] && (
+                        <Close onClick={() => onChange(searchField?.name, '')}
+                            sx={{ fontSize: 15, color: '#94a3b8', cursor: 'pointer', flexShrink: 0,
+                                '&:hover': { color: '#ef4444' } }} />
                     )}
-                </Paper>
+                </Box>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ minHeight: 26, px: 0.5 }}>
-                    {fields.map(f => {
-                        if (!isFieldActive(f)) return null;
+                <Box sx={{ width: 1, height: 28, bgcolor: '#e2e8f0', flexShrink: 0 }} />
 
-                        let displayValue = '';
-                        if (f.type === 'range') {
-                            displayValue = `${filters[f.minName]}–${filters[f.maxName]}`;
-                        } else if (f.type === 'datetime') {
-                            displayValue = formatDisplayDate(filters[f.name]);
-                        } else if (f.type === 'checkbox-group') {
-                            const ids = filters[f.name] || [];
-                            displayValue = `${ids.length} обрано`;
-                        } else {
-                            displayValue = getOptionLabel(f, filters[f.name]);
-                        }
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', flex: '99 1 auto' }}>
+                    {filterFields.map(f => (
+                        <FilterToken
+                            key={f.name || f.label}
+                            field={f}
+                            filters={filters}
+                            onChange={onChange}
+                            accentColor={accentColor}
+                            counts={counts}
+                        />
+                    ))}
+                </Box>
 
-                        return (
-                            <Chip
-                                key={f.name || f.label}
-                                label={`${f.label}: ${displayValue}`}
-                                size="small"
-                                onDelete={() => {
-                                    if (f.type === 'range') {
-                                        onChange(f.minName, f.min); onChange(f.maxName, f.max);
-                                    } else if (f.type === 'checkbox-group') {
-                                        onChange(f.name, []);
-                                    } else {
-                                        onChange(f.name, '');
-                                    }
-                                }}
-                                sx={{
-                                    bgcolor: alpha(accentColor, 0.08),
-                                    color: accentColor,
-                                    fontWeight: 500, borderRadius: 1.5,
-                                }}
-                            />
-                        );
-                    })}
-                </Stack>
-
-                <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
-                    <Box sx={{ width: 380, p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <Typography variant="h6" fontWeight="800"
-                            sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FilterList color="primary" /> Всі фільтри
-                        </Typography>
-
-                        <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 0.5 }}>
-                            {advancedFields.map(f => renderField(f))}
-                        </Box>
-
-                        <Button fullWidth variant="contained"
-                            onClick={() => setOpen(false)}
-                            sx={{ mt: 2, py: 1.5, borderRadius: 2, bgcolor: '#263238' }}>
-                            Застосувати
-                        </Button>
-                    </Box>
-                </Drawer>
+                {activeCount > 0 && (
+                    <>
+                        <Box sx={{ width: 1, height: 28, bgcolor: '#e2e8f0', flexShrink: 0 }} />
+                        <Tooltip title="Скинути всі фільтри">
+                            <Box onClick={onClear} sx={{
+                                display: 'flex', alignItems: 'center', gap: 0.5,
+                                px: 1.25, py: 0.6, borderRadius: 2, cursor: 'pointer',
+                                color: '#ef4444', transition: 'all 0.15s',
+                                '&:hover': { bgcolor: alpha('#ef4444', 0.07) },
+                            }}>
+                                <Close sx={{ fontSize: 14 }} />
+                                <Typography variant="caption" fontWeight={700} fontSize={12}>
+                                    Скинути{activeCount > 0 ? ` (${activeCount})` : ''}
+                                </Typography>
+                            </Box>
+                        </Tooltip>
+                    </>
+                )}
             </Box>
-        </LocalizationProvider>
+
+            {(totalCount !== undefined || activeCount > 0) && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 0.5 }}>
+                    {totalCount !== undefined && (
+                        <Typography variant="caption" sx={{ color: '#64748b', fontSize: 12, fontWeight: 500 }}>
+                            Знайдено:{' '}
+                            <span style={{ color: accentColor, fontWeight: 700 }}>{totalCount}</span>
+                        </Typography>
+                    )}
+
+                    {activeCount > 0 && totalCount !== undefined && (
+                        <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: '#cbd5e1' }} />
+                    )}
+
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {filterFields.filter(f => isActive(f, filters)).map(f => {
+                            const fCount = counts?.[f.name];
+                            return (
+                                <Box key={f.name} sx={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                                    px: 1, py: 0.3, borderRadius: '6px',
+                                    bgcolor: alpha(accentColor, 0.07),
+                                }}>
+                                    <Typography variant="caption" sx={{
+                                        fontSize: 11.5, color: '#64748b',
+                                    }}>
+                                        {f.label}:
+                                    </Typography>
+                                    <Typography variant="caption" sx={{
+                                        fontSize: 11.5, color: accentColor, fontWeight: 700,
+                                    }}>
+                                        {displayValue(f, filters)}
+                                        {fCount !== undefined && (
+                                            <span style={{ color: alpha(accentColor, 0.6), fontWeight: 500 }}>
+                                                {' '}({fCount})
+                                            </span>
+                                        )}
+                                    </Typography>
+                                    <Close onClick={() => {
+                                        if (f.type === 'range') {
+                                            onChange(f.minName, f.min);
+                                            onChange(f.maxName, f.max);
+                                        } else if (f.type === 'checkbox-group') {
+                                            onChange(f.name, []);
+                                        } else {
+                                            onChange(f.name, '');
+                                        }
+                                    }} sx={{
+                                        fontSize: 11, color: '#94a3b8', cursor: 'pointer',
+                                        '&:hover': { color: '#ef4444' },
+                                    }} />
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                </Box>
+            )}
+        </Box>
     );
 };
 
