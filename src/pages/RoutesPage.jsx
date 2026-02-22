@@ -54,7 +54,7 @@ const RoutesPage = () => {
             try {
                 const res = await DictionaryApi.getStatistics('routes');
                 const { distanceKmMin, distanceKmMax } = res.data;
-                
+
                 setStatistics({
                     minDistance: distanceKmMin || 0,
                     maxDistance: distanceKmMax || 3000
@@ -204,6 +204,7 @@ const RoutesPage = () => {
                 searchPlaceholder="Пошук маршруту..."
                 quickFilters={['needSorting']}
                 fields={filterFields}
+                accentColor={mainColor}
                 counts={{ total: totalElements }}
             />
 

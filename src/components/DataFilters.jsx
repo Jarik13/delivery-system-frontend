@@ -353,11 +353,44 @@ const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
                     {field.type === 'range' && (() => {
                         const pctLeft = ((minVal - field.min) / (field.max - field.min)) * 100;
                         const pctRight = ((maxVal - field.min) / (field.max - field.min)) * 100;
+
                         return (
                             <Box>
-                                <Box sx={{
-                                    display: 'flex', justifyContent: 'space-between', mb: 2.5,
-                                }}>
+                                <style>{`
+                .dual-range-input {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 100%;
+                    background: transparent;
+                    pointer-events: none;
+                    position: absolute;
+                    margin: 0;
+                }
+                .dual-range-input::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    appearance: none;
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background: transparent;
+                    border: none;
+                    pointer-events: auto;
+                    cursor: pointer;
+                }
+                .dual-range-input::-moz-range-thumb {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    background: transparent;
+                    border: none;
+                    pointer-events: auto;
+                    cursor: pointer;
+                }
+                .dual-range-input:focus {
+                    outline: none;
+                }
+            `}</style>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2.5 }}>
                                     {[
                                         { label: 'Від', name: field.minName, val: minVal },
                                         { label: 'До', name: field.maxName, val: maxVal },
@@ -369,8 +402,8 @@ const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
                                             </Typography>
                                             <Box sx={{
                                                 mt: 0.5, px: 1.5, py: 0.75, borderRadius: 2,
-                                                border: `1.5px solid ${alpha(accentColor, 0.3)}`,
-                                                minWidth: 70, textAlign: 'center',
+                                                border: `1px solid ${alpha(accentColor, 0.2)}`,
+                                                minWidth: 75, textAlign: 'center', bgcolor: alpha(accentColor, 0.02)
                                             }}>
                                                 <Typography variant="body2" fontWeight={700} color={accentColor}>
                                                     {v}
@@ -380,40 +413,62 @@ const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
                                     ))}
                                 </Box>
 
-                                <Box sx={{ px: 0.5, position: 'relative', height: 24, display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <Box sx={{ position: 'absolute', left: 0, right: 0, height: 4, bgcolor: '#e2e8f0', borderRadius: 2 }} />
+                                <Box sx={{ px: 0, position: 'relative', height: 24, display: 'flex', alignItems: 'center', mb: 1 }}>
+                                    <Box sx={{ position: 'absolute', left: 0, right: 0, height: 4, bgcolor: '#f1f5f9', borderRadius: 2 }} />
+
                                     <Box sx={{
                                         position: 'absolute',
                                         left: `${pctLeft}%`,
                                         right: `${100 - pctRight}%`,
                                         height: 4, bgcolor: accentColor, borderRadius: 2,
                                     }} />
-                                    {[
-                                        { val: minVal, name: field.minName, z: 2, check: (v) => v <= maxVal },
-                                        { val: maxVal, name: field.maxName, z: 3, check: (v) => v >= minVal },
-                                    ].map(({ val: v, name, z, check }, i) => (
-                                        <input key={name} type="range"
-                                            min={field.min} max={field.max} value={v}
-                                            onChange={e => { const nv = Number(e.target.value); if (check(nv)) onChange(name, nv); }}
-                                            style={{
-                                                position: 'absolute', width: '100%', opacity: 0,
-                                                cursor: 'pointer', height: 24, zIndex: z, margin: 0,
-                                            }}
-                                        />
-                                    ))}
-                                    {[pctLeft, pctRight].map((pct, i) => (
-                                        <Box key={i} sx={{
-                                            position: 'absolute', left: `calc(${pct}% - 10px)`,
-                                            width: 20, height: 20, borderRadius: '50%',
-                                            bgcolor: 'white', border: `2.5px solid ${accentColor}`,
-                                            boxShadow: `0 2px 8px ${alpha(accentColor, 0.35)}`,
-                                            zIndex: 1, pointerEvents: 'none', transition: 'left 0s',
-                                        }} />
-                                    ))}
+
+                                    <input
+                                        type="range"
+                                        className="dual-range-input"
+                                        min={field.min}
+                                        max={field.max}
+                                        step={field.step || 1}
+                                        value={minVal}
+                                        onChange={e => {
+                                            const nv = Number(e.target.value);
+                                            if (nv <= maxVal) onChange(field.minName, nv);
+                                        }}
+                                        style={{ zIndex: minVal > (field.max - (field.max - field.min) * 0.1) ? 5 : 3 }}
+                                    />
+
+                                    <input
+                                        type="range"
+                                        className="dual-range-input"
+                                        min={field.min}
+                                        max={field.max}
+                                        step={field.step || 1}
+                                        value={maxVal}
+                                        onChange={e => {
+                                            const nv = Number(e.target.value);
+                                            if (nv >= minVal) onChange(field.maxName, nv);
+                                        }}
+                                        style={{ zIndex: 4 }}
+                                    />
+
+                                    <Box sx={{
+                                        position: 'absolute', left: `calc(${pctLeft}% - 10px)`,
+                                        width: 20, height: 20, borderRadius: '50%',
+                                        bgcolor: 'white', border: `2px solid ${accentColor}`,
+                                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)', zIndex: 2, pointerEvents: 'none'
+                                    }} />
+
+                                    <Box sx={{
+                                        position: 'absolute', left: `calc(${pctRight}% - 10px)`,
+                                        width: 20, height: 20, borderRadius: '50%',
+                                        bgcolor: 'white', border: `2px solid ${accentColor}`,
+                                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)', zIndex: 2, pointerEvents: 'none'
+                                    }} />
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <Typography variant="caption" color="text.disabled" fontSize={11}>{field.min}</Typography>
-                                    <Typography variant="caption" color="text.disabled" fontSize={11}>{field.max}</Typography>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.disabled" fontWeight={500}>{field.min}</Typography>
+                                    <Typography variant="caption" color="text.disabled" fontWeight={500}>{field.max}</Typography>
                                 </Box>
                             </Box>
                         );
