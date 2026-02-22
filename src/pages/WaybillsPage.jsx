@@ -13,6 +13,7 @@ import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import WaybillWizardDialog from '../components/waybills/WaybillWizardDialog';
 
 const EXPORT_FORMATS = [
     { key: 'xlsx', label: 'Excel (.xlsx)', ext: 'xlsx', icon: <TableChart sx={{ color: '#217346' }} /> },
@@ -84,6 +85,11 @@ const WaybillsPage = () => {
         const t = setTimeout(load, 300);
         return () => clearTimeout(t);
     }, [load]);
+
+    const handleWizardSuccess = (message) => {
+        load();
+        setNotification({ open: true, message, severity: 'success' });
+    };
 
     const handleToggle = useCallback((id) => {
         setSelectedIds(prev => {
@@ -338,6 +344,13 @@ const WaybillsPage = () => {
                 selected={[...selectedIds]}
                 onToggle={handleToggle}
                 onToggleAll={handleToggleAll}
+            />
+
+            <WaybillWizardDialog
+                open={openWizard}
+                onClose={() => setOpenWizard(false)}
+                mainColor={mainColor}
+                onSuccess={handleWizardSuccess}
             />
 
             <DataPagination
