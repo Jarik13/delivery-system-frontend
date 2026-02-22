@@ -35,7 +35,7 @@ const ParcelsPage = () => {
 
     const [filters, setFilters] = useState({
         name: '',
-        parcelTypeId: '',
+        parcelTypes: [],
         weightMin: 0,
         weightMax: 100,
         declaredValueMin: 0,
@@ -88,7 +88,13 @@ const ParcelsPage = () => {
 
     const loadTableData = useCallback(async () => {
         try {
-            const response = await DictionaryApi.getAll('parcels', page, rowsPerPage, filters);
+            const activeFilters = Object.fromEntries(
+                Object.entries(filters).filter(([_, v]) =>
+                    v !== '' && v !== null && !(Array.isArray(v) && v.length === 0)
+                )
+            );
+
+            const response = await DictionaryApi.getAll('parcels', page, rowsPerPage, activeFilters);
             setParcels(response.data.content || []);
             setTotalElements(response.data.totalElements || 0);
         } catch (error) {
@@ -109,7 +115,7 @@ const ParcelsPage = () => {
     const handleClearFilters = () => {
         setFilters({
             name: '',
-            parcelTypeId: '',
+            parcelTypes: [],
             weightMin: statistics.minWeight,
             weightMax: statistics.maxWeight,
             declaredValueMin: statistics.minDeclaredValue,
@@ -155,8 +161,17 @@ const ParcelsPage = () => {
     };
 
     const filterFields = [
-        { name: 'name', label: 'Опис вмісту', type: 'text', md: 2.5 },
-        { name: 'parcelTypeId', label: 'Тип посилки', type: 'select', options: parcelTypes, md: 2 },
+        {
+            name: 'name',
+            label: 'Опис вмісту',
+            type: 'text'
+        },
+        {
+            name: 'parcelTypes',
+            label: 'Тип посилки',
+            type: 'checkbox-group',
+            options: parcelTypes.map(t => ({ id: t.id, name: t.name }))
+        },
         {
             label: 'Вага (кг)',
             type: 'range',
@@ -164,7 +179,6 @@ const ParcelsPage = () => {
             maxName: 'weightMax',
             min: statistics.minWeight,
             max: statistics.maxWeight,
-            md: 3.5
         },
         {
             label: 'Вартість (грн)',
@@ -173,7 +187,6 @@ const ParcelsPage = () => {
             maxName: 'declaredValueMax',
             min: statistics.minDeclaredValue,
             max: statistics.maxDeclaredValue,
-            md: 4
         }
     ];
 
@@ -208,8 +221,8 @@ const ParcelsPage = () => {
                 onChange={handleFilterChange}
                 onClear={handleClearFilters}
                 searchPlaceholder="Опис вмісту..."
-                quickFilters={['parcelTypeId']}
                 fields={filterFields}
+                counts={{ total: totalElements }}
             />
 
             <Grid
