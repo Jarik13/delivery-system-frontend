@@ -32,6 +32,11 @@ const displayValue = (field, filters) => {
         return `${filters[field.minName]}–${filters[field.maxName]}`;
     if (field.type === 'datetime')
         return fmt(filters[field.name]);
+    if (field.type === 'select') {
+        const val = filters[field.name];
+        const o = field.options?.find(o => String(o.id) === String(val));
+        return o?.name || o?.label || val;
+    }
     if (field.type === 'checkbox-group') {
         const ids = filters[field.name] || [];
         const labels = ids.map(id => {
@@ -45,6 +50,8 @@ const displayValue = (field, filters) => {
 
 const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
     const [anchor, setAnchor] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
     const active = isActive(field, filters);
     const val = active ? displayValue(field, filters) : null;
     const count = counts?.[field.name];
@@ -143,7 +150,10 @@ const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
             <Popover
                 open={Boolean(anchor)}
                 anchorEl={anchor}
-                onClose={() => setAnchor(null)}
+                onClose={() => {
+                    setAnchor(null);
+                    setSearchQuery('');
+                }}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 PaperProps={{
@@ -203,10 +213,87 @@ const FilterToken = ({ field, filters, onChange, accentColor, counts }) => {
                         </Box>
                     )}
 
+                    {field.type === 'select' && (() => {
+                        const filteredOptions = (field.options || []).filter(opt =>
+                            (opt.name || opt.label || "").toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+
+                        return (
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Box sx={{ p: 1.5, pb: 1, borderBottom: '1px solid #f1f5f9' }}>
+                                    <Box sx={{
+                                        display: 'flex', alignItems: 'center', gap: 1,
+                                        px: 1, py: 0.5, bgcolor: '#f8fafc', borderRadius: 2,
+                                        border: '1px solid #e2e8f0'
+                                    }}>
+                                        <Search sx={{ fontSize: 16, color: '#94a3b8' }} />
+                                        <input
+                                            autoFocus
+                                            placeholder="Пошук..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            style={{
+                                                border: 'none', outline: 'none', background: 'transparent',
+                                                fontSize: 13, width: '100%', color: '#1e293b'
+                                            }}
+                                        />
+                                        {searchQuery && (
+                                            <Close
+                                                onClick={() => setSearchQuery('')}
+                                                sx={{ fontSize: 14, color: '#94a3b8', cursor: 'pointer' }}
+                                            />
+                                        )}
+                                    </Box>
+                                </Box>
+
+                                <Box sx={{
+                                    maxHeight: 250, overflowY: 'auto', p: 1,
+                                    '&::-webkit-scrollbar': { width: 3 },
+                                    '&::-webkit-scrollbar-thumb': { bgcolor: alpha(accentColor, 0.2), borderRadius: 2 },
+                                }}>
+                                    {filteredOptions.length > 0 ? (
+                                        filteredOptions.map(opt => {
+                                            const isSelected = String(filters[field.name]) === String(opt.id);
+                                            return (
+                                                <Box key={opt.id}
+                                                    onClick={() => {
+                                                        onChange(field.name, isSelected ? '' : opt.id);
+                                                        setAnchor(null);
+                                                        setSearchQuery('');
+                                                    }}
+                                                    sx={{
+                                                        display: 'flex', alignItems: 'center', gap: 1,
+                                                        px: 1.5, py: 1, borderRadius: 2, cursor: 'pointer',
+                                                        bgcolor: isSelected ? alpha(accentColor, 0.08) : 'transparent',
+                                                        '&:hover': { bgcolor: isSelected ? alpha(accentColor, 0.12) : '#f8fafc' }
+                                                    }}
+                                                >
+                                                    <Typography variant="body2" sx={{
+                                                        fontSize: 13,
+                                                        fontWeight: isSelected ? 600 : 400,
+                                                        color: isSelected ? accentColor : '#374151'
+                                                    }}>
+                                                        {opt.name || opt.label}
+                                                    </Typography>
+                                                    {isSelected && <Check sx={{ fontSize: 14, color: accentColor, ml: 'auto' }} />}
+                                                </Box>
+                                            );
+                                        })
+                                    ) : (
+                                        <Box sx={{ p: 2, textAlign: 'center' }}>
+                                            <Typography variant="caption" color="text.disabled">Нічого не знайдено</Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Box>
+                        );
+                    })()}
+
                     {field.type === 'checkbox-group' && (() => {
                         const selected = Array.isArray(filters[field.name]) ? filters[field.name] : [];
                         return (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, maxHeight: 300, overflowY: 'auto',
+                            <Box sx={{
+                                display: 'flex', flexDirection: 'column', gap: 0.25, maxHeight: 300, overflowY: 'auto',
                                 '&::-webkit-scrollbar': { width: 3 },
                                 '&::-webkit-scrollbar-thumb': { bgcolor: alpha(accentColor, 0.2), borderRadius: 2 },
                             }}>
@@ -398,8 +485,10 @@ const DataFilters = ({
                     />
                     {filters[searchField?.name] && (
                         <Close onClick={() => onChange(searchField?.name, '')}
-                            sx={{ fontSize: 15, color: '#94a3b8', cursor: 'pointer', flexShrink: 0,
-                                '&:hover': { color: '#ef4444' } }} />
+                            sx={{
+                                fontSize: 15, color: '#94a3b8', cursor: 'pointer', flexShrink: 0,
+                                '&:hover': { color: '#ef4444' }
+                            }} />
                     )}
                 </Box>
 

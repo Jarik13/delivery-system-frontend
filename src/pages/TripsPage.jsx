@@ -57,9 +57,21 @@ const TripsPage = () => {
                     DictionaryApi.getAll('drivers', 0, 1000),
                     DictionaryApi.getAll('vehicles', 0, 1000),
                 ]);
+
                 setStatuses(statusRes.data.content || []);
-                setDrivers(driverRes.data.content || []);
-                setVehicles(vehicleRes.data.content || []);
+
+                const mappedDrivers = (driverRes.data.content || []).map(d => ({
+                    ...d,
+                    name: `${d.lastName || ''} ${d.firstName || ''} ${d.middleName || ''}`.trim() || `Водій №${d.id}`
+                }));
+                setDrivers(mappedDrivers);
+
+                const mappedVehicles = (vehicleRes.data.content || []).map(v => ({
+                    ...v,
+                    name: `${v.licensePlate} (${v.brandName || 'Без бренду'})`.trim()
+                }));
+                setVehicles(mappedVehicles);
+
             } catch (err) {
                 console.error("Помилка завантаження довідників", err);
             }
@@ -87,8 +99,18 @@ const TripsPage = () => {
             type: 'checkbox-group',
             options: statuses,
         },
-        { name: 'driverId', label: 'Водій', type: 'select', options: drivers },
-        { name: 'vehicleId', label: 'Транспортний засіб', type: 'select', options: vehicles },
+        {
+            name: 'driverId',
+            label: 'Водій',
+            type: 'select',
+            options: drivers.map(d => ({ ...d, name: d.name })) 
+        },
+        { name: 
+            'vehicleId', 
+            label: 'Транспортний засіб', 
+            type: 'select', 
+            options: vehicles.map(v => ({ ...v, name: v.name })) 
+        },
         { name: 'originCity', label: 'Місто відправлення', type: 'text' },
         { name: 'destinationCity', label: 'Місто призначення', type: 'text' },
         { name: 'anyCity', label: 'Будь-яке місто маршруту', type: 'text' },
