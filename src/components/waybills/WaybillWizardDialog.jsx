@@ -13,11 +13,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { DictionaryApi } from '../../api/dictionaries';
 
-// Рейси: тільки активні (Заплановано=1, Завантаження=2, В дорозі=3, Розвантаження=4)
 const ACTIVE_TRIP_STATUSES = [1, 2, 3, 4];
-
-// Відправлення: виключаємо фінальні статуси (Доставлено=8, Відмова=9, Втрачено=10, Утилізовано=11)
-const EXCLUDE_SHIPMENT_STATUSES = [8, 9, 10, 11];
 
 const ColorConnector = styled(StepConnector)(({ theme, maincolor }) => ({
     [`&.${stepConnectorClasses.alternativeLabel}`]: { top: 22 },
@@ -72,18 +68,15 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
-    // Крок 1 — рейс
     const [tripSearch, setTripSearch] = useState('');
     const [trips, setTrips] = useState([]);
     const [tripsLoading, setTripsLoading] = useState(false);
     const [selectedTrip, setSelectedTrip] = useState(null);
 
-    // Крок 2 — сегмент
     const [segments, setSegments] = useState([]);
     const [segmentsLoading, setSegmentsLoading] = useState(false);
     const [selectedSegment, setSelectedSegment] = useState(null);
 
-    // Крок 3 — відправлення
     const [shipmentSearch, setShipmentSearch] = useState('');
     const [shipments, setShipments] = useState([]);
     const [shipmentsLoading, setShipmentsLoading] = useState(false);
@@ -98,7 +91,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
         onClose();
     };
 
-    // ── Крок 1: рейси тільки з активними статусами ────────────────────────────
     useEffect(() => {
         if (!open) return;
         const t = setTimeout(async () => {
@@ -106,7 +98,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             try {
                 const res = await DictionaryApi.getAll('trips', 0, 20, {
                     ...(tripSearch ? { tripNumber: tripSearch } : {}),
-                    tripStatuses: ACTIVE_TRIP_STATUSES,  // [1,2,3,4]
+                    tripStatuses: ACTIVE_TRIP_STATUSES,
                 });
                 setTrips(res.data.content || []);
             } catch {
@@ -118,7 +110,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
         return () => clearTimeout(t);
     }, [open, tripSearch]);
 
-    // ── Крок 2: сегменти рейсу ────────────────────────────────────────────────
     useEffect(() => {
         if (!selectedTrip) return;
         setSegmentsLoading(true);
@@ -128,7 +119,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             .finally(() => setSegmentsLoading(false));
     }, [selectedTrip]);
 
-    // ── Крок 3: відправлення без фінальних статусів ───────────────────────────
     useEffect(() => {
         if (step !== 2 || !selectedSegment) return;
         const t = setTimeout(async () => {
@@ -136,8 +126,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             try {
                 const res = await DictionaryApi.getAll('shipments', 0, 100, {
                     ...(shipmentSearch ? { trackingNumber: shipmentSearch } : {}),
-                    // Виключаємо: Доставлено(8), Відмова(9), Втрачено(10), Утилізовано(11)
-                    // Передаємо як окремі параметри — axios з paramsSerializer: repeat
                     shipmentStatuses: [1, 2, 3, 4, 5, 6, 7],
                 });
                 setShipments(res.data.content || []);
@@ -205,7 +193,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                 sx: { borderRadius: 3, overflow: 'hidden', boxShadow: `0 24px 80px ${alpha(mainColor, 0.3)}` }
             }}
         >
-            {/* Header */}
             <Box sx={{
                 px: 3, py: 2.5,
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
@@ -220,7 +207,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                 <IconButton onClick={handleClose} sx={{ color: 'white' }}><Close /></IconButton>
             </Box>
 
-            {/* Stepper */}
             <Box sx={{ px: 3, pt: 2.5, pb: 1, bgcolor: alpha(mainColor, 0.03) }}>
                 <Stepper activeStep={step} connector={<ColorConnector maincolor={mainColor} />} alternativeLabel>
                     {STEPS.map((label, idx) => (
@@ -243,7 +229,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                     <Alert severity="error" onClose={() => setError('')} sx={{ m: 2, mb: 0 }}>{error}</Alert>
                 </Collapse>
 
-                {/* ── Крок 1: Рейс ──────────────────────────────────────────── */}
                 {step === 0 && (
                     <Box sx={{ p: 3 }}>
                         <TextField
@@ -257,7 +242,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                             sx={{ mb: 2 }}
                         />
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, px: 0.5 }}>
-                            Показуються тільки активні рейси (Заплановано, Завантаження, В дорозі, Розвантаження)
+                            Показуються тільки активні рейси
                         </Typography>
                         {tripsLoading ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -295,15 +280,15 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        {trip.scheduledDeparture
-                                                            ? new Date(trip.scheduledDeparture).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                                        {trip.scheduledDepartureTime
+                                                            ? new Date(trip.scheduledDepartureTime).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
                                                             : '—'}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        {trip.scheduledArrival
-                                                            ? new Date(trip.scheduledArrival).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                                        {trip.scheduledArrivalTime
+                                                            ? new Date(trip.scheduledArrivalTime).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
                                                             : '—'}
                                                     </Typography>
                                                 </TableCell>
@@ -327,7 +312,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                     </Box>
                 )}
 
-                {/* ── Крок 2: Сегмент маршруту ──────────────────────────────── */}
                 {step === 1 && (
                     <Box sx={{ p: 3 }}>
                         <Box sx={{
@@ -396,7 +380,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                     </Box>
                 )}
 
-                {/* ── Крок 3: Відправлення ──────────────────────────────────── */}
                 {step === 2 && (
                     <Box sx={{ p: 3 }}>
                         <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
@@ -417,7 +400,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                         </Box>
 
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, px: 0.5 }}>
-                            Показуються відправлення в активних статусах (без Доставлено, Відмова, Втрачено, Утилізовано)
+                            Показуються відправлення в активних статусах
                         </Typography>
 
                         <TextField
@@ -476,14 +459,14 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Typography variant="caption">{s.senderName || '—'}</Typography>
+                                                    <Typography variant="caption">{s.senderFullName || '—'}</Typography>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Typography variant="caption">{s.recipientName || '—'}</Typography>
+                                                    <Typography variant="caption">{s.recipientFullName || '—'}</Typography>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Chip label={s.status || '—'} size="small"
-                                                        color={statusColor(s.status)} variant="outlined" />
+                                                    <Chip label={s.shipmentStatusName || '—'} size="small"
+                                                        color={statusColor(s.shipmentStatusName)} variant="outlined" />
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -504,7 +487,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
 
             <Divider />
 
-            {/* Footer */}
             <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'grey.50' }}>
                 <Button startIcon={<ArrowBack />}
                     onClick={() => step === 0 ? handleClose() : setStep(s => s - 1)}
