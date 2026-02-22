@@ -51,7 +51,7 @@ const WaybillsPage = () => {
     const [waybills, setWaybills] = useState([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(15);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
     const [filters, setFilters] = useState({ number: '' });
     const [openWizard, setOpenWizard] = useState(false);
@@ -360,7 +360,6 @@ const WaybillsPage = () => {
                 onPageChange={(e, p) => setPage(p)}
                 onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
                 label="Накладних:"
-                rowsPerPageOptions={[10, 15, 25, 50]}
             />
 
             <Snackbar
