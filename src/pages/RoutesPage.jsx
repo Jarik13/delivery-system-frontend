@@ -36,6 +36,11 @@ const RoutesPage = () => {
         distanceKmMax: 3000
     });
 
+    const [statistics, setStatistics] = useState({
+        minDistance: 0,
+        maxDistance: 3000
+    });
+
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
@@ -43,6 +48,29 @@ const RoutesPage = () => {
     const [destCityId, setDestCityId] = useState(null);
 
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+
+    useEffect(() => {
+        const loadStats = async () => {
+            try {
+                const res = await DictionaryApi.getStatistics('routes');
+                const { distanceKmMin, distanceKmMax } = res.data;
+                
+                setStatistics({
+                    minDistance: distanceKmMin || 0,
+                    maxDistance: distanceKmMax || 3000
+                });
+
+                setFilters(prev => ({
+                    ...prev,
+                    distanceKmMin: distanceKmMin || 0,
+                    distanceKmMax: distanceKmMax || 3000
+                }));
+            } catch (error) {
+                console.error("Помилка завантаження статистики маршрутів", error);
+            }
+        };
+        loadStats();
+    }, []);
 
     const loadTableData = useCallback(async () => {
         try {
@@ -130,12 +158,13 @@ const RoutesPage = () => {
             options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }]
         },
         {
+            name: 'distanceRange',
             label: 'Відстань (км)',
             type: 'range',
             minName: 'distanceKmMin',
             maxName: 'distanceKmMax',
-            min: 0,
-            max: 3000,
+            min: statistics.minDistance,
+            max: statistics.maxDistance,
         }
     ];
 
@@ -169,8 +198,8 @@ const RoutesPage = () => {
                     originBranchName: '',
                     destinationBranchName: '',
                     needSorting: '',
-                    distanceKmMin: 0,
-                    distanceKmMax: 3000
+                    distanceKmMin: statistics.minDistance,
+                    distanceKmMax: statistics.maxDistance
                 })}
                 searchPlaceholder="Пошук маршруту..."
                 quickFilters={['needSorting']}
