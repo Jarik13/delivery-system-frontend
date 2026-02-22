@@ -31,7 +31,9 @@ const RoutesPage = () => {
     const [filters, setFilters] = useState({
         originBranchName: '',
         destinationBranchName: '',
-        needSorting: ''
+        needSorting: '',
+        distanceKmMin: 0,
+        distanceKmMax: 3000
     });
 
     const [open, setOpen] = useState(false);
@@ -121,7 +123,20 @@ const RoutesPage = () => {
     const filterFields = [
         { name: 'originBranchName', label: 'Звідки', type: 'text' },
         { name: 'destinationBranchName', label: 'Куди', type: 'text' },
-        { name: 'needSorting', label: 'Логістика', type: 'select', options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] }
+        {
+            name: 'needSorting',
+            label: 'Логістика',
+            type: 'select',
+            options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }]
+        },
+        {
+            label: 'Відстань (км)',
+            type: 'range',
+            minName: 'distanceKmMin',
+            maxName: 'distanceKmMax',
+            min: 0,
+            max: 3000,
+        }
     ];
 
     return (
@@ -150,10 +165,17 @@ const RoutesPage = () => {
             <DataFilters
                 filters={filters}
                 onChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(0); }}
-                onClear={() => setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' })}
+                onClear={() => setFilters({
+                    originBranchName: '',
+                    destinationBranchName: '',
+                    needSorting: '',
+                    distanceKmMin: 0,
+                    distanceKmMax: 3000
+                })}
                 searchPlaceholder="Пошук маршруту..."
                 quickFilters={['needSorting']}
                 fields={filterFields}
+                counts={{ total: totalElements }}
             />
 
             <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e0e0e0' }}>

@@ -335,6 +335,8 @@ const WaybillsPage = () => {
                 onClear={() => { setFilters({ number: '' }); setPage(0); }}
                 fields={filterFields}
                 searchPlaceholder="Номер накладної..."
+                accentColor={mainColor}
+                counts={{ total: totalElements }}
             />
 
             <WaybillsTable

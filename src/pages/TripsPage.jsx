@@ -152,6 +152,7 @@ const TripsPage = () => {
                 fields={filterFields}
                 searchPlaceholder="Пошук за номером..."
                 accentColor={mainColor}
+                counts={{ total: totalElements }}
             />
 
             {loading ? (
