@@ -76,13 +76,8 @@ const ShipmentsPage = () => {
                     DictionaryApi.getStatistics('shipments')
                 ]);
 
-                const statusesWithColors = (s.data.content || []).map(st => ({
-                    ...st,
-                    color: STATUS_COLORS[st.name] || STATUS_COLORS['default'],
-                }));
-
                 setReferences({
-                    statuses: statusesWithColors,
+                    statuses: (s.data.content || []).map(st => ({ ...st, color: STATUS_COLORS[st.name] || STATUS_COLORS.default })),
                     clients: c.data.content || [],
                     shipmentTypes: t.data.content || [],
                     parcelTypes: pt.data.content || [],
@@ -91,12 +86,18 @@ const ShipmentsPage = () => {
                 });
 
                 if (statsRes.data) {
-                    setStats(statsRes.data);
                     const d = statsRes.data;
+                    setStats(d);
                     setFilters(prev => ({
                         ...prev,
                         weightMin: d.minWeight, weightMax: d.maxWeight,
                         totalPriceMin: d.minTotalPrice, totalPriceMax: d.maxTotalPrice,
+                        deliveryPriceMin: d.minDeliveryPrice, deliveryPriceMax: d.maxDeliveryPrice,
+                        weightPriceMin: d.minWeightPrice, weightPriceMax: d.maxWeightPrice,
+                        distancePriceMin: d.minDistancePrice, distancePriceMax: d.maxDistancePrice,
+                        boxVariantPriceMin: d.minBoxVariantPrice, boxVariantPriceMax: d.maxBoxVariantPrice,
+                        specialPackagingPriceMin: d.minSpecialPackagingPrice, specialPackagingPriceMax: d.maxSpecialPackagingPrice,
+                        insuranceFeeMin: d.minInsuranceFee, insuranceFeeMax: d.maxInsuranceFee,
                     }));
                 }
             } catch (e) { console.error(e); }
@@ -138,13 +139,21 @@ const ShipmentsPage = () => {
     };
 
     const handleClearFilters = () => {
-        setFilters({
-            ...defaultFilters,
-            weightMin: stats?.minWeight || 0,
-            weightMax: stats?.maxWeight || 100,
-            totalPriceMin: stats?.minTotalPrice || 0,
-            totalPriceMax: stats?.maxTotalPrice || 10000,
-        });
+        if (!stats) {
+            setFilters(defaultFilters);
+        } else {
+            setFilters({
+                ...defaultFilters,
+                weightMin: stats.minWeight, weightMax: stats.maxWeight,
+                totalPriceMin: stats.minTotalPrice, totalPriceMax: stats.maxTotalPrice,
+                deliveryPriceMin: stats.minDeliveryPrice, deliveryPriceMax: stats.maxDeliveryPrice,
+                weightPriceMin: stats.minWeightPrice, weightPriceMax: stats.maxWeightPrice,
+                distancePriceMin: stats.minDistancePrice, distancePriceMax: stats.maxDistancePrice,
+                boxVariantPriceMin: stats.minBoxVariantPrice, boxVariantPriceMax: stats.maxBoxVariantPrice,
+                specialPackagingPriceMin: stats.minSpecialPackagingPrice, specialPackagingPriceMax: stats.maxSpecialPackagingPrice,
+                insuranceFeeMin: stats.minInsuranceFee, insuranceFeeMax: stats.maxInsuranceFee,
+            });
+        }
         setPage(0);
     };
 
@@ -162,28 +171,56 @@ const ShipmentsPage = () => {
 
     const filterFields = [
         { name: 'trackingNumber', label: 'Трек-номер', type: 'text' },
+        { name: 'parcelDescription', label: 'Вміст', type: 'text' },
+        { name: 'shipmentStatuses', label: 'Статус', type: 'checkbox-group', options: references.statuses },
+        { name: 'shipmentTypes', label: 'Тип доставки', type: 'checkbox-group', options: references.shipmentTypes },
         {
-            name: 'shipmentStatuses',
-            label: 'Статус відправлення',
-            type: 'checkbox-group',
-            options: references.statuses,
-        },
-        {
-            name: 'shipmentTypes',
-            label: 'Тип доставки',
-            type: 'checkbox-group',
-            options: references.shipmentTypes,
-        },
-        { name: 'parcelDescription', label: 'Опис вмісту', type: 'text' },
-        {
+            name: 'weightRange',
             label: 'Вага (кг)', type: 'range',
             minName: 'weightMin', maxName: 'weightMax',
             min: stats?.minWeight || 0, max: stats?.maxWeight || 100,
         },
         {
-            label: 'Ціна загальна', type: 'range',
+            name: 'totalPriceRange',
+            label: 'Загальна вартість', type: 'range',
             minName: 'totalPriceMin', maxName: 'totalPriceMax',
             min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000,
+        },
+        {
+            name: 'deliveryPriceRange',
+            label: 'Базовий тариф', type: 'range',
+            minName: 'deliveryPriceMin', maxName: 'deliveryPriceMax',
+            min: stats?.minDeliveryPrice || 0, max: stats?.maxDeliveryPrice || 5000,
+        },
+        {
+            name: 'weightPriceRange',
+            label: 'Доплата за вагу', type: 'range',
+            minName: 'weightPriceMin', maxName: 'weightPriceMax',
+            min: stats?.minWeightPrice || 0, max: stats?.maxWeightPrice || 2000,
+        },
+        {
+            name: 'distancePriceRange',
+            label: 'Доплата за відстань', type: 'range',
+            minName: 'distancePriceMin', maxName: 'distancePriceMax',
+            min: stats?.minDistancePrice || 0, max: stats?.maxDistancePrice || 2000,
+        },
+        {
+            name: 'insuranceFeeRange',
+            label: 'Страховий збір', type: 'range',
+            minName: 'insuranceFeeMin', maxName: 'insuranceFeeMax',
+            min: stats?.minInsuranceFee || 0, max: stats?.maxInsuranceFee || 1000,
+        },
+        {
+            name: 'boxPriceRange',
+            label: 'Ціна коробки', type: 'range',
+            minName: 'boxVariantPriceMin', maxName: 'boxVariantPriceMax',
+            min: stats?.minBoxVariantPrice || 0, max: stats?.maxBoxVariantPrice || 500,
+        },
+        {
+            name: 'packPriceRange',
+            label: 'Спец. пакування', type: 'range',
+            minName: 'specialPackagingPriceMin', maxName: 'specialPackagingPriceMax',
+            min: stats?.minSpecialPackagingPrice || 0, max: stats?.maxSpecialPackagingPrice || 500,
         },
         { name: 'createdAtFrom', label: 'Створено (від)', type: 'datetime' },
         { name: 'createdAtTo', label: 'Створено (до)', type: 'datetime' },
