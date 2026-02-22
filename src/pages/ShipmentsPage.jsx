@@ -218,6 +218,7 @@ const ShipmentsPage = () => {
                 fields={filterFields}
                 searchPlaceholder="Трек-номер..."
                 accentColor={mainColor}
+                counts={{ total: totalElements }}
             />
 
             <ShipmentGrid

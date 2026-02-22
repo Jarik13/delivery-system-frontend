@@ -220,8 +220,9 @@ const ParcelsPage = () => {
                 filters={filters}
                 onChange={handleFilterChange}
                 onClear={handleClearFilters}
-                searchPlaceholder="Опис вмісту..."
                 fields={filterFields}
+                searchPlaceholder="Опис вмісту..."
+                accentColor={mainColor}
                 counts={{ total: totalElements }}
             />
 
