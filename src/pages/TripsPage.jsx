@@ -27,12 +27,11 @@ const TripsPage = () => {
     const [totalElements, setTotalElements] = useState(0);
 
     const [mapTrip, setMapTrip] = useState(null);
-
     const [wizardTrip, setWizardTrip] = useState(undefined);
 
-    const [filters, setFilters] = useState({
+    const defaultFilters = {
         tripNumber: '',
-        tripStatusId: '',
+        tripStatuses: [],
         driverId: '',
         vehicleId: '',
         originCity: '',
@@ -46,7 +45,9 @@ const TripsPage = () => {
         actualDepartureTo: '',
         actualArrivalFrom: '',
         actualArrivalTo: '',
-    });
+    };
+
+    const [filters, setFilters] = useState(defaultFilters);
 
     useEffect(() => {
         const fetchReferences = async () => {
@@ -69,7 +70,8 @@ const TripsPage = () => {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await DictionaryApi.getAll('trips', page, rowsPerPage, filters);
+            const params = { ...filters };
+            const res = await DictionaryApi.getAll('trips', page, rowsPerPage, params);
             setTrips(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
         } finally { setLoading(false); }
@@ -77,32 +79,27 @@ const TripsPage = () => {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    const handleCloseMap = () => setMapTrip(null);
-
-    const handleOpenCreate = () => setWizardTrip(null);
-
-    const handleOpenEdit = (trip) => setWizardTrip(trip);
-
-    const handleCloseWizard = () => setWizardTrip(undefined);
-
-    const wizardOpen = wizardTrip !== undefined;
-
     const filterFields = [
-        { name: 'tripNumber', label: 'Номер рейсу', type: 'text', md: 3 },
-        { name: 'tripStatusId', label: 'Статус', type: 'select', options: statuses, md: 3 },
-        { name: 'driverId', label: 'Водій', type: 'select', options: drivers, md: 3 },
-        { name: 'vehicleId', label: 'Транспортний засіб', type: 'select', options: vehicles, md: 3 },
-        { name: 'originCity', label: 'Місто відправлення', type: 'text', md: 3 },
-        { name: 'destinationCity', label: 'Місто призначення', type: 'text', md: 3 },
-        { name: 'anyCity', label: 'Будь-яке місто маршруту', type: 'text', md: 3 },
-        { name: 'scheduledDepartureFrom', label: 'Плановий виїзд (від)', type: 'datetime', md: 3 },
-        { name: 'scheduledDepartureTo', label: 'Плановий виїзд (до)', type: 'datetime', md: 3 },
-        { name: 'scheduledArrivalFrom', label: 'Планове прибуття (від)', type: 'datetime', md: 3 },
-        { name: 'scheduledArrivalTo', label: 'Планове прибуття (до)', type: 'datetime', md: 3 },
-        { name: 'actualDepartureFrom', label: 'Фактичний виїзд (від)', type: 'datetime', md: 3 },
-        { name: 'actualDepartureTo', label: 'Фактичний виїзд (до)', type: 'datetime', md: 3 },
-        { name: 'actualArrivalFrom', label: 'Фактичне прибуття (від)', type: 'datetime', md: 3 },
-        { name: 'actualArrivalTo', label: 'Фактичне прибуття (до)', type: 'datetime', md: 3 },
+        { name: 'tripNumber', label: 'Номер рейсу', type: 'text' },
+        {
+            name: 'tripStatuses',
+            label: 'Статус рейсу',
+            type: 'checkbox-group',
+            options: statuses,
+        },
+        { name: 'driverId', label: 'Водій', type: 'select', options: drivers },
+        { name: 'vehicleId', label: 'Транспортний засіб', type: 'select', options: vehicles },
+        { name: 'originCity', label: 'Місто відправлення', type: 'text' },
+        { name: 'destinationCity', label: 'Місто призначення', type: 'text' },
+        { name: 'anyCity', label: 'Будь-яке місто маршруту', type: 'text' },
+        { name: 'scheduledDepartureFrom', label: 'Плановий виїзд (від)', type: 'datetime' },
+        { name: 'scheduledDepartureTo', label: 'Плановий виїзд (до)', type: 'datetime' },
+        { name: 'scheduledArrivalFrom', label: 'Планове прибуття (від)', type: 'datetime' },
+        { name: 'scheduledArrivalTo', label: 'Планове прибуття (до)', type: 'datetime' },
+        { name: 'actualDepartureFrom', label: 'Фактичний виїзд (від)', type: 'datetime' },
+        { name: 'actualDepartureTo', label: 'Фактичний виїзд (до)', type: 'datetime' },
+        { name: 'actualArrivalFrom', label: 'Фактичне прибуття (від)', type: 'datetime' },
+        { name: 'actualArrivalTo', label: 'Фактичне прибуття (до)', type: 'datetime' },
     ];
 
     return (
@@ -119,7 +116,7 @@ const TripsPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування маршрутами та рейсами</Typography>
                     </Box>
                 </Box>
-                <Button onClick={handleOpenCreate} variant="contained"
+                <Button onClick={() => setWizardTrip(null)} variant="contained"
                     sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
                     startIcon={<Add />}>
                     Новий рейс
@@ -128,17 +125,11 @@ const TripsPage = () => {
 
             <DataFilters
                 filters={filters}
-                onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))}
-                onClear={() => setFilters({
-                    tripNumber: '', tripStatusId: '', driverId: '', vehicleId: '',
-                    scheduledDepartureFrom: '', scheduledDepartureTo: '',
-                    scheduledArrivalFrom: '', scheduledArrivalTo: '',
-                    actualDepartureFrom: '', actualDepartureTo: '',
-                    actualArrivalFrom: '', actualArrivalTo: ''
-                })}
+                onChange={(k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(0); }}
+                onClear={() => { setFilters(defaultFilters); setPage(0); }}
                 fields={filterFields}
-                quickFilters={['tripStatusId']}
                 searchPlaceholder="Пошук за номером..."
+                accentColor={mainColor}
             />
 
             {loading ? (
@@ -150,7 +141,7 @@ const TripsPage = () => {
                     trips={trips}
                     mainColor={mainColor}
                     onMap={setMapTrip}
-                    onEdit={handleOpenEdit}
+                    onEdit={(trip) => setWizardTrip(trip)}
                     onDelete={(id) => console.log('Delete', id)}
                 />
             )}
@@ -165,15 +156,15 @@ const TripsPage = () => {
             />
 
             <TripWizardDialog
-                open={wizardOpen}
-                onClose={handleCloseWizard}
+                open={wizardTrip !== undefined}
+                onClose={() => setWizardTrip(undefined)}
                 mainColor={mainColor}
                 references={{ drivers, vehicles }}
                 tripToEdit={wizardTrip ?? null}
-                onSuccess={(msg) => { loadData(); }}
+                onSuccess={() => loadData()}
             />
 
-            <Dialog open={!!mapTrip} onClose={handleCloseMap} fullWidth maxWidth="md">
+            <Dialog open={!!mapTrip} onClose={() => setMapTrip(null)} fullWidth maxWidth="md">
                 <DialogTitle sx={{
                     bgcolor: mainColor, color: 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between'
@@ -182,7 +173,7 @@ const TripsPage = () => {
                         <MapIcon />
                         <Typography fontWeight="bold">Маршрут рейсу №{mapTrip?.tripNumber}</Typography>
                     </Box>
-                    <IconButton onClick={handleCloseMap} color="inherit"><Close /></IconButton>
+                    <IconButton onClick={() => setMapTrip(null)} color="inherit"><Close /></IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 0, height: 450, position: 'relative', overflow: 'hidden' }}>
                     {mapTrip && <LeafletMap trip={mapTrip} />}

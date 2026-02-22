@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-    Box, TextField, MenuItem, Button, Drawer, IconButton,
-    Typography, Divider, Slider, Badge, Tooltip, Paper, Chip, Stack, alpha, InputAdornment
+    Box, TextField, Button, Drawer, IconButton,
+    Typography, Divider, Slider, Badge, Tooltip, Paper, Chip, Stack, alpha, InputAdornment,
+    FormGroup, FormControlLabel, Checkbox,
 } from '@mui/material';
 import { Search, Tune, Close, RestartAlt, FilterList } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -16,15 +17,15 @@ const DataFilters = ({
     onClear,
     fields,
     searchPlaceholder = "Пошук...",
-    quickFilters = []
+    quickFilters = [],
+    accentColor = '#1976d2',
 }) => {
     const [open, setOpen] = useState(false);
-    
+
     const searchField = fields[0];
     const quickAccessFields = fields.filter(f => quickFilters.includes(f.name));
     const advancedFields = fields.filter(f =>
-        f.name !== searchField?.name &&
-        !quickFilters.includes(f.name)
+        f.name !== searchField?.name && !quickFilters.includes(f.name)
     );
 
     const formatDisplayDate = (dateStr) => {
@@ -34,38 +35,153 @@ const DataFilters = ({
     };
 
     const getOptionLabel = (field, value) => {
+        if (field.type === 'checkbox-group') {
+            const ids = Array.isArray(value) ? value : [];
+            return ids.map(id => {
+                const o = field.options?.find(o => String(o.id) === String(id));
+                return o ? (o.name || o.label) : id;
+            }).join(', ');
+        }
         const option = field.options?.find(o => String(o.id) === String(value));
         return option ? (option.name || option.label) : value;
     };
 
-    const activeCount = Object.keys(filters).filter(key => {
-        const val = filters[key];
-        const field = fields.find(f => f.minName === key || f.maxName === key || f.name === key);
-        if (!field || val === '' || val === null || val === undefined) return false;
+    const isFieldActive = (field) => {
         if (field.type === 'range') {
-            if (key === field.minName) return val > field.min;
-            if (key === field.maxName) return val < field.max;
+            return filters[field.minName] > field.min || filters[field.maxName] < field.max;
         }
-        return true;
-    }).length;
+        if (field.type === 'checkbox-group') {
+            const val = filters[field.name];
+            return Array.isArray(val) && val.length > 0;
+        }
+        const val = filters[field.name];
+        return val !== '' && val !== null && val !== undefined;
+    };
+
+    const activeCount = fields.filter(isFieldActive).length;
+
+    const handleCheckboxToggle = (fieldName, optionId) => {
+        const current = Array.isArray(filters[fieldName]) ? filters[fieldName] : [];
+        const next = current.includes(optionId)
+            ? current.filter(id => id !== optionId)
+            : [...current, optionId];
+        onChange(fieldName, next.length > 0 ? next : []);
+    };
+
+    const renderCheckboxGroup = (field) => {
+        const selected = Array.isArray(filters[field.name]) ? filters[field.name] : [];
+        const options = field.options || [];
+
+        return (
+            <Box key={field.name} sx={{ mb: 2.5, mt: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="body2" fontWeight={600} color="text.secondary">
+                        {field.label}
+                    </Typography>
+                    {selected.length > 0 && (
+                        <IconButton size="small" color="error" onClick={() => onChange(field.name, [])}>
+                            <Close sx={{ fontSize: 14 }} />
+                        </IconButton>
+                    )}
+                </Box>
+                <Box sx={{
+                    border: '1px solid #e0e0e0', borderRadius: 2,
+                    p: 1.5, maxHeight: 220, overflowY: 'auto',
+                    '&::-webkit-scrollbar': { width: 4 },
+                    '&::-webkit-scrollbar-thumb': { bgcolor: alpha(accentColor, 0.3), borderRadius: 2 },
+                }}>
+                    <FormGroup>
+                        {options.map(option => {
+                            const id = option.id;
+                            const label = option.name || option.label;
+                            const checked = selected.includes(id);
+                            return (
+                                <FormControlLabel
+                                    key={id}
+                                    control={
+                                        <Checkbox
+                                            size="small"
+                                            checked={checked}
+                                            onChange={() => handleCheckboxToggle(field.name, id)}
+                                            sx={{
+                                                py: 0.5,
+                                                '&.Mui-checked': { color: accentColor },
+                                            }}
+                                        />
+                                    }
+                                    label={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {option.color && (
+                                                <Box sx={{
+                                                    width: 8, height: 8, borderRadius: '50%',
+                                                    bgcolor: option.color, flexShrink: 0,
+                                                }} />
+                                            )}
+                                            <Typography variant="body2" sx={{ fontSize: 13 }}>
+                                                {label}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                    sx={{
+                                        mx: 0, px: 0.5,
+                                        borderRadius: 1.5,
+                                        bgcolor: checked ? alpha(accentColor, 0.07) : 'transparent',
+                                        transition: 'background 0.15s',
+                                        '&:hover': { bgcolor: alpha(accentColor, 0.05) },
+                                    }}
+                                />
+                            );
+                        })}
+                        {options.length === 0 && (
+                            <Typography variant="caption" color="text.disabled" sx={{ px: 1 }}>
+                                Завантаження...
+                            </Typography>
+                        )}
+                    </FormGroup>
+                </Box>
+                {selected.length > 0 && (
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                        {selected.map(id => {
+                            const o = options.find(o => o.id === id);
+                            return (
+                                <Chip
+                                    key={id}
+                                    label={o?.name || o?.label || id}
+                                    size="small"
+                                    onDelete={() => handleCheckboxToggle(field.name, id)}
+                                    sx={{
+                                        height: 20, fontSize: 11,
+                                        bgcolor: alpha(accentColor, 0.1),
+                                        color: accentColor,
+                                        '& .MuiChip-deleteIcon': { fontSize: 12, color: accentColor },
+                                    }}
+                                />
+                            );
+                        })}
+                    </Stack>
+                )}
+            </Box>
+        );
+    };
 
     const renderField = (field, isQuick = false) => {
         if (!field) return null;
 
+        if (field.type === 'checkbox-group') {
+            return renderCheckboxGroup(field);
+        }
+
         const commonSx = {
-            mb: isQuick ? 0 : 2.5, 
+            mb: isQuick ? 0 : 2.5,
             mt: isQuick ? 0 : 1.5,
             minWidth: isQuick ? 200 : 'auto',
             '& .MuiInputLabel-root': {
-                bgcolor: 'white',
-                px: 1,
-                ml: -0.5,
-                fontWeight: 400,
-                color: 'text.secondary',
+                bgcolor: 'white', px: 1, ml: -0.5,
+                fontWeight: 400, color: 'text.secondary',
             },
             '& .MuiOutlinedInput-root': {
                 borderRadius: 3,
-                '& fieldset legend': { fontSize: '0.75rem' } 
+                '& fieldset legend': { fontSize: '0.75rem' },
             }
         };
 
@@ -75,10 +191,14 @@ const DataFilters = ({
                 <Box key={field.label} sx={{ px: 1, mb: 4, mt: isQuick ? 0 : 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                         <Typography variant="body2" fontWeight="400" color="text.secondary">
-                            {field.label}: <span style={{ color: '#1976d2', fontWeight: 600 }}>{filters[field.minName]} — {filters[field.maxName]}</span>
+                            {field.label}:{' '}
+                            <span style={{ color: accentColor, fontWeight: 600 }}>
+                                {filters[field.minName]} — {filters[field.maxName]}
+                            </span>
                         </Typography>
                         {isModified && (
-                            <IconButton size="small" color="error" onClick={() => { onChange(field.minName, field.min); onChange(field.maxName, field.max); }}>
+                            <IconButton size="small" color="error"
+                                onClick={() => { onChange(field.minName, field.min); onChange(field.maxName, field.max); }}>
                                 <Close sx={{ fontSize: 14 }} />
                             </IconButton>
                         )}
@@ -90,6 +210,7 @@ const DataFilters = ({
                         min={field.min}
                         max={field.max}
                         valueLabelDisplay="auto"
+                        sx={{ color: accentColor }}
                     />
                 </Box>
             );
@@ -101,21 +222,18 @@ const DataFilters = ({
                     key={field.name}
                     label={field.label}
                     value={filters[field.name] ? dayjs(filters[field.name]) : null}
-                    onChange={(newValue) => {
-                        onChange(field.name, newValue && newValue.isValid() ? newValue.format('YYYY-MM-DDTHH:mm:ss') : '');
-                    }}
+                    onChange={(v) => onChange(field.name, v && v.isValid() ? v.format('YYYY-MM-DDTHH:mm:ss') : '')}
                     ampm={false}
                     format="DD.MM.YYYY HH:mm"
                     slotProps={{
                         textField: {
-                            fullWidth: !isQuick,
-                            size: 'small',
-                            sx: commonSx,
+                            fullWidth: !isQuick, size: 'small', sx: commonSx,
                             InputLabelProps: { shrink: true },
                             InputProps: {
                                 endAdornment: filters[field.name] && (
                                     <InputAdornment position="end" sx={{ mr: 3 }}>
-                                        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onChange(field.name, ''); }}>
+                                        <IconButton size="small"
+                                            onClick={(e) => { e.stopPropagation(); onChange(field.name, ''); }}>
                                             <Close sx={{ fontSize: 16 }} />
                                         </IconButton>
                                     </InputAdornment>
@@ -135,7 +253,6 @@ const DataFilters = ({
                 fullWidth={!isQuick}
                 size="small"
                 label={field.label}
-                select={field.type === 'select'}
                 value={filters[field.name] || ''}
                 onChange={(e) => onChange(field.name, e.target.value)}
                 sx={commonSx}
@@ -147,21 +264,14 @@ const DataFilters = ({
                         </InputAdornment>
                     ),
                     endAdornment: hasValue ? (
-                        <InputAdornment position="end" sx={{ mr: field.type === 'select' ? 2 : 0 }}>
+                        <InputAdornment position="end">
                             <IconButton size="small" color="error" onClick={() => onChange(field.name, '')}>
                                 <Close sx={{ fontSize: 16 }} />
                             </IconButton>
                         </InputAdornment>
                     ) : null
                 }}
-            >
-                {field.type === 'select' && [
-                    <MenuItem key="all" value=""><em>Всі</em></MenuItem>,
-                    ...(field.options || []).map(o => (
-                        <MenuItem key={o.id} value={o.id}>{o.name || o.label}</MenuItem>
-                    ))
-                ]}
-            </TextField>
+            />
         );
     };
 
@@ -181,7 +291,9 @@ const DataFilters = ({
                         InputProps={{
                             startAdornment: <Search sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
                             endAdornment: filters[searchField?.name] ? (
-                                <IconButton size="small" onClick={() => onChange(searchField?.name, '')}><Close sx={{ fontSize: 16 }} /></IconButton>
+                                <IconButton size="small" onClick={() => onChange(searchField?.name, '')}>
+                                    <Close sx={{ fontSize: 16 }} />
+                                </IconButton>
                             ) : null
                         }}
                     />
@@ -203,7 +315,8 @@ const DataFilters = ({
 
                     {activeCount > 0 && (
                         <Tooltip title="Скинути все">
-                            <IconButton onClick={onClear} color="error" sx={{ bgcolor: alpha('#f44336', 0.05), borderRadius: 2 }}>
+                            <IconButton onClick={onClear} color="error"
+                                sx={{ bgcolor: alpha('#f44336', 0.05), borderRadius: 2 }}>
                                 <RestartAlt />
                             </IconButton>
                         </Tooltip>
@@ -212,21 +325,18 @@ const DataFilters = ({
 
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ minHeight: 26, px: 0.5 }}>
                     {fields.map(f => {
-                        const hasVal = f.type === 'range'
-                            ? (filters[f.minName] > f.min || filters[f.maxName] < f.max)
-                            : (filters[f.name] !== '' && filters[f.name] !== null);
+                        if (!isFieldActive(f)) return null;
 
-                        if (!hasVal) return null;
-
-                        let displayValue = "";
+                        let displayValue = '';
                         if (f.type === 'range') {
-                            displayValue = `${filters[f.minName]}-${filters[f.maxName]}`;
+                            displayValue = `${filters[f.minName]}–${filters[f.maxName]}`;
                         } else if (f.type === 'datetime') {
                             displayValue = formatDisplayDate(filters[f.name]);
-                        } else if (f.type === 'select') {
-                            displayValue = getOptionLabel(f, filters[f.name]);
+                        } else if (f.type === 'checkbox-group') {
+                            const ids = filters[f.name] || [];
+                            displayValue = `${ids.length} обрано`;
                         } else {
-                            displayValue = filters[f.name];
+                            displayValue = getOptionLabel(f, filters[f.name]);
                         }
 
                         return (
@@ -237,9 +347,17 @@ const DataFilters = ({
                                 onDelete={() => {
                                     if (f.type === 'range') {
                                         onChange(f.minName, f.min); onChange(f.maxName, f.max);
-                                    } else onChange(f.name, '');
+                                    } else if (f.type === 'checkbox-group') {
+                                        onChange(f.name, []);
+                                    } else {
+                                        onChange(f.name, '');
+                                    }
                                 }}
-                                sx={{ bgcolor: alpha('#1976d2', 0.08), color: 'primary.dark', fontWeight: 500, borderRadius: 1.5 }}
+                                sx={{
+                                    bgcolor: alpha(accentColor, 0.08),
+                                    color: accentColor,
+                                    fontWeight: 500, borderRadius: 1.5,
+                                }}
                             />
                         );
                     })}
@@ -247,7 +365,8 @@ const DataFilters = ({
 
                 <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
                     <Box sx={{ width: 380, p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-                        <Typography variant="h6" fontWeight="800" sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" fontWeight="800"
+                            sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FilterList color="primary" /> Всі фільтри
                         </Typography>
 
@@ -255,11 +374,9 @@ const DataFilters = ({
                             {advancedFields.map(f => renderField(f))}
                         </Box>
 
-                        <Button 
-                            fullWidth variant="contained" 
-                            onClick={() => setOpen(false)} 
-                            sx={{ mt: 2, py: 1.5, borderRadius: 2, bgcolor: '#263238' }}
-                        >
+                        <Button fullWidth variant="contained"
+                            onClick={() => setOpen(false)}
+                            sx={{ mt: 2, py: 1.5, borderRadius: 2, bgcolor: '#263238' }}>
                             Застосувати
                         </Button>
                     </Box>

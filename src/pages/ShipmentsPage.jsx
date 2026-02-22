@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Paper, Button, Box, Typography, Snackbar, Alert, TablePagination, useTheme, alpha } from '@mui/material';
+import { Paper, Button, Box, Typography, Snackbar, Alert, alpha } from '@mui/material';
 import { Add, LocalShipping } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
@@ -24,7 +24,6 @@ const STATUS_COLORS = {
 };
 
 const ShipmentsPage = () => {
-    const theme = useTheme();
     const groupName = ITEM_GROUP_MAP['shipments'] || 'Керування логістикою';
     const mainColor = GROUP_COLORS[groupName] || '#673ab7';
 
@@ -38,20 +37,31 @@ const ShipmentsPage = () => {
     const [expandedHistory, setExpandedHistory] = useState({});
     const [expandedFinance, setExpandedFinance] = useState({});
     const [movements, setMovements] = useState({});
-
     const [openWizard, setOpenWizard] = useState(false);
+
     const [references, setReferences] = useState({
-        statuses: [], clients: [], shipmentTypes: [], parcelTypes: [], storageConditions: [], boxVariants: []
+        statuses: [], clients: [], shipmentTypes: [],
+        parcelTypes: [], storageConditions: [], boxVariants: []
     });
 
-    const [filters, setFilters] = useState({
-        trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',
-        createdAtFrom: '', createdAtTo: '', issuedAtFrom: '', issuedAtTo: '',
-        weightMin: 0, weightMax: 100, totalPriceMin: 0, totalPriceMax: 10000,
-        deliveryPriceMin: 0, deliveryPriceMax: 5000, weightPriceMin: 0, weightPriceMax: 2000,
-        distancePriceMin: 0, distancePriceMax: 2000, boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
-        specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000, insuranceFeeMin: 0, insuranceFeeMax: 1000
-    });
+    const defaultFilters = {
+        trackingNumber: '',
+        shipmentStatuses: [],
+        shipmentTypes: [],
+        parcelDescription: '',
+        createdAtFrom: '', createdAtTo: '',
+        issuedAtFrom: '', issuedAtTo: '',
+        weightMin: 0, weightMax: 100,
+        totalPriceMin: 0, totalPriceMax: 10000,
+        deliveryPriceMin: 0, deliveryPriceMax: 5000,
+        weightPriceMin: 0, weightPriceMax: 2000,
+        distancePriceMin: 0, distancePriceMax: 2000,
+        boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
+        specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000,
+        insuranceFeeMin: 0, insuranceFeeMax: 1000,
+    };
+
+    const [filters, setFilters] = useState(defaultFilters);
 
     useEffect(() => {
         const loadAllReferences = async () => {
@@ -65,19 +75,28 @@ const ShipmentsPage = () => {
                     DictionaryApi.getAll('box-variants', 0, 100),
                     DictionaryApi.getStatistics('shipments')
                 ]);
+
+                const statusesWithColors = (s.data.content || []).map(st => ({
+                    ...st,
+                    color: STATUS_COLORS[st.name] || STATUS_COLORS['default'],
+                }));
+
                 setReferences({
-                    statuses: s.data.content || [],
+                    statuses: statusesWithColors,
                     clients: c.data.content || [],
                     shipmentTypes: t.data.content || [],
                     parcelTypes: pt.data.content || [],
                     storageConditions: sc.data.content || [],
                     boxVariants: bv.data.content || []
                 });
+
                 if (statsRes.data) {
                     setStats(statsRes.data);
-                    const s = statsRes.data;
+                    const d = statsRes.data;
                     setFilters(prev => ({
-                        ...prev, weightMin: s.minWeight, weightMax: s.maxWeight, totalPriceMin: s.minTotalPrice, totalPriceMax: s.maxTotalPrice
+                        ...prev,
+                        weightMin: d.minWeight, weightMax: d.maxWeight,
+                        totalPriceMin: d.minTotalPrice, totalPriceMax: d.maxTotalPrice,
                     }));
                 }
             } catch (e) { console.error(e); }
@@ -87,7 +106,12 @@ const ShipmentsPage = () => {
 
     const loadTableData = useCallback(async () => {
         try {
-            const activeFilters = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== '' && v !== null));
+            const activeFilters = Object.fromEntries(
+                Object.entries(filters).filter(([_, v]) => {
+                    if (Array.isArray(v)) return v.length > 0;
+                    return v !== '' && v !== null;
+                })
+            );
             const response = await DictionaryApi.getAll('shipments', page, rowsPerPage, activeFilters);
             setShipments(response.data.content || []);
             setTotalElements(response.data.totalElements || 0);
@@ -115,15 +139,14 @@ const ShipmentsPage = () => {
 
     const handleClearFilters = () => {
         setFilters({
-            trackingNumber: '', shipmentStatusId: '', shipmentTypeId: '', parcelDescription: '',
-            createdAtFrom: '', createdAtTo: '', issuedAtFrom: '', issuedAtTo: '',
-            weightMin: stats?.minWeight || 0, weightMax: stats?.maxWeight || 100, totalPriceMin: stats?.minTotalPrice || 0, totalPriceMax: stats?.maxTotalPrice || 10000,
-            deliveryPriceMin: 0, deliveryPriceMax: 5000, weightPriceMin: 0, weightPriceMax: 2000,
-            distancePriceMin: 0, distancePriceMax: 2000, boxVariantPriceMin: 0, boxVariantPriceMax: 1000,
-            specialPackagingPriceMin: 0, specialPackagingPriceMax: 1000, insuranceFeeMin: 0, insuranceFeeMax: 1000
+            ...defaultFilters,
+            weightMin: stats?.minWeight || 0,
+            weightMax: stats?.maxWeight || 100,
+            totalPriceMin: stats?.minTotalPrice || 0,
+            totalPriceMax: stats?.maxTotalPrice || 10000,
         });
         setPage(0);
-    }
+    };
 
     const handleDelete = async (id) => {
         if (window.confirm('Видалити це відправлення?')) {
@@ -131,17 +154,41 @@ const ShipmentsPage = () => {
                 await DictionaryApi.delete('shipments', id);
                 loadTableData();
                 setNotification({ open: true, message: 'Видалено успішно', severity: 'success' });
-            } catch (error) { setNotification({ open: true, message: 'Помилка видалення', severity: 'error' }); }
+            } catch {
+                setNotification({ open: true, message: 'Помилка видалення', severity: 'error' });
+            }
         }
     };
 
     const filterFields = [
-        { name: 'trackingNumber', label: 'Трек-номер', type: 'text', md: 3 },
-        { name: 'shipmentStatusId', label: 'Статус', type: 'select', options: references.statuses, md: 3 },
-        { name: 'shipmentTypeId', label: 'Тип доставки', type: 'select', options: references.shipmentTypes, md: 3 },
-        { name: 'parcelDescription', label: 'Опис вмісту', type: 'text', md: 3 },
-        { label: 'Вага (кг)', type: 'range', minName: 'weightMin', maxName: 'weightMax', min: stats?.minWeight || 0, max: stats?.maxWeight || 100, md: 4 },
-        { label: 'Ціна загальна', type: 'range', minName: 'totalPriceMin', maxName: 'totalPriceMax', min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000, md: 4 }
+        { name: 'trackingNumber', label: 'Трек-номер', type: 'text' },
+        {
+            name: 'shipmentStatuses',
+            label: 'Статус відправлення',
+            type: 'checkbox-group',
+            options: references.statuses,
+        },
+        {
+            name: 'shipmentTypes',
+            label: 'Тип доставки',
+            type: 'checkbox-group',
+            options: references.shipmentTypes,
+        },
+        { name: 'parcelDescription', label: 'Опис вмісту', type: 'text' },
+        {
+            label: 'Вага (кг)', type: 'range',
+            minName: 'weightMin', maxName: 'weightMax',
+            min: stats?.minWeight || 0, max: stats?.maxWeight || 100,
+        },
+        {
+            label: 'Ціна загальна', type: 'range',
+            minName: 'totalPriceMin', maxName: 'totalPriceMax',
+            min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000,
+        },
+        { name: 'createdAtFrom', label: 'Створено (від)', type: 'datetime' },
+        { name: 'createdAtTo', label: 'Створено (до)', type: 'datetime' },
+        { name: 'issuedAtFrom', label: 'Видано (від)', type: 'datetime' },
+        { name: 'issuedAtTo', label: 'Видано (до)', type: 'datetime' },
     ];
 
     return (
@@ -166,11 +213,11 @@ const ShipmentsPage = () => {
 
             <DataFilters
                 filters={filters}
-                onChange={(k, v) => setFilters(p => ({ ...p, [k]: v }))}
+                onChange={(k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(0); }}
                 onClear={handleClearFilters}
                 fields={filterFields}
                 searchPlaceholder="Трек-номер..."
-                quickFilters={['shipmentStatusId', 'shipmentTypeId']}
+                accentColor={mainColor}
             />
 
             <ShipmentGrid
@@ -200,8 +247,13 @@ const ShipmentsPage = () => {
                 }}
             />
 
-            <Snackbar open={notification.open} autoHideDuration={4000} onClose={() => setNotification({ ...notification, open: false })} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>{notification.message}</Alert>
+            <Snackbar
+                open={notification.open} autoHideDuration={4000}
+                onClose={() => setNotification(n => ({ ...n, open: false }))}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>
+                    {notification.message}
+                </Alert>
             </Snackbar>
         </Box>
     );
