@@ -9,7 +9,6 @@ import {
     ExpandLess, ExpandMore, CreditScore, AssignmentReturn
 } from '@mui/icons-material';
 
-// Допоміжна компонента для однієї картки
 const ShipmentCard = ({
     s,
     mainColor,
@@ -101,7 +100,7 @@ const ShipmentCard = ({
                                                         {step.cityName ? `${step.cityName}, ` : ''}{step.locationName}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                                                        {step.statusDescription} • {new Date(step.time).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                        {step.statusDescription} • {new Date(step.time).toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                     </Typography>
                                                 </Box>
                                             ))
@@ -129,7 +128,7 @@ const ShipmentCard = ({
                                 <Typography variant="caption" sx={{ fontWeight: 600 }}>Оформлено:</Typography>
                             </Box>
                             <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                                {new Date(s.createdAt).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                {new Date(s.createdAt).toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </Typography>
                         </Box>
                         {s.issuedAt && (
@@ -139,7 +138,7 @@ const ShipmentCard = ({
                                     <Typography variant="caption" sx={{ fontWeight: 800 }}>Видано:</Typography>
                                 </Box>
                                 <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.main' }}>
-                                    {new Date(s.issuedAt).toLocaleString([], { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(s.issuedAt).toLocaleString([], { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </Typography>
                             </Box>
                         )}
