@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FormControl, InputLabel, Select, MenuItem, Box, Grow, TextField, InputAdornment, Autocomplete } from '@mui/material';
-import { ArrowDownward, LocationOn, Map, Public, Search as SearchIcon } from '@mui/icons-material';
+import { FormControl, InputLabel, Select, MenuItem, Box, Grow, TextField } from '@mui/material';
+import { ArrowDownward, LocationOn, Map, Public } from '@mui/icons-material';
+import { Autocomplete } from '@mui/material';
 import { DictionaryApi } from '../api/dictionaries';
 
 const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
     const [regions, setRegions] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [cities, setCities] = useState([]);
-    
+
     const [filteredDistricts, setFilteredDistricts] = useState([]);
     const [filteredCities, setFilteredCities] = useState([]);
     const [districtSearch, setDistrictSearch] = useState('');
@@ -41,11 +42,11 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
         const loadCityHierarchy = async () => {
             if (selectedCityId && regions.length > 0) {
                 try {
-                    const cityRes = await DictionaryApi.getById('cities', selectedCityId);
-                    const cityData = cityRes.data;
+                    const cityRes = await DictionaryApi.getAll('cities', 0, 1, { id: selectedCityId });
+                    const cityData = cityRes.data.content?.[0];
+                    if (!cityData) return;
 
-                    const districtId = cityData.districtId || (cityData.district && cityData.district.id);
-
+                    const districtId = cityData.districtId;
                     if (districtId) {
                         const distRes = await DictionaryApi.getById('districts', districtId);
                         const distData = distRes.data;
@@ -54,7 +55,7 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                         if (regionId) {
                             const districtsRes = await DictionaryApi.getAll('districts', 0, 1000, { regionId });
                             const districtsData = districtsRes.data.content || districtsRes.data || [];
-                            
+
                             const citiesRes = await DictionaryApi.getAll('cities', 0, 1000, { districtId });
                             const citiesData = citiesRes.data.content || citiesRes.data || [];
 
@@ -72,7 +73,7 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                         }
                     }
                 } catch (e) {
-                    console.error("Failed to load city hierarchy", e);
+                    console.error('Failed to load city hierarchy', e);
                 }
             } else if (!selectedCityId && !isInitialMount.current) {
                 setSelectedRegion('');
@@ -90,11 +91,15 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
     }, [selectedCityId, regions.length]);
 
     useEffect(() => {
-        setFilteredDistricts(districts.filter(d => d.name.toLowerCase().includes(districtSearch.toLowerCase())));
+        setFilteredDistricts(districts.filter(d =>
+            d.name.toLowerCase().includes(districtSearch.toLowerCase())
+        ));
     }, [districtSearch, districts]);
 
     useEffect(() => {
-        setFilteredCities(cities.filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase())));
+        setFilteredCities(cities.filter(c =>
+            c.name.toLowerCase().includes(citySearch.toLowerCase())
+        ));
     }, [citySearch, cities]);
 
     const handleRegionChange = async (e) => {
@@ -104,16 +109,21 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
         setSelectedCity('');
         setDistricts([]);
         setCities([]);
-        
+        setDistrictSearch('');
+        setCitySearch('');
+
         isInternalChange.current = true;
-        onCityChange(null);
+        onCityChange(null, null);
 
         if (regionId) {
             try {
                 const res = await DictionaryApi.getAll('districts', 0, 1000, { regionId });
                 const data = res.data.content || res.data || [];
                 setDistricts(data);
-            } catch (e) { console.error(e); }
+                setFilteredDistricts(data);
+            } catch (e) {
+                console.error(e);
+            }
         }
     };
 
@@ -122,20 +132,32 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
             setSelectedDistrict(value.id);
             setSelectedCity('');
             setCities([]);
+            setCitySearch('');
             isInternalChange.current = true;
-            onCityChange(null);
+            onCityChange(null, null);
 
             DictionaryApi.getAll('cities', 0, 1000, { districtId: value.id })
-                .then(res => setCities(res.data.content || res.data || []))
+                .then(res => {
+                    const data = res.data.content || res.data || [];
+                    setCities(data);
+                    setFilteredCities(data);
+                })
                 .catch(console.error);
+        } else {
+            setSelectedDistrict('');
+            setSelectedCity('');
+            setCities([]);
+            isInternalChange.current = true;
+            onCityChange(null, null);
         }
     };
 
     const handleCityChange = (e, value) => {
         const id = value ? value.id : null;
+        const name = value ? value.name : null;
         setSelectedCity(id);
         isInternalChange.current = true;
-        onCityChange(id);
+        onCityChange(id, name);
     };
 
     return (
@@ -149,7 +171,9 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                         label="1. Оберіть область"
                         onChange={handleRegionChange}
                     >
-                        {regions.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
+                        {regions.map(r => (
+                            <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
+                        ))}
                     </Select>
                 </FormControl>
             </Box>
@@ -167,7 +191,9 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                             value={districts.find(d => d.id === selectedDistrict) || null}
                             onChange={handleDistrictChange}
                             onInputChange={(e, val) => setDistrictSearch(val)}
-                            renderInput={(params) => <TextField {...params} label="2. Оберіть район" />}
+                            renderInput={(params) => (
+                                <TextField {...params} label="2. Оберіть район" />
+                            )}
                         />
                     </Box>
                 </Box>
@@ -187,9 +213,9 @@ const LocationSelector = ({ selectedCityId, onCityChange, error }) => {
                             onChange={handleCityChange}
                             onInputChange={(e, val) => setCitySearch(val)}
                             renderInput={(params) => (
-                                <TextField 
-                                    {...params} 
-                                    label="3. Оберіть населений пункт" 
+                                <TextField
+                                    {...params}
+                                    label="3. Оберіть населений пункт"
                                     error={!!error}
                                     helperText={error ? "Обов'язкове поле" : ""}
                                 />

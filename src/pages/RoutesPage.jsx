@@ -3,16 +3,20 @@ import {
     Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     Box, Typography, Snackbar, Alert, Chip, Checkbox, FormControlLabel,
-    TablePagination, useTheme, alpha, FormHelperText
+    TablePagination, useTheme, alpha, FormHelperText,
+    Grid,
+    TextField
 } from '@mui/material';
 import {
     Add, Edit, Delete, LocalShipping, SwapHoriz,
-    ArrowRightAlt, Map, TripOrigin, LocationOn, Place
+    ArrowRightAlt, Map, TripOrigin, LocationOn, Place,
+    Straighten
 } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import RouteBranchSelector from '../components/RouteBranchSelector';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
+import DataPagination from '../components/pagination/DataPagination';
 
 const RoutesPage = () => {
     const theme = useTheme();
@@ -27,7 +31,14 @@ const RoutesPage = () => {
     const [filters, setFilters] = useState({
         originBranchName: '',
         destinationBranchName: '',
-        needSorting: ''
+        needSorting: '',
+        distanceKmMin: 0,
+        distanceKmMax: 3000
+    });
+
+    const [statistics, setStatistics] = useState({
+        minDistance: 0,
+        maxDistance: 3000
     });
 
     const [open, setOpen] = useState(false);
@@ -37,6 +48,29 @@ const RoutesPage = () => {
     const [destCityId, setDestCityId] = useState(null);
 
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+
+    useEffect(() => {
+        const loadStats = async () => {
+            try {
+                const res = await DictionaryApi.getStatistics('routes');
+                const { distanceKmMin, distanceKmMax } = res.data;
+
+                setStatistics({
+                    minDistance: distanceKmMin || 0,
+                    maxDistance: distanceKmMax || 3000
+                });
+
+                setFilters(prev => ({
+                    ...prev,
+                    distanceKmMin: distanceKmMin || 0,
+                    distanceKmMax: distanceKmMax || 3000
+                }));
+            } catch (error) {
+                console.error("Помилка завантаження статистики маршрутів", error);
+            }
+        };
+        loadStats();
+    }, []);
 
     const loadTableData = useCallback(async () => {
         try {
@@ -90,10 +124,10 @@ const RoutesPage = () => {
             if (serverData?.validationErrors) {
                 setFieldErrors(serverData.validationErrors);
             }
-            setNotification({ 
-                open: true, 
-                message: serverData?.message || 'Помилка збереження', 
-                severity: 'error' 
+            setNotification({
+                open: true,
+                message: serverData?.message || 'Помилка збереження',
+                severity: 'error'
             });
         }
     };
@@ -104,15 +138,35 @@ const RoutesPage = () => {
                 await DictionaryApi.delete('routes', id);
                 loadTableData();
                 setNotification({ open: true, message: 'Видалено', severity: 'success' });
-            } catch (error) { 
-                setNotification({ 
-                    open: true, 
-                    message: error.response?.data?.message || 'Помилка видалення', 
-                    severity: 'error' 
+            } catch (error) {
+                setNotification({
+                    open: true,
+                    message: error.response?.data?.message || 'Помилка видалення',
+                    severity: 'error'
                 });
             }
         }
     };
+
+    const filterFields = [
+        { name: 'originBranchName', label: 'Звідки', type: 'text' },
+        { name: 'destinationBranchName', label: 'Куди', type: 'text' },
+        {
+            name: 'needSorting',
+            label: 'Логістика',
+            type: 'select',
+            options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }]
+        },
+        {
+            name: 'distanceRange',
+            label: 'Відстань (км)',
+            type: 'range',
+            minName: 'distanceKmMin',
+            maxName: 'distanceKmMax',
+            min: statistics.minDistance,
+            max: statistics.maxDistance,
+        }
+    ];
 
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%', margin: '0 auto' }}>
@@ -140,12 +194,18 @@ const RoutesPage = () => {
             <DataFilters
                 filters={filters}
                 onChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(0); }}
-                onClear={() => setFilters({ originBranchName: '', destinationBranchName: '', needSorting: '' })}
-                fields={[
-                    { name: 'originBranchName', label: 'Звідки (назва)', type: 'text' },
-                    { name: 'destinationBranchName', label: 'Куди (назва)', type: 'text' },
-                    { name: 'needSorting', label: 'Тип логістики', type: 'select', options: [{ id: 'true', name: 'Сортування' }, { id: 'false', name: 'Прямий' }] }
-                ]}
+                onClear={() => setFilters({
+                    originBranchName: '',
+                    destinationBranchName: '',
+                    needSorting: '',
+                    distanceKmMin: statistics.minDistance,
+                    distanceKmMax: statistics.maxDistance
+                })}
+                searchPlaceholder="Пошук маршруту..."
+                quickFilters={['needSorting']}
+                fields={filterFields}
+                accentColor={mainColor}
+                counts={{ total: totalElements }}
             />
 
             <TableContainer component={Paper} sx={{ borderRadius: 3, border: '1px solid #e0e0e0' }}>
@@ -160,32 +220,36 @@ const RoutesPage = () => {
                     <TableBody>
                         {routes.map((row) => (
                             <TableRow key={row.id} hover>
-                                <TableCell sx={{ pl: 3 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        <Box sx={{ flex: 1, textAlign: 'right' }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                <TableCell sx={{ pl: 3, pr: 3 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 3 }}>
+                                        <Box sx={{ textAlign: 'left', minWidth: 'fit-content' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                                                 {row.originBranchName}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <Place sx={{ fontSize: 12 }} />
                                                 {row.originCityName || 'Невідомо'}
                                             </Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120, px: 1 }}>
-                                            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled', mb: 0.5, letterSpacing: 1 }}>КУДИ</Typography>
+
+                                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                            <Typography variant="caption" sx={{ color: mainColor, fontWeight: 800, mb: 0.5 }}>
+                                                {row.distanceKm ? `${row.distanceKm} км` : '—'}
+                                            </Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                                                <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'divider' }} />
-                                                <Box sx={{ flex: 1, height: 0, borderTop: '1px dashed', borderColor: 'divider' }} />
-                                                <LocalShipping color="primary" sx={{ fontSize: 20, mx: 0.5 }} />
-                                                <Box sx={{ flex: 1, height: 0, borderTop: '1px dashed', borderColor: 'divider' }} />
-                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 18, ml: -0.5 }} />
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'divider' }} />
+                                                <Box sx={{ flex: 1, height: 0, borderTop: '2px dashed', borderColor: 'divider' }} />
+                                                <LocalShipping color="primary" sx={{ fontSize: 24, mx: 1 }} />
+                                                <Box sx={{ flex: 1, height: 0, borderTop: '2px dashed', borderColor: 'divider' }} />
+                                                <ArrowRightAlt sx={{ color: 'divider', fontSize: 24, ml: -1 }} />
                                             </Box>
                                         </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+
+                                        <Box sx={{ textAlign: 'right', minWidth: 'fit-content' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                                                 {row.destinationBranchName}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                                                 <Place sx={{ fontSize: 12 }} />
                                                 {row.destinationCityName || 'Невідомо'}
                                             </Typography>
@@ -210,7 +274,14 @@ const RoutesPage = () => {
                         ))}
                     </TableBody>
                 </Table>
-                <TablePagination component="div" count={totalElements} page={page} onPageChange={(e, n) => setPage(n)} rowsPerPage={rowsPerPage} onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))} labelRowsPerPage="Рядків:" />
+                <DataPagination
+                    count={totalElements}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    onPageChange={(e, n) => setPage(n)}
+                    onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
+                    label="Маршрутів:"
+                />
             </TableContainer>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 4, maxWidth: '1050px', width: '100%' } }}>
@@ -220,7 +291,7 @@ const RoutesPage = () => {
                         {currentItem.id ? 'Редагувати магістральний маршрут' : 'Новий маршрут'}
                     </Typography>
                 </DialogTitle>
-                <DialogContent sx={{ p: 3, overflowX: 'hidden', mt: 1 }}>
+                <DialogContent sx={{ p: 3, mt: 1 }}>
                     <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <RouteBranchSelector
@@ -247,23 +318,43 @@ const RoutesPage = () => {
                             )}
                         </Box>
                     </Box>
-                    <Box sx={{ mt: 3 }}>
-                        <Paper variant="outlined" sx={{ 
-                            p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', 
-                            bgcolor: 'transparent', borderColor: fieldErrors.destinationBranchId ? 'error.main' : '#e0e0e0' 
-                        }}>
-                            <FormControlLabel
-                                control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
-                                label={<Typography fontWeight={500}>Маршрут потребує додаткового сортування на терміналі</Typography>}
-                                sx={{ width: '100%', ml: 0 }}
+
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                label="Відстань (км)"
+                                type="number"
+                                fullWidth
+                                variant="outlined"
+                                value={currentItem.distanceKm || ''}
+                                onChange={(e) => handleFieldChange('distanceKm', e.target.value)}
+                                error={!!fieldErrors.distanceKm}
+                                helperText={fieldErrors.distanceKm}
+                                InputProps={{
+                                    startAdornment: <Straighten sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />,
+                                }}
+                                sx={{ mt: 1 }}
                             />
-                        </Paper>
-                    </Box>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Paper variant="outlined" sx={{
+                                p: 1, px: 2, mt: 1, height: '56px', display: 'flex', alignItems: 'center',
+                                borderRadius: 2, bgcolor: 'transparent', borderColor: '#ccc'
+                            }}>
+                                <FormControlLabel
+                                    control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
+                                    label={<Typography fontWeight={500}>Потребує сортування на терміналі</Typography>}
+                                    sx={{ width: '100%', ml: 0 }}
+                                />
+                            </Paper>
+                        </Grid>
+                    </Grid>
                 </DialogContent>
+
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold', textTransform: 'none' }}>Скасувати</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Скасувати</Button>
                     <Button onClick={handleSave} variant="contained" disableElevation
-                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: mainColor, opacity: 0.9 }, px: 4, borderRadius: 2, fontWeight: 'bold', textTransform: 'none' }}
+                        sx={{ bgcolor: mainColor, px: 4, borderRadius: 2, fontWeight: 'bold' }}
                     >
                         Зберегти
                     </Button>

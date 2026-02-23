@@ -7,16 +7,24 @@ import BranchesPage from '../pages/BranchesPage';
 import PostomatsPage from '../pages/PostomatsPage';
 import RoutesPage from '../pages/RoutesPage';
 import ParcelsPage from '../pages/ParcelsPage';
+import ShipmentsPage from '../pages/ShipmentsPage';
+import TripsPage from '../pages/TripsPage';
+import WaybillsPage from '../pages/WaybillsPage';
+import RouteListsPage from '../pages/RouteListsPage';
 
 const AppRoutes = () => {
     return (
         <Routes>
-            <Route path="/" element={<Navigate to="/branches" replace />} />
+            <Route path="/" element={<Navigate to="/shipments" replace />} />
             
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/postomats" element={<PostomatsPage />} />
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/parcels" element={<ParcelsPage />} />
+            <Route path="/shipments" element={<ShipmentsPage />} />
+            <Route path="/trips" element={<TripsPage />} />
+            <Route path="/waybills" element={<WaybillsPage />} />
+            <Route path="/route-lists" element={<RouteListsPage />} />
 
             {MENU_GROUPS.flatMap(group => group.items).map((item) => (
                 !item.isCustomPage && (

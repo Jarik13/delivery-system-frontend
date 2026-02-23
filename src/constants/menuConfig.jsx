@@ -9,7 +9,8 @@ import {
     BuildCircle, SettingsEthernet, SettingsInputComponent, EvStation,
     DirectionsCarFilled, DirectionsCarOutlined,
     Schedule, AccessTime, AllInbox, TrackChanges, AcUnit, HelpOutline,
-    TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage
+    TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage,
+    Receipt
 } from '@mui/icons-material';
 
 export const GROUPS = {
@@ -40,6 +41,10 @@ export const groupIcons = {
 
 export const ITEM_GROUP_MAP = {
     "parcels": GROUPS.LOGISTICS,
+    "shipments": GROUPS.LOGISTICS,
+    "trips": GROUPS.LOGISTICS,
+    "waybills": GROUPS.LOGISTICS,
+    "route-lists": GROUPS.LOGISTICS,
 
     "branches": GROUPS.NETWORK,
     "postomats": GROUPS.NETWORK,
@@ -60,7 +65,6 @@ export const ITEM_GROUP_MAP = {
     "fleets": GROUPS.FLEET,
     "vehicles": GROUPS.FLEET,
     "drivers": GROUPS.FLEET,
-    "trips": GROUPS.FLEET,
     "trip-statuses": GROUPS.FLEET,
 
     "box-types": GROUPS.PACKAGING,
@@ -70,6 +74,7 @@ export const ITEM_GROUP_MAP = {
     "storage-conditions": GROUPS.PACKAGING,
     "return-reasons": GROUPS.PACKAGING,
     "box-variants": GROUPS.PACKAGING,
+    "route-list-statuses": GROUPS.FINANCE, 
 
     "branch-types": GROUPS.FINANCE,
     "payment-types": GROUPS.FINANCE,
@@ -106,5 +111,9 @@ export const itemIcons = {
     "payment-types": <LocalAtm />,
     "clients": <People />,
     "employees": <Badge />,
-    "payments": <Payments />
+    "payments": <Payments />,
+    "trips": <DirectionsBus />,
+    "waybills": <Receipt />, 
+    "route-lists": <ListAlt />,
+    "route-list-statuses": <ChecklistRtl />, 
 };

@@ -12,10 +12,28 @@ export const DictionaryApi = {
     },
 
     getStatistics: async (entityType) => api.get(`${entityType}/statistics`),
-    getByParam: (endpoint, paramName, paramValue) => api.get(`/${endpoint}`, { params: { [paramName]: paramValue } }),
+    getMovement: async (shipmentId) => api.get(`shipments/${shipmentId}/movement`),
+    getByParam: (endpoint, paramName, paramValue, page = 0, size = 5000) => {
+        return api.get(`/${endpoint}`, {
+            params: {
+                [paramName]: paramValue,
+                page,
+                size
+            }
+        });
+    },
     getById: (endpoint, id) => api.get(`/${endpoint}/${id}`),
 
+    calculatePrices: (data) => api.post('/shipments/calculate', data),
     create: (endpoint, data) => api.post(`/${endpoint}`, data),
     update: (endpoint, id, data) => api.put(`/${endpoint}/${id}`, data),
     delete: (endpoint, id) => api.delete(`/${endpoint}/${id}`),
+
+    exportFile: (endpoint, params = {}, config = {}) => {
+        return api.get(`/${endpoint}`, {
+            params,
+            responseType: 'blob',
+            ...config,
+        });
+    },
 };
