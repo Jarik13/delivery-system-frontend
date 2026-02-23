@@ -5,7 +5,7 @@ import {
     TextField, Box, Typography, Snackbar, Alert, MenuItem, Select,
     FormControl, InputLabel, Tooltip, useTheme, alpha, FormHelperText,
 } from '@mui/material';
-import { Add, Edit, Delete, Apartment, Place, Store } from '@mui/icons-material';
+import { Add, Edit, Delete, Apartment, Place, Store, AccessTime, CalendarMonth } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 import DataFilters from '../components/DataFilters';
@@ -81,6 +81,8 @@ const BranchesPage = () => {
             const serverData = error.response?.data;
             if (serverData?.validationErrors) setFieldErrors(serverData.validationErrors);
             setNotification({ open: true, message: serverData?.message || 'Помилка збереження', severity: 'error' });
+            if (serverData?.validationErrors) setFieldErrors(serverData.validationErrors);
+            setNotification({ open: true, message: serverData?.message || 'Помилка збереження', severity: 'error' });
         }
     };
 
@@ -150,6 +152,7 @@ const BranchesPage = () => {
                             <TableRow>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary', pl: 3 }}>НАЗВА</TableCell>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>АДРЕСА</TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>ГРАФІК</TableCell>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>ТИП</TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary', pr: 3 }}>ДІЇ</TableCell>
                             </TableRow>
@@ -165,6 +168,20 @@ const BranchesPage = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell><Typography variant="body2">{row.address}</Typography></TableCell>
+
+                                    <TableCell>
+                                        <Tooltip title="Переглянути графік">
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                onClick={(e) => handleShowSchedule(e, row.id)}
+                                                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}
+                                            >
+                                                <AccessTime fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </TableCell>
+
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Store color="action" fontSize="small" />
