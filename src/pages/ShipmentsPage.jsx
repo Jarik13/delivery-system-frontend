@@ -244,7 +244,8 @@ const ShipmentsPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування логістичними маршрутами</Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
+                <Button variant="contained" size="small"
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
                     startIcon={<Add />} onClick={() => setOpenWizard(true)}>
                     Створити ТТН
                 </Button>
