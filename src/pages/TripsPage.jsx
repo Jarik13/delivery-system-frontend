@@ -4,7 +4,7 @@ import {
     Dialog, DialogTitle, DialogContent,
     IconButton, alpha
 } from '@mui/material';
-import { LocalShipping, Add, Map as MapIcon, Close } from '@mui/icons-material';
+import { LocalShipping, Add, Map as MapIcon, Close, AltRoute } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
@@ -103,13 +103,14 @@ const TripsPage = () => {
             name: 'driverId',
             label: 'Водій',
             type: 'select',
-            options: drivers.map(d => ({ ...d, name: d.name })) 
+            options: drivers.map(d => ({ ...d, name: d.name }))
         },
-        { name: 
-            'vehicleId', 
-            label: 'Транспортний засіб', 
-            type: 'select', 
-            options: vehicles.map(v => ({ ...v, name: v.name })) 
+        {
+            name:
+                'vehicleId',
+            label: 'Транспортний засіб',
+            type: 'select',
+            options: vehicles.map(v => ({ ...v, name: v.name }))
         },
         { name: 'originCity', label: 'Місто відправлення', type: 'text' },
         { name: 'destinationCity', label: 'Місто призначення', type: 'text' },
@@ -129,19 +130,22 @@ const TripsPage = () => {
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white', borderRadius: 3
+                color: 'white', borderRadius: 3,
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <LocalShipping fontSize="large" />
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
+                        <AltRoute fontSize="medium" />
+                    </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Магістральні рейси</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування маршрутами та рейсами</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.8 }}>Схеми доставки між відділеннями</Typography>
                     </Box>
                 </Box>
-                <Button onClick={() => setWizardTrip(null)} variant="contained"
-                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold' }}
-                    startIcon={<Add />}>
-                    Новий рейс
+                <Button variant="contained" size="small"
+                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                    startIcon={<Add />} onClick={() => setWizardTrip(null)}>
+                    Створити новий рейс
                 </Button>
             </Paper>
 

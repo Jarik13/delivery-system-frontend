@@ -233,10 +233,12 @@ const ShipmentsPage = () => {
             <Paper elevation={0} sx={{
                 p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white', borderRadius: 3
+                color: 'white', borderRadius: 3,
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <LocalShipping fontSize="large" />
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
+                        <LocalShipping fontSize="medium" />
+                    </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Відправлення</Typography>
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування логістичними маршрутами</Typography>
