@@ -30,6 +30,12 @@ export const MENU_GROUPS = [
                 isCustomPage: true,
                 endpoint: 'waybills'
             },
+            {
+                label: 'Маршрутні листи',
+                path: 'route-lists',
+                isCustomPage: true,
+                endpoint: 'route-lists'
+            },
         ]
     },
     {
@@ -83,6 +89,12 @@ export const MENU_GROUPS = [
                 ]
             },
             { label: 'Причини повернення', path: 'return-reasons', endpoint: 'return-reasons', columns: DEFAULT_COLS },
+            {
+                label: 'Статуси маршрутних листів',
+                path: 'route-list-statuses',
+                endpoint: 'route-list-statuses',
+                columns: DEFAULT_COLS
+            },
         ]
     },
     {

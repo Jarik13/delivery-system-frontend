@@ -10,6 +10,7 @@ import ParcelsPage from '../pages/ParcelsPage';
 import ShipmentsPage from '../pages/ShipmentsPage';
 import TripsPage from '../pages/TripsPage';
 import WaybillsPage from '../pages/WaybillsPage';
+import RouteListsPage from '../pages/RouteListsPage';
 
 const AppRoutes = () => {
     return (
@@ -23,6 +24,7 @@ const AppRoutes = () => {
             <Route path="/shipments" element={<ShipmentsPage />} />
             <Route path="/trips" element={<TripsPage />} />
             <Route path="/waybills" element={<WaybillsPage />} />
+            <Route path="/route-lists" element={<RouteListsPage />} />
 
             {MENU_GROUPS.flatMap(group => group.items).map((item) => (
                 !item.isCustomPage && (

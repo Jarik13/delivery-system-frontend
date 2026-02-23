@@ -44,6 +44,7 @@ export const ITEM_GROUP_MAP = {
     "shipments": GROUPS.LOGISTICS,
     "trips": GROUPS.LOGISTICS,
     "waybills": GROUPS.LOGISTICS,
+    "route-lists": GROUPS.LOGISTICS,
 
     "branches": GROUPS.NETWORK,
     "postomats": GROUPS.NETWORK,
@@ -73,6 +74,7 @@ export const ITEM_GROUP_MAP = {
     "storage-conditions": GROUPS.PACKAGING,
     "return-reasons": GROUPS.PACKAGING,
     "box-variants": GROUPS.PACKAGING,
+    "route-list-statuses": GROUPS.FINANCE, 
 
     "branch-types": GROUPS.FINANCE,
     "payment-types": GROUPS.FINANCE,
@@ -112,4 +114,6 @@ export const itemIcons = {
     "payments": <Payments />,
     "trips": <DirectionsBus />,
     "waybills": <Receipt />, 
+    "route-lists": <ListAlt />,
+    "route-list-statuses": <ChecklistRtl />, 
 };
