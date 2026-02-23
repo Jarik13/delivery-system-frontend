@@ -88,28 +88,50 @@ const RouteListsPage = () => {
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
             <Paper elevation={0} sx={{
-                p: 2, mb: 2,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white', borderRadius: 3,
+                mb: 2, borderRadius: 3, overflow: 'hidden', position: 'relative',
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Assignment fontSize="large" />
-                    <Box>
-                        <Typography variant="h6" fontWeight="bold">Маршрутні листи</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                            Керування чергою доставки та кур'єрами
-                        </Typography>
+                {/*
+                <LinearProgress
+                    variant="indeterminate"
+                    sx={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        height: 3, zIndex: 2,
+                        bgcolor: 'rgba(255,255,255,0.15)',
+                        '& .MuiLinearProgress-bar': { bgcolor: 'rgba(255,255,255,0.9)' },
+                    }}
+                /> */}
+
+                <Box sx={{
+                    p: 2,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                    color: 'white',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
+                            <Assignment fontSize="medium" />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight="bold">Маршрутні листи</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
+                                Керування чергою доставки та кур'єрами
+                            </Typography>
+                        </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<Add />}
+                            onClick={() => setOpenWizard(true)}
+                            sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                        >
+                            Сформувати маршрут
+                        </Button>
                     </Box>
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={() => setOpenWizard(true)}
-                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                >
-                    Сформувати маршрут
-                </Button>
             </Paper>
 
             <DataFilters
