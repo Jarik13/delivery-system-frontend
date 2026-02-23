@@ -10,7 +10,7 @@ import {
     Explore,
     LocationCity
 } from '@mui/icons-material';
-import { DictionaryApi } from '../api/dictionaries';
+import { DictionaryApi } from '../../api/dictionaries';
 
 const DeliveryPointSelector = ({ point, onChange, label }) => {
     const [regions, setRegions] = useState([]);

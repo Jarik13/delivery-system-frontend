@@ -7,11 +7,11 @@ import {
 } from '@mui/material';
 import {
     Inventory, Person, Calculate, CheckCircle,
-    LocalShipping, ChevronRight, ChevronLeft, Payments, AccountBalanceWallet
+    LocalShipping, Payments, AccountBalanceWallet
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import DeliveryPointSelector from './DeliveryPointSelector';
-import { DictionaryApi } from '../api/dictionaries';
+import { DictionaryApi } from '../../api/dictionaries';
 
 const ColorlibStepIcon = (props) => {
     const { active, completed, icon, mainColor } = props;

@@ -3,8 +3,8 @@ import { Paper, Button, Box, Typography, Snackbar, Alert, alpha } from '@mui/mat
 import { Add, LocalShipping } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
-import ShipmentGrid from '../components/ShipmentGrid';
-import ShipmentWizardDialog from '../components/ShipmentWizardDialog';
+import ShipmentGrid from '../components/shipments/ShipmentGrid';
+import ShipmentWizardDialog from '../components/shipments/ShipmentWizardDialog';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import DataPagination from '../components/pagination/DataPagination';
 
