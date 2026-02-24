@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     TableRow, TableCell, IconButton, Chip, Box, Typography, alpha,
-    Checkbox, LinearProgress,
+    Checkbox, LinearProgress, Tooltip,
 } from '@mui/material';
 import {
     ListAlt, ExpandMore, ExpandLess,
@@ -9,12 +9,17 @@ import {
 } from '@mui/icons-material';
 import RouteSheetPanel from './RouteSheetPanel';
 
-const RouteListRow = ({ item, mainColor, selected, onToggle }) => {
+const RouteListRow = ({
+    item, mainColor, selected, onToggle,
+    isHighlighted = false,
+    highlightRowRef = null,
+}) => {
     const [expanded, setExpanded] = useState(false);
 
-    const total = item.items?.length || 0;
-    const delivered = item.items?.filter(s => s.isDelivered)?.length || 0;
-    const progress = total > 0 ? Math.round((delivered / total) * 100) : 0;
+    const shipmentsList = item?.items ?? item?.shipments ?? item?.routeSheetItems ?? item?.sheets ?? [];
+    const total     = shipmentsList.length;
+    const delivered = shipmentsList.filter(s => s?.isDelivered)?.length || 0;
+    const progress  = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
     const handleExpandClick = (e) => {
         e.stopPropagation();
@@ -24,11 +29,27 @@ const RouteListRow = ({ item, mainColor, selected, onToggle }) => {
     return (
         <>
             <TableRow
+                ref={highlightRowRef}
                 onClick={onToggle}
                 sx={{
                     cursor: 'pointer',
-                    bgcolor: selected ? alpha(mainColor, 0.06) : 'inherit',
-                    '&:hover': { bgcolor: alpha(mainColor, 0.02) },
+                    ...(isHighlighted
+                        ? {
+                            bgcolor: `${alpha(mainColor, 0.08)} !important`,
+                            outline: `2px solid ${alpha(mainColor, 0.45)}`,
+                            outlineOffset: '-2px',
+                            animation: 'highlightPulse 1.6s ease-in-out 2',
+                            '@keyframes highlightPulse': {
+                                '0%':   { backgroundColor: alpha(mainColor, 0.08) },
+                                '50%':  { backgroundColor: alpha(mainColor, 0.2)  },
+                                '100%': { backgroundColor: alpha(mainColor, 0.08) },
+                            },
+                        }
+                        : {
+                            bgcolor: selected ? alpha(mainColor, 0.06) : 'inherit',
+                            '&:hover': { bgcolor: alpha(mainColor, 0.02) },
+                        }
+                    ),
                 }}
             >
                 <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
@@ -47,12 +68,18 @@ const RouteListRow = ({ item, mainColor, selected, onToggle }) => {
                 </TableCell>
 
                 <TableCell>
-                    <Chip
-                        icon={<ListAlt sx={{ fontSize: '14px !important' }} />}
-                        label={`ML-${item.number}`}
-                        size="small"
-                        sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }}
-                    />
+                    <Tooltip title={isHighlighted ? 'Перейдено з відправлення' : ''} placement="top">
+                        <Chip
+                            icon={<ListAlt sx={{ fontSize: '14px !important' }} />}
+                            label={`ML-${item.number}`}
+                            size="small"
+                            sx={{
+                                bgcolor: alpha(mainColor, isHighlighted ? 0.18 : 0.1),
+                                color: mainColor, fontWeight: 700,
+                                ...(isHighlighted && { border: `1px solid ${alpha(mainColor, 0.4)}` }),
+                            }}
+                        />
+                    </Tooltip>
                 </TableCell>
 
                 <TableCell>
@@ -123,7 +150,7 @@ const RouteListRow = ({ item, mainColor, selected, onToggle }) => {
 
             <RouteSheetPanel
                 open={expanded}
-                shipments={item.items}
+                shipments={shipmentsList}
                 mainColor={mainColor}
             />
         </>

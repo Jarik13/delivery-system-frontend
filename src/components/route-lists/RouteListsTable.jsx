@@ -7,8 +7,13 @@ import {
 import { AssignmentInd } from '@mui/icons-material';
 import RouteListRow from './RouteListRow';
 
-const RouteListsTable = ({ items, loading, mainColor, selected = [], onToggle, onToggleAll }) => {
-    const allSelected = items.length > 0 && selected.length === items.length;
+const RouteListsTable = ({
+    items, loading, mainColor,
+    selected = [], onToggle, onToggleAll,
+    highlightId,
+    highlightRowRef,
+}) => {
+    const allSelected  = items.length > 0 && selected.length === items.length;
     const someSelected = selected.length > 0 && selected.length < items.length;
 
     return (
@@ -63,6 +68,8 @@ const RouteListsTable = ({ items, loading, mainColor, selected = [], onToggle, o
                                         mainColor={mainColor}
                                         selected={selected.includes(item.id)}
                                         onToggle={() => onToggle(item.id)}
+                                        isHighlighted={item.id === highlightId}
+                                        highlightRowRef={item.id === highlightId ? highlightRowRef : null}
                                     />
                                 ))
                             )}

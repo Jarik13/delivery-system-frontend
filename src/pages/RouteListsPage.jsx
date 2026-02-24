@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Box, Paper, Typography, alpha, Snackbar, Alert, Button,
+    Box, Paper, Typography, alpha, Snackbar, Alert, Button, Chip,
 } from '@mui/material';
 import { Assignment, Add } from '@mui/icons-material';
+import { useSearchParams } from 'react-router-dom';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import DataPagination from '../components/pagination/DataPagination';
@@ -11,7 +12,11 @@ import RouteListsTable from '../components/route-lists/RouteListsTable';
 // import RouteListWizardDialog from '../components/route-lists/RouteListWizardDialog';
 
 const RouteListsPage = () => {
-    const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['route-lists']] || '#e65100';
+    const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['route-lists']] || '#673ab7';
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    const highlightId = searchParams.get('highlight') ? Number(searchParams.get('highlight')) : null;
+    const highlightRowRef = useRef(null);
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -65,6 +70,26 @@ const RouteListsPage = () => {
         return () => clearTimeout(t);
     }, [load]);
 
+    useEffect(() => {
+        if (!highlightId || loading) return;
+        const timer = setTimeout(() => {
+            highlightRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 200);
+        return () => clearTimeout(timer);
+    }, [highlightId, loading, items]);
+
+    useEffect(() => {
+        if (!highlightId || loading || items.length === 0) return;
+        const found = items.find(i => i.id === highlightId);
+        if (!found) {
+            setNotification({
+                open: true,
+                message: `Маршрутний лист #${highlightId} не знайдено на цій сторінці. Спробуйте пошук.`,
+                severity: 'info',
+            });
+        }
+    }, [highlightId, items, loading]);
+
     const handleToggle = (id) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -91,17 +116,6 @@ const RouteListsPage = () => {
                 mb: 2, borderRadius: 3, overflow: 'hidden', position: 'relative',
                 boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
-                {/*
-                <LinearProgress
-                    variant="indeterminate"
-                    sx={{
-                        position: 'absolute', bottom: 0, left: 0, right: 0,
-                        height: 3, zIndex: 2,
-                        bgcolor: 'rgba(255,255,255,0.15)',
-                        '& .MuiLinearProgress-bar': { bgcolor: 'rgba(255,255,255,0.9)' },
-                    }}
-                /> */}
-
                 <Box sx={{
                     p: 2,
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -121,6 +135,19 @@ const RouteListsPage = () => {
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {highlightId && !loading && (
+                            <Chip
+                                label={`↓ Маршрутний лист #${highlightId}`}
+                                size="small"
+                                onDelete={() => setSearchParams({})}
+                                sx={{
+                                    bgcolor: 'rgba(255,255,255,0.25)', color: 'white',
+                                    fontWeight: 700, border: '1px solid rgba(255,255,255,0.4)',
+                                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
+                                }}
+                            />
+                        )}
+
                         <Button
                             variant="contained"
                             size="small"
@@ -151,6 +178,8 @@ const RouteListsPage = () => {
                 selected={[...selectedIds]}
                 onToggle={handleToggle}
                 onToggleAll={handleToggleAll}
+                highlightId={highlightId}
+                highlightRowRef={highlightRowRef}
             />
 
             <DataPagination
