@@ -1,13 +1,50 @@
 import React from 'react';
 import {
     Card, CardContent, Box, Chip, IconButton, Typography,
-    Divider, Collapse, Button, useTheme, alpha
+    Divider, Collapse, Button, useTheme, alpha, Tooltip,
 } from '@mui/material';
 import {
     Delete, TripOrigin, LocationOn, RemoveCircleOutline, AddCircleOutline,
     AccessTime, EventAvailable, ErrorOutline, CheckCircle, PendingActions,
     ExpandLess, ExpandMore, Inventory2, LocalShipping,
+    ArticleOutlined, RouteOutlined, OpenInNew,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+
+const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
+    const theme = useTheme();
+    return (
+        <Tooltip title={`Відкрити ${label} ${number}`} placement="top">
+            <Box
+                onClick={onClick}
+                sx={{
+                    display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                    px: 1, py: 0.35,
+                    borderRadius: 1.5,
+                    border: `1px solid ${alpha(color, 0.3)}`,
+                    bgcolor: alpha(color, 0.06),
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                        bgcolor: alpha(color, 0.14),
+                        borderColor: alpha(color, 0.6),
+                        transform: 'translateY(-1px)',
+                        boxShadow: `0 2px 6px ${alpha(color, 0.2)}`,
+                    },
+                }}
+            >
+                {React.cloneElement(icon, { sx: { fontSize: 12, color } })}
+                <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color, lineHeight: 1 }}>
+                    {label}
+                </Typography>
+                <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color, lineHeight: 1 }}>
+                    {number}
+                </Typography>
+                <OpenInNew sx={{ fontSize: 10, color: alpha(color, 0.6) }} />
+            </Box>
+        </Tooltip>
+    );
+};
 
 const ShipmentCard = ({
     s,
@@ -21,7 +58,22 @@ const ShipmentCard = ({
     onToggleFinance,
 }) => {
     const theme = useTheme();
+    const navigate = useNavigate();
     const statusColor = statusColors[s.shipmentStatusName] || statusColors.default;
+
+    const handleWaybillClick = () => {
+        if (s.waybillId) {
+            navigate(`/waybills?highlight=${s.waybillId}`);
+        }
+    };
+
+    const handleRouteListClick = () => {
+        if (s.routeListId) {
+            navigate(`/route-lists?highlight=${s.routeListId}`);
+        }
+    };
+
+    const hasLinkedDocs = s.waybillId || s.routeListId;
 
     return (
         <Card sx={{
@@ -89,6 +141,41 @@ const ShipmentCard = ({
                         />
                     )}
                 </Box>
+
+                {hasLinkedDocs && (
+                    <Box sx={{
+                        mb: 1.5, p: 1, borderRadius: 2,
+                        bgcolor: alpha(theme.palette.text.primary, 0.02),
+                        border: `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
+                    }}>
+                        <Typography sx={{
+                            fontSize: '0.58rem', fontWeight: 800, color: 'text.disabled',
+                            textTransform: 'uppercase', letterSpacing: 0.6, mb: 0.8,
+                        }}>
+                            Пов'язані документи
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                            {s.waybillId && s.waybillNumber && (
+                                <LinkedDocChip
+                                    icon={<ArticleOutlined />}
+                                    label="Накладна"
+                                    number={`№${s.waybillNumber}`}
+                                    color={mainColor}
+                                    onClick={handleWaybillClick}
+                                />
+                            )}
+                            {s.routeListId && s.routeListNumber && (
+                                <LinkedDocChip
+                                    icon={<RouteOutlined />}
+                                    label="Маршрутний"
+                                    number={`№${s.routeListNumber}`}
+                                    color={theme.palette.secondary.main}
+                                    onClick={handleRouteListClick}
+                                />
+                            )}
+                        </Box>
+                    </Box>
+                )}
 
                 <Divider sx={{ mt: 0.5, mb: 1.5, opacity: 0.5, borderStyle: 'dashed' }} />
 
