@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import {
     TableRow, TableCell, IconButton, Chip, Box, Typography, alpha,
-    Checkbox
+    Checkbox, Tooltip,
 } from '@mui/material';
 import {
     Receipt, ExpandMore, ExpandLess,
-    Inventory2, Scale, ViewInAr, Person, CalendarToday
+    Inventory2, Scale, ViewInAr, Person, CalendarToday,
 } from '@mui/icons-material';
 import WaybillShipmentsPanel from './WaybillShipmentsPanel';
 
-const WaybillRow = ({ waybill, mainColor, selected, onToggle }) => {
+const WaybillRow = ({
+    waybill, mainColor, selected, onToggle,
+    isHighlighted = false,
+    highlightRowRef = null,
+}) => {
     const [expanded, setExpanded] = useState(false);
 
     const handleExpandClick = (e) => {
@@ -20,11 +24,27 @@ const WaybillRow = ({ waybill, mainColor, selected, onToggle }) => {
     return (
         <>
             <TableRow
+                ref={highlightRowRef}
                 onClick={onToggle}
                 sx={{
                     cursor: 'pointer',
-                    bgcolor: selected ? alpha(mainColor, 0.06) : 'inherit',
-                    '&:hover': { bgcolor: alpha(mainColor, 0.02) }
+                    ...(isHighlighted
+                        ? {
+                            bgcolor: `${alpha(mainColor, 0.08)} !important`,
+                            outline: `2px solid ${alpha(mainColor, 0.45)}`,
+                            outlineOffset: '-2px',
+                            animation: 'highlightPulse 1.6s ease-in-out 2',
+                            '@keyframes highlightPulse': {
+                                '0%':   { backgroundColor: alpha(mainColor, 0.08) },
+                                '50%':  { backgroundColor: alpha(mainColor, 0.2)  },
+                                '100%': { backgroundColor: alpha(mainColor, 0.08) },
+                            },
+                        }
+                        : {
+                            bgcolor: selected ? alpha(mainColor, 0.06) : 'inherit',
+                            '&:hover': { bgcolor: alpha(mainColor, 0.02) },
+                        }
+                    ),
                 }}
             >
                 <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
@@ -41,9 +61,18 @@ const WaybillRow = ({ waybill, mainColor, selected, onToggle }) => {
                     </IconButton>
                 </TableCell>
                 <TableCell>
-                    <Chip icon={<Receipt sx={{ fontSize: '14px !important' }} />}
-                        label={`#${waybill.number}`} size="small"
-                        sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} />
+                    <Tooltip title={isHighlighted ? 'Перейдено з відправлення' : ''} placement="top">
+                        <Chip
+                            icon={<Receipt sx={{ fontSize: '14px !important' }} />}
+                            label={`#${waybill.number}`}
+                            size="small"
+                            sx={{
+                                bgcolor: alpha(mainColor, isHighlighted ? 0.18 : 0.1),
+                                color: mainColor, fontWeight: 700,
+                                ...(isHighlighted && { border: `1px solid ${alpha(mainColor, 0.4)}` }),
+                            }}
+                        />
+                    </Tooltip>
                 </TableCell>
                 <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -62,10 +91,12 @@ const WaybillRow = ({ waybill, mainColor, selected, onToggle }) => {
                     </Box>
                 </TableCell>
                 <TableCell>
-                    <Chip icon={<Inventory2 sx={{ fontSize: '14px !important' }} />}
+                    <Chip
+                        icon={<Inventory2 sx={{ fontSize: '14px !important' }} />}
                         label={waybill.shipmentsCount ?? waybill.shipments?.length ?? 0}
                         size="small" variant="outlined"
-                        sx={{ fontWeight: 700, borderColor: mainColor, color: mainColor }} />
+                        sx={{ fontWeight: 700, borderColor: mainColor, color: mainColor }}
+                    />
                 </TableCell>
                 <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -82,7 +113,7 @@ const WaybillRow = ({ waybill, mainColor, selected, onToggle }) => {
                             {waybill.createdAt
                                 ? new Date(waybill.createdAt).toLocaleString('uk-UA', {
                                     day: '2-digit', month: '2-digit', year: 'numeric',
-                                    hour: '2-digit', minute: '2-digit'
+                                    hour: '2-digit', minute: '2-digit',
                                 })
                                 : '—'}
                         </Typography>

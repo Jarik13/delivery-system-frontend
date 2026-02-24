@@ -7,8 +7,13 @@ import {
 import { LocalShipping } from '@mui/icons-material';
 import WaybillRow from './WaybillRow';
 
-const WaybillsTable = ({ waybills, loading, mainColor, selected, onToggle, onToggleAll }) => {
-    const allSelected = waybills.length > 0 && selected.length === waybills.length;
+const WaybillsTable = ({
+    waybills, loading, mainColor,
+    selected, onToggle, onToggleAll,
+    highlightId,
+    highlightRowRef,
+}) => {
+    const allSelected  = waybills.length > 0 && selected.length === waybills.length;
     const someSelected = selected.length > 0 && selected.length < waybills.length;
 
     return (
@@ -63,6 +68,8 @@ const WaybillsTable = ({ waybills, loading, mainColor, selected, onToggle, onTog
                                         mainColor={mainColor}
                                         selected={selected.includes(w.id)}
                                         onToggle={() => onToggle(w.id)}
+                                        isHighlighted={w.id === highlightId}
+                                        highlightRowRef={w.id === highlightId ? highlightRowRef : null}
                                     />
                                 ))
                             )}
