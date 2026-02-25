@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-    TableRow, TableCell, Chip, Box, Typography, alpha, Checkbox, Tooltip,
+    TableRow, TableCell, Chip, Box, Typography, alpha, Checkbox,
 } from '@mui/material';
 import {
-    CreditCard, Money, AccountBalanceWallet, CalendarToday, Tag,
+    CreditCard, Money, AccountBalanceWallet, CalendarToday, Tag, LocalShipping,
 } from '@mui/icons-material';
 
 const PAYMENT_TYPE_ICONS = {
@@ -79,13 +79,17 @@ const PaymentRow = ({ payment, mainColor, selected, onToggle, visibleCols }) => 
                 </TableCell>
             )}
 
-            {show('shipmentId') && (
+            {show('shipmentTrackingNumber') && (
                 <TableCell>
-                    <Chip
-                        label={`#${payment.shipmentId}`}
-                        size="small" variant="outlined"
-                        sx={{ fontWeight: 700, borderColor: alpha(mainColor, 0.35), color: mainColor, fontSize: 11 }}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <LocalShipping sx={{ fontSize: 13, color: '#999' }} />
+                        <Typography variant="caption" sx={{
+                            fontFamily: 'monospace', fontWeight: 600,
+                            bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1, fontSize: 11,
+                        }}>
+                            {payment.shipmentTrackingNumber || `#${payment.shipmentId}`}
+                        </Typography>
+                    </Box>
                 </TableCell>
             )}
 
