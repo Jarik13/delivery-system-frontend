@@ -9,6 +9,59 @@ import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import PaymentTable from '../components/payments/PaymentTable';
 
+const DEFAULT_AMOUNT_MIN = 0;
+const DEFAULT_AMOUNT_MAX = 50000;
+
+const defaultFilters = {
+    transactionNumber: '',
+    shipmentTrackingNumber: '',
+    paymentTypes: [],
+    amountMin: DEFAULT_AMOUNT_MIN,
+    amountMax: DEFAULT_AMOUNT_MAX,
+    paymentDateFrom: '',
+    paymentDateTo: '',
+};
+
+const buildFilterFields = (paymentTypes, statistics) => [
+    {
+        name: 'transactionNumber',
+        label: 'Номер транзакції',
+        type: 'text',
+        placeholder: 'TXN-...',
+    },
+    {
+        name: 'shipmentTrackingNumber',
+        label: 'Трек-номер відправлення',
+        type: 'text',
+        placeholder: '590000...',
+    },
+    {
+        name: 'paymentTypes',
+        label: 'Тип оплати',
+        type: 'checkbox-group',
+        options: paymentTypes.map(t => ({ id: t.id, name: t.name })),
+    },
+    {
+        label: 'Сума (₴)',
+        type: 'range',
+        minName: 'amountMin',
+        maxName: 'amountMax',
+        min: statistics.amountMin,
+        max: statistics.amountMax,
+        step: 50,
+    },
+    {
+        name: 'paymentDateFrom',
+        label: 'Дата оплати від',
+        type: 'datetime',
+    },
+    {
+        name: 'paymentDateTo',
+        label: 'Дата оплати до',
+        type: 'datetime',
+    },
+];
+
 const PaymentsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['payments']] || '#673ab7';
 
@@ -19,36 +72,75 @@ const PaymentsPage = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
-    const [references, setReferences] = useState({ paymentTypes: [] });
-
-    const defaultFilters = { transactionNumber: '', paymentTypeId: '', shipmentId: '' };
+    const [paymentTypes, setPaymentTypes] = useState([]);
     const [filters, setFilters] = useState(defaultFilters);
+
+    const [statistics, setStatistics] = useState({
+        amountMin: DEFAULT_AMOUNT_MIN,
+        amountMax: DEFAULT_AMOUNT_MAX,
+    });
 
     useEffect(() => {
         DictionaryApi.getAll('payment-types', 0, 100)
-            .then(r => setReferences({ paymentTypes: r.data.content || [] }))
+            .then(r => setPaymentTypes(r.data.content || []))
+            .catch(console.error);
+
+        DictionaryApi.getStatistics('payments')
+            .then(r => {
+                const { amountMin, amountMax } = r.data;
+                const min = amountMin ?? DEFAULT_AMOUNT_MIN;
+                const max = amountMax ?? DEFAULT_AMOUNT_MAX;
+                setStatistics({ amountMin: min, amountMax: max });
+                setFilters(prev => ({ ...prev, amountMin: min, amountMax: max }));
+            })
             .catch(console.error);
     }, []);
+
+    const buildParams = useCallback((f) => {
+        const params = {};
+        if (f.transactionNumber?.trim()) params.transactionNumber = f.transactionNumber.trim();
+        if (f.shipmentTrackingNumber?.trim()) params.shipmentTrackingNumber = f.shipmentTrackingNumber.trim();
+        if (f.paymentTypes?.length) params.paymentTypes = f.paymentTypes.join(',');
+        if (f.amountMin !== statistics.amountMin) params.amountMin = f.amountMin;
+        if (f.amountMax !== statistics.amountMax) params.amountMax = f.amountMax;
+        if (f.paymentDateFrom) params.paymentDateFrom = f.paymentDateFrom;
+        if (f.paymentDateTo) params.paymentDateTo = f.paymentDateTo;
+        return params;
+    }, [statistics]);
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const active = Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''));
-            const res = await DictionaryApi.getAll('payments', page, rowsPerPage, active);
+            const res = await DictionaryApi.getAll('payments', page, rowsPerPage, buildParams(filters));
             setItems(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
             setSelectedIds(new Set());
         } catch (e) {
+            console.error(e);
             setNotification({ open: true, message: 'Помилка завантаження', severity: 'error' });
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, filters]);
+    }, [page, rowsPerPage, filters, buildParams]);
 
     useEffect(() => {
         const t = setTimeout(load, 300);
         return () => clearTimeout(t);
     }, [load]);
+
+    const handleFilterClear = useCallback(() => {
+        setFilters({
+            ...defaultFilters,
+            amountMin: statistics.amountMin,
+            amountMax: statistics.amountMax,
+        });
+        setPage(0);
+    }, [statistics]);
+
+    const handleFilterChange = useCallback((key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        setPage(0);
+    }, []);
 
     const handleToggle = useCallback((id) => setSelectedIds(prev => {
         const next = new Set(prev);
@@ -61,12 +153,6 @@ const PaymentsPage = () => {
             prev.size === items.length ? new Set() : new Set(items.map(i => i.id))
         );
     }, [items]);
-
-    const filterFields = [
-        { name: 'transactionNumber', label: 'Номер транзакції', type: 'text' },
-        { name: 'paymentTypeId', label: 'Тип оплати', type: 'select', options: references.paymentTypes },
-        { name: 'shipmentId', label: 'ID відправлення', type: 'text' },
-    ];
 
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
@@ -112,9 +198,9 @@ const PaymentsPage = () => {
 
             <DataFilters
                 filters={filters}
-                onChange={(k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(0); }}
-                onClear={() => { setFilters(defaultFilters); setPage(0); }}
-                fields={filterFields}
+                onChange={handleFilterChange}
+                onClear={handleFilterClear}
+                fields={buildFilterFields(paymentTypes, statistics)}
                 searchPlaceholder="Пошук за номером транзакції..."
                 accentColor={mainColor}
                 counts={{ total: totalElements }}
