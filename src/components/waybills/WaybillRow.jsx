@@ -9,7 +9,7 @@ import {
     Route, AltRoute, LocationOn, CheckCircleOutline, LocalShipping,
 } from '@mui/icons-material';
 import WaybillShipmentsPanel from './WaybillShipmentsPanel';
-import { WAYBILL_COLUMNS } from './WaybillsTable'
+import { WAYBILL_COLUMNS } from './WaybillsTable';
 
 const CellContent = ({ colKey, waybill, mainColor }) => {
     const secondary = { fontSize: 14, color: '#999' };
@@ -144,10 +144,9 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
     }
 };
 
-// ── Рядок таблиці ─────────────────────────────────────────────────────────────
 const WaybillRow = ({
     waybill, mainColor, selected, onToggle,
-    visibleCols,
+    visibleCols, colSpan,
     isHighlighted = false,
     highlightRowRef = null,
 }) => {
@@ -158,9 +157,7 @@ const WaybillRow = ({
         setExpanded(!expanded);
     };
 
-    const orderedKeys = WAYBILL_COLUMNS
-        .filter(c => visibleCols.has(c.key))
-        .map(c => c.key);
+    const orderedCols = WAYBILL_COLUMNS.filter(c => visibleCols.has(c.key));
 
     return (
         <>
@@ -196,20 +193,21 @@ const WaybillRow = ({
                         sx={{ color: alpha(mainColor, 0.4), '&.Mui-checked': { color: mainColor } }}
                     />
                 </TableCell>
+
                 <TableCell>
                     <IconButton size="small" sx={{ color: mainColor }} onClick={handleExpandClick}>
                         {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                     </IconButton>
                 </TableCell>
 
-                {orderedKeys.map(key => (
-                    <TableCell key={key}>
+                {orderedCols.map(col => (
+                    <TableCell key={col.key}>
                         <Tooltip
-                            title={isHighlighted && key === 'number' ? 'Перейдено з відправлення' : ''}
+                            title={isHighlighted && col.key === 'number' ? 'Перейдено з відправлення' : ''}
                             placement="top"
                         >
                             <span>
-                                <CellContent colKey={key} waybill={waybill} mainColor={mainColor} />
+                                <CellContent colKey={col.key} waybill={waybill} mainColor={mainColor} />
                             </span>
                         </Tooltip>
                     </TableCell>
@@ -220,6 +218,7 @@ const WaybillRow = ({
                 open={expanded}
                 shipments={waybill.shipments}
                 mainColor={mainColor}
+                colSpan={colSpan}
             />
         </>
     );

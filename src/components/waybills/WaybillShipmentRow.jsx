@@ -28,7 +28,6 @@ const WaybillShipmentRow = ({ shipment }) => {
             '&:hover': { bgcolor: '#fafafa' },
             borderLeft: `3px solid ${alpha(statusColor, 0.4)}`,
         }}>
-            {/* Порядковий номер */}
             <TableCell sx={{ pl: 3, py: 1, width: 48 }}>
                 <Box sx={{
                     width: 24, height: 24, borderRadius: '50%',
@@ -40,8 +39,7 @@ const WaybillShipmentRow = ({ shipment }) => {
                 </Box>
             </TableCell>
 
-            {/* Трек-номер */}
-            <TableCell sx={{ py: 1 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                 <Typography variant="caption" sx={{
                     fontFamily: 'monospace', fontWeight: 700,
                     bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1,
@@ -51,49 +49,43 @@ const WaybillShipmentRow = ({ shipment }) => {
                 </Typography>
             </TableCell>
 
-            {/* Відправник */}
-            <TableCell sx={{ py: 1 }}>
-                <Typography variant="caption" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
+                <Typography variant="caption" fontWeight={600} noWrap>
                     {shipment.senderFullName || '—'}
                 </Typography>
             </TableCell>
 
-            {/* Отримувач */}
-            <TableCell sx={{ py: 1 }}>
-                <Typography variant="caption" fontWeight={600} sx={{ lineHeight: 1.3 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
+                <Typography variant="caption" fontWeight={600} noWrap>
                     {shipment.recipientFullName || '—'}
                 </Typography>
             </TableCell>
 
-            {/* Маршрут */}
-            <TableCell sx={{ py: 1 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" noWrap>
                         {shipment.originCityName || '—'}
                     </Typography>
-                    <ArrowForward sx={{ fontSize: 12, color: '#bbb' }} />
-                    <Typography variant="caption" color="text.secondary">
+                    <ArrowForward sx={{ fontSize: 12, color: '#bbb', flexShrink: 0 }} />
+                    <Typography variant="caption" color="text.secondary" noWrap>
                         {shipment.destinationCityName || '—'}
                     </Typography>
                 </Box>
             </TableCell>
 
-            {/* Вага */}
-            <TableCell sx={{ py: 1 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                 <Typography variant="caption" color="text.secondary">
                     {shipment.actualWeight != null ? `${shipment.actualWeight} кг` : '—'}
                 </Typography>
             </TableCell>
 
-            {/* Вартість */}
-            <TableCell sx={{ py: 1 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                 <Typography variant="caption" fontWeight={700} color="text.primary">
                     {shipment.totalPrice != null ? `${shipment.totalPrice} грн` : '—'}
                 </Typography>
             </TableCell>
 
-            {/* Статус */}
-            <TableCell sx={{ py: 1 }}>
+            <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                 {shipment.shipmentStatusName ? (
                     <Chip
                         label={shipment.shipmentStatusName}
