@@ -11,6 +11,7 @@ import ShipmentsPage from '../pages/ShipmentsPage';
 import TripsPage from '../pages/TripsPage';
 import WaybillsPage from '../pages/WaybillsPage';
 import RouteListsPage from '../pages/RouteListsPage';
+import PaymentsPage from '../pages/PaymentsPage';
 
 const AppRoutes = () => {
     return (
@@ -22,6 +23,7 @@ const AppRoutes = () => {
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/parcels" element={<ParcelsPage />} />
             <Route path="/shipments" element={<ShipmentsPage />} />
+            <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/trips" element={<TripsPage />} />
             <Route path="/waybills" element={<WaybillsPage />} />
             <Route path="/route-lists" element={<RouteListsPage />} />

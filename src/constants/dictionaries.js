@@ -1,3 +1,5 @@
+import { label } from "framer-motion/client";
+
 const DEFAULT_COLS = [
     { id: 'name', label: 'Назва' }
 ];
@@ -17,6 +19,12 @@ export const MENU_GROUPS = [
                 path: 'shipments',
                 isCustomPage: true,
                 endpoint: 'shipments'
+            },
+            {
+                label: 'Платежі',
+                path: 'payments',
+                isCustomPage: true,
+                endpoint: 'payments'
             },
             {
                 label: 'Рейси',

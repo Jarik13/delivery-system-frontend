@@ -42,6 +42,7 @@ export const groupIcons = {
 export const ITEM_GROUP_MAP = {
     "parcels": GROUPS.LOGISTICS,
     "shipments": GROUPS.LOGISTICS,
+    "payments": GROUPS.LOGISTICS,
     "trips": GROUPS.LOGISTICS,
     "waybills": GROUPS.LOGISTICS,
     "route-lists": GROUPS.LOGISTICS,
@@ -80,8 +81,7 @@ export const ITEM_GROUP_MAP = {
     "payment-types": GROUPS.FINANCE,
     "trip-statuses-fin": GROUPS.FINANCE,
     "clients": GROUPS.FINANCE,
-    "employees": GROUPS.FINANCE,
-    "payments": GROUPS.FINANCE
+    "employees": GROUPS.FINANCE
 };
 
 // --- 5. ІКОНКИ ПУНКТІВ МЕНЮ ---
@@ -116,4 +116,5 @@ export const itemIcons = {
     "waybills": <Receipt />, 
     "route-lists": <ListAlt />,
     "route-list-statuses": <ChecklistRtl />, 
+    "payments": <Payments />
 };
