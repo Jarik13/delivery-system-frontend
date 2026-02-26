@@ -18,13 +18,9 @@ import WaybillWizardDialog from '../components/waybills/WaybillWizardDialog';
 
 const EXPORT_FORMATS = [
     { key: 'xlsx', label: 'Excel (.xlsx)', ext: 'xlsx', icon: <TableChart sx={{ color: '#217346' }} /> },
-    { key: 'csv',  label: 'CSV (.csv)',    ext: 'csv',  icon: <Description sx={{ color: '#f57c00' }} /> },
-    { key: 'pdf',  label: 'PDF (.pdf)',    ext: 'pdf',  icon: <PictureAsPdf sx={{ color: '#d32f2f' }} /> },
+    { key: 'csv', label: 'CSV (.csv)', ext: 'csv', icon: <Description sx={{ color: '#f57c00' }} /> },
+    { key: 'pdf', label: 'PDF (.pdf)', ext: 'pdf', icon: <PictureAsPdf sx={{ color: '#d32f2f' }} /> },
     { key: 'json', label: 'JSON (.json)', ext: 'json', icon: <DataObject sx={{ color: '#1565c0' }} /> },
-];
-
-const filterFields = [
-    { name: 'number', label: 'Номер накладної', type: 'text' },
 ];
 
 const formatBytes = (bytes) => {
@@ -58,12 +54,23 @@ const WaybillsPage = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
-    const [filters, setFilters] = useState({ number: '' });
+    const [filters, setFilters] = useState({
+        number: '',
+        totalWeightMin: 0,
+        totalWeightMax: 5000,
+        volumeMin: 0,
+        volumeMax: 100,
+        createdAtFrom: null,
+        createdAtTo: null,
+        createdById: null,
+    });
     const [openWizard, setOpenWizard] = useState(false);
     const [exportAnchor, setExportAnchor] = useState(null);
     const [progress, setProgress] = useState(NO_PROGRESS);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
     const [selectedIds, setSelectedIds] = useState(new Set());
+
+    const [employees, setEmployees] = useState([]);
 
     const abortRef = useRef(null);
     const statsRef = useRef({ startTime: 0, lastLoaded: 0, lastTime: 0 });
@@ -84,6 +91,65 @@ const WaybillsPage = () => {
             setLoading(false);
         }
     }, [page, rowsPerPage, filters]);
+
+    useEffect(() => {
+        DictionaryApi.getAll('employees', 0, 1000, {})
+            .then(res => setEmployees(res.data.content || []))
+            .catch(console.error);
+    }, []);
+
+    const [statistics, setStatistics] = useState({ totalWeightMin: 0, totalWeightMax: 5000 });
+
+    const filterFields = [
+        { name: 'number', label: 'Номер накладної', type: 'text' },
+        {
+            name: 'weightRange',
+            label: 'Вага (кг)',
+            type: 'range',
+            minName: 'totalWeightMin',
+            maxName: 'totalWeightMax',
+            min: statistics.totalWeightMin,
+            max: statistics.totalWeightMax,
+            step: 1,
+        },
+        {
+            name: 'volumeRange',
+            label: 'Об\'єм (м³)',
+            type: 'range',
+            minName: 'volumeMin',
+            maxName: 'volumeMax',
+            min: statistics.volumeMin,
+            max: statistics.volumeMax,
+            step: 1,
+        },
+        { name: 'createdAtFrom', label: 'Створено від', type: 'datetime' },
+        { name: 'createdAtTo', label: 'Створено до', type: 'datetime' },
+        {
+            name: 'createdById',
+            label: 'Оформив',
+            type: 'select',
+            options: employees.map(e => ({
+                id: e.id,
+                name: `${e.lastName} ${e.firstName} ${e.middleName}`,
+            })),
+        },
+    ];
+
+    useEffect(() => {
+        DictionaryApi.getStatistics('waybills')
+            .then(res => {
+                const { totalWeightMin, totalWeightMax } = res.data;
+                setStatistics({ totalWeightMin: totalWeightMin || 0, totalWeightMax: totalWeightMax || 5000 });
+                setFilters(prev => ({
+                    ...prev,
+                    totalWeightMin: totalWeightMin || 0,
+                    totalWeightMax: totalWeightMax || 5000,
+                    volumeMin: res.data.volumeMin || 0,
+                    volumeMax: res.data.volumeMax || 100,
+                }));
+            })
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         const t = setTimeout(load, 300);
@@ -192,8 +258,8 @@ const WaybillsPage = () => {
     };
 
     const isIndeterminate = progress.active && progress.percent === null;
-    const isDeterminate   = progress.active && progress.percent !== null;
-    const selectionCount  = selectedIds.size;
+    const isDeterminate = progress.active && progress.percent !== null;
+    const selectionCount = selectedIds.size;
 
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
@@ -342,7 +408,19 @@ const WaybillsPage = () => {
             <DataFilters
                 filters={filters}
                 onChange={(k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(0); }}
-                onClear={() => { setFilters({ number: '' }); setPage(0); }}
+                onClear={() => {
+                    setFilters({
+                        number: '',
+                        totalWeightMin: 0,
+                        totalWeightMax: 5000,
+                        volumeMin: 0,
+                        volumeMax: 100,
+                        createdAtFrom: null,
+                        createdAtTo: null,
+                        createdById: null,
+                    });
+                    setPage(0);
+                }}
                 fields={filterFields}
                 searchPlaceholder="Номер накладної..."
                 accentColor={mainColor}
