@@ -306,7 +306,8 @@ const ShipmentCard = ({
                             </Typography>
                             {s.boxVariantDimensions && (
                                 <Typography variant="caption" color="text.secondary">
-                                    Коробка: <b>{s.boxVariantDimensions}</b>
+                                    <b>{s.boxVariantName || 'Коробка'}</b>
+                                    {` · ${s.boxVariantDimensions}`}
                                     {s.boxVariantPrice > 0 && ` · ${s.boxVariantPrice} ₴`}
                                 </Typography>
                             )}
