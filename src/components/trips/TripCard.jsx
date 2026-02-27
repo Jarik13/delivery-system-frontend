@@ -1,18 +1,55 @@
 import React, { useState } from 'react';
 import {
     Box, Card, CardContent, Typography, Divider, Stack,
-    IconButton, Collapse, Grid, Button, Chip, alpha, Paper
+    IconButton, Collapse, Grid, Button, Chip, alpha, Paper, Tooltip,
 } from '@mui/material';
 import {
     ExpandMore, ExpandLess, Scale,
     Straighten, LocationOn, AccessTime, LocalShipping,
     Map as MapIcon, Delete, Person, DirectionsCar,
-    Inventory2, Room, History, Edit
+    Inventory2, Room, History, Edit,
+    ArticleOutlined, OpenInNew,
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import StatusChip from './StatusChip';
 
-const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
+const LinkedDocChip = ({ icon, label, number, color, onClick }) => (
+    <Tooltip title={`Відкрити ${label} ${number}`} placement="top">
+        <Box
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            sx={{
+                display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                px: 1, py: 0.35,
+                borderRadius: 1.5,
+                border: `1px solid ${alpha(color, 0.3)}`,
+                bgcolor: alpha(color, 0.06),
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                '&:hover': {
+                    bgcolor: alpha(color, 0.14),
+                    borderColor: alpha(color, 0.6),
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 2px 6px ${alpha(color, 0.2)}`,
+                },
+            }}
+        >
+            {React.cloneElement(icon, { sx: { fontSize: 12, color } })}
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color, lineHeight: 1 }}>
+                {label}
+            </Typography>
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color, lineHeight: 1 }}>
+                {number}
+            </Typography>
+            <OpenInNew sx={{ fontSize: 10, color: alpha(color, 0.6) }} />
+        </Box>
+    </Tooltip>
+);
+
+const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false, highlightRowRef = null }) => {
     const [expanded, setExpanded] = useState(false);
+    const navigate = useNavigate();
+
+    const waybills = trip.waybills || [];
 
     const formatTime = (dateStr) => dateStr
         ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -23,29 +60,46 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
         : '';
 
     return (
-        <Card sx={{
-            mb: 2,
-            ml: { xs: 0, sm: 6.5 },
-            borderRadius: 4,
-            border: '1px solid',
-            borderColor: 'divider',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            position: 'relative',
-            overflow: 'hidden',
-            '&:hover': {
-                boxShadow: `0 12px 24px ${alpha(color, 0.15)}`,
-                borderColor: alpha(color, 0.4),
-                transform: 'translateY(-2px)'
-            },
-            '&::before': {
-                content: '""',
-                position: 'absolute',
-                left: 0, top: 0, bottom: 0,
-                width: 4,
-                bgcolor: color,
-                opacity: 0.8
-            }
-        }} elevation={0}>
+        <Card
+            ref={highlightRowRef}
+            sx={{
+                mb: 2,
+                ml: { xs: 0, sm: 6.5 },
+                borderRadius: 4,
+                border: '1px solid',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                ...(isHighlighted ? {
+                    borderColor: `${alpha(color, 0.6)} !important`,
+                    outline: `2px solid ${alpha(color, 0.45)}`,
+                    outlineOffset: '2px',
+                    animation: 'highlightPulse 1.6s ease-in-out 2',
+                    '@keyframes highlightPulse': {
+                        '0%': { boxShadow: `0 0 0 0 ${alpha(color, 0.15)}` },
+                        '50%': { boxShadow: `0 8px 32px ${alpha(color, 0.4)}` },
+                        '100%': { boxShadow: `0 0 0 0 ${alpha(color, 0.15)}` },
+                    },
+                } : {
+                    borderColor: 'divider',
+                    '&:hover': {
+                        boxShadow: `0 12px 24px ${alpha(color, 0.15)}`,
+                        borderColor: alpha(color, 0.4),
+                        transform: 'translateY(-2px)',
+                    },
+                }),
+
+                '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0, top: 0, bottom: 0,
+                    width: 4,
+                    bgcolor: color,
+                    opacity: isHighlighted ? 1 : 0.8,
+                },
+            }}
+            elevation={0}
+        >
             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
@@ -78,21 +132,62 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                                 </Box>
                             </Box>
 
-                            <Stack direction="row" spacing={1}>
-                                <Chip icon={<Scale sx={{ fontSize: '14px !important' }} />}
-                                    label={`${trip.totalWeight?.toLocaleString()} кг`} size="small"
-                                    sx={{ bgcolor: alpha(color, 0.05), fontWeight: 600, fontSize: '0.7rem' }} />
-                                <Chip icon={<Straighten sx={{ fontSize: '14px !important' }} />}
-                                    label={`${trip.distanceKm} км`} size="small"
-                                    sx={{ bgcolor: '#f5f5f5', fontWeight: 600, fontSize: '0.7rem' }} />
-                                <Chip icon={<LocationOn sx={{ fontSize: '14px !important' }} />}
-                                    label={`${trip.waypoints?.length || 0} точок`} size="small"
-                                    sx={{ bgcolor: '#f5f5f5', fontWeight: 600, fontSize: '0.7rem' }} />
+                            <Stack direction="row" spacing={1} sx={{ mb: waybills.length > 0 ? 1 : 0 }}>
+                                <Chip
+                                    icon={<Scale sx={{ fontSize: '14px !important' }} />}
+                                    label={`${trip.totalWeight?.toLocaleString()} кг`}
+                                    size="small"
+                                    sx={{ bgcolor: alpha(color, 0.05), fontWeight: 600, fontSize: '0.7rem' }}
+                                />
+                                <Chip
+                                    icon={<Straighten sx={{ fontSize: '14px !important' }} />}
+                                    label={`${trip.distanceKm} км`}
+                                    size="small"
+                                    sx={{ bgcolor: '#f5f5f5', fontWeight: 600, fontSize: '0.7rem' }}
+                                />
+                                <Chip
+                                    icon={<LocationOn sx={{ fontSize: '14px !important' }} />}
+                                    label={`${trip.waypoints?.length || 0} точок`}
+                                    size="small"
+                                    sx={{ bgcolor: '#f5f5f5', fontWeight: 600, fontSize: '0.7rem' }}
+                                />
                             </Stack>
+
+                            {waybills.length > 0 && (
+                                <Box sx={{
+                                    mt: 0.5, p: 0.75, borderRadius: 1.5,
+                                    bgcolor: alpha(color, 0.03),
+                                    border: `1px solid ${alpha(color, 0.08)}`,
+                                }}>
+                                    <Typography sx={{
+                                        fontSize: '0.58rem', fontWeight: 800,
+                                        color: 'text.disabled',
+                                        textTransform: 'uppercase', letterSpacing: 0.6, mb: 0.6,
+                                    }}>
+                                        Пов'язані документи
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 0.6, flexWrap: 'wrap' }}>
+                                        {waybills.map(wb => (
+                                            <LinkedDocChip
+                                                key={wb.id}
+                                                icon={<ArticleOutlined />}
+                                                label="Накладна"
+                                                number={`№${wb.number}`}
+                                                color={color}
+                                                onClick={() => navigate(`/waybills?highlight=${wb.id}`)}
+                                            />
+                                        ))}
+                                    </Box>
+                                </Box>
+                            )}
                         </Box>
                     </Box>
 
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%', minHeight: 80 }}>
+                    <Box sx={{
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'flex-end', justifyContent: 'space-between',
+                        height: '100%', minHeight: 80,
+                    }}>
                         <StatusChip status={trip.status} />
 
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 'auto' }}>
@@ -107,7 +202,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                             <IconButton size="small" onClick={() => setExpanded(!expanded)} sx={{
                                 bgcolor: expanded ? alpha(color, 0.1) : '#f8f9fa',
                                 color: expanded ? color : 'inherit',
-                                '&:hover': { bgcolor: alpha(color, 0.2) }
+                                '&:hover': { bgcolor: alpha(color, 0.2) },
                             }}>
                                 {expanded ? <ExpandLess /> : <ExpandMore />}
                             </IconButton>
@@ -119,7 +214,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                     <Box sx={{ mt: 3 }}>
                         <Paper variant="outlined" sx={{
                             p: 2.5, borderRadius: 3,
-                            bgcolor: alpha('#f8f9fa', 0.5), borderStyle: 'dashed'
+                            bgcolor: alpha('#f8f9fa', 0.5), borderStyle: 'dashed',
                         }}>
                             <Grid container spacing={3}>
                                 <Grid item xs={12} sm={6} md={3}>
@@ -140,10 +235,10 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                                         <Box>
                                             <Typography variant="caption" color="text.disabled">Факт:</Typography>
                                             <Typography variant="body2" fontWeight="700"
-                                                color={trip.actualDepartureTime ? "success.main" : "text.secondary"}>
+                                                color={trip.actualDepartureTime ? 'success.main' : 'text.secondary'}>
                                                 {trip.actualDepartureTime
                                                     ? `${formatDate(trip.actualDepartureTime)} ${formatTime(trip.actualDepartureTime)}`
-                                                    : "Очікується"}
+                                                    : 'Очікується'}
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -167,10 +262,10 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                                         <Box>
                                             <Typography variant="caption" color="text.disabled">Факт:</Typography>
                                             <Typography variant="body2" fontWeight="700"
-                                                color={trip.actualArrivalTime ? "success.main" : "text.secondary"}>
+                                                color={trip.actualArrivalTime ? 'success.main' : 'text.secondary'}>
                                                 {trip.actualArrivalTime
                                                     ? `${formatDate(trip.actualArrivalTime)} ${formatTime(trip.actualArrivalTime)}`
-                                                    : "У дорозі"}
+                                                    : 'У дорозі'}
                                             </Typography>
                                         </Box>
                                     </Stack>
@@ -212,7 +307,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                                                 trip.waypoints.map((wp, i) => (
                                                     <Chip key={i} label={wp} size="small" sx={{
                                                         fontSize: '0.65rem', height: 22,
-                                                        bgcolor: 'white', border: '1px solid #e0e0e0', fontWeight: 600
+                                                        bgcolor: 'white', border: '1px solid #e0e0e0', fontWeight: 600,
                                                     }} />
                                                 ))
                                             ) : (
@@ -237,7 +332,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                                 sx={{
                                     fontWeight: 800, borderRadius: 2, px: 2.5,
                                     borderColor: color, color,
-                                    '&:hover': { bgcolor: alpha(color, 0.06), borderColor: color }
+                                    '&:hover': { bgcolor: alpha(color, 0.06), borderColor: color },
                                 }}>
                                 Редагувати
                             </Button>
@@ -245,7 +340,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit }) => {
                                 onClick={() => onMap(trip)}
                                 sx={{
                                     bgcolor: color, fontWeight: 800, borderRadius: 2, px: 3,
-                                    '&:hover': { bgcolor: alpha(color, 0.85) }
+                                    '&:hover': { bgcolor: alpha(color, 0.85) },
                                 }}>
                                 Карта маршруту
                             </Button>

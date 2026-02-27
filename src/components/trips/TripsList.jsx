@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Divider, Chip, Stack, alpha } from '@mui/material';
 import TripCard from './TripCard';
 
-const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit }) => {
+const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit, highlightId, highlightRowRef }) => {
     const grouped = trips.reduce((acc, trip) => {
         const date = trip.scheduledDepartureTime
             ? new Date(trip.scheduledDepartureTime).toLocaleDateString('uk-UA', {
@@ -46,6 +46,8 @@ const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit }) => {
                                 onMap={onMap}
                                 onDelete={onDelete}
                                 onEdit={onEdit}
+                                isHighlighted={trip.id === highlightId}
+                                highlightRowRef={trip.id === highlightId ? highlightRowRef : null}
                             />
                         ))}
                     </Stack>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Box, Paper, Typography, Button, CircularProgress,
     Dialog, DialogTitle, DialogContent,
-    IconButton, alpha
+    IconButton, alpha, Chip
 } from '@mui/material';
 import { LocalShipping, Add, Map as MapIcon, Close, AltRoute } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
@@ -12,6 +12,7 @@ import TripsList from '../components/trips/TripsList';
 import LeafletMap from '../components/trips/LeafletMap';
 import DataPagination from '../components/pagination/DataPagination';
 import TripWizardDialog from '../components/trips/TripWizardDialog';
+import { useSearchParams } from 'react-router-dom';
 
 const TripsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['trips']] || '#1976d2';
@@ -48,6 +49,18 @@ const TripsPage = () => {
     };
 
     const [filters, setFilters] = useState(defaultFilters);
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    const highlightId = searchParams.get('highlight') ? Number(searchParams.get('highlight')) : null;
+    const highlightRowRef = useRef(null);
+
+    useEffect(() => {
+        if (!highlightId || loading) return;
+        const timer = setTimeout(() => {
+            highlightRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [highlightId, loading, trips]);
 
     useEffect(() => {
         const fetchReferences = async () => {
@@ -142,11 +155,26 @@ const TripsPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>Схеми доставки між відділеннями</Typography>
                     </Box>
                 </Box>
-                <Button variant="contained" size="small"
-                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                    startIcon={<Add />} onClick={() => setWizardTrip(null)}>
-                    Створити новий рейс
-                </Button>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    {highlightId && !loading && (
+                        <Chip
+                            label={`↓ Рейс #${highlightId}`}
+                            size="small"
+                            onDelete={() => setSearchParams({})}
+                            sx={{
+                                bgcolor: 'rgba(255,255,255,0.25)', color: 'white',
+                                fontWeight: 700, border: '1px solid rgba(255,255,255,0.4)',
+                                '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
+                            }}
+                        />
+                    )}
+                    <Button variant="contained" size="small"
+                        sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                        startIcon={<Add />} onClick={() => setWizardTrip(null)}>
+                        Створити новий рейс
+                    </Button>
+                </Box>
             </Paper>
 
             <DataFilters
@@ -170,6 +198,9 @@ const TripsPage = () => {
                     onMap={setMapTrip}
                     onEdit={(trip) => setWizardTrip(trip)}
                     onDelete={(id) => console.log('Delete', id)}
+                    highlightId={highlightId}
+                    highlightRowRef={highlightRowRef}
+                    onClearHighlight={() => setSearchParams({})}
                 />
             )}
 

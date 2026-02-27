@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     TableRow, TableCell, IconButton, Chip, Box, Typography, alpha,
     Checkbox, Tooltip,
@@ -12,6 +13,7 @@ import WaybillShipmentsPanel from './WaybillShipmentsPanel';
 import { WAYBILL_COLUMNS } from './WaybillsTable';
 
 const CellContent = ({ colKey, waybill, mainColor }) => {
+    const navigate = useNavigate();
     const secondary = { fontSize: 14, color: '#999' };
 
     switch (colKey) {
@@ -51,15 +53,6 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
                     sx={{ fontWeight: 700, borderColor: mainColor, color: mainColor }}
                 />
             );
-        case 'routeSummary':
-            return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Route sx={secondary} />
-                    <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                        {waybill.routeSummary || '—'}
-                    </Typography>
-                </Box>
-            );
         case 'totalDistanceKm':
             return (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -67,20 +60,6 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
                     <Typography variant="body2">
                         {waybill.totalDistanceKm != null ? `${waybill.totalDistanceKm} км` : '—'}
                     </Typography>
-                </Box>
-            );
-        case 'originCity':
-            return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LocationOn sx={{ ...secondary, color: '#4caf50' }} />
-                    <Typography variant="body2">{waybill.originCityName || '—'}</Typography>
-                </Box>
-            );
-        case 'destinationCity':
-            return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <LocationOn sx={{ ...secondary, color: '#f44336' }} />
-                    <Typography variant="body2">{waybill.destinationCityName || '—'}</Typography>
                 </Box>
             );
         case 'statusSummary':
@@ -101,8 +80,23 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             );
         case 'tripNumber':
             return waybill.tripNumber ? (
-                <Chip label={`Рейс #${waybill.tripNumber}`} size="small"
-                    sx={{ fontSize: 11, fontWeight: 700, bgcolor: alpha('#607d8b', 0.1), color: '#607d8b' }} />
+                <Tooltip title="Перейти до рейсу">
+                    <Chip
+                        label={`Рейс #${waybill.tripNumber}`}
+                        size="small"
+                        clickable
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/trips?highlight=${waybill.tripId}`);
+                        }}
+                        sx={{
+                            fontSize: 11, fontWeight: 700,
+                            bgcolor: alpha('#607d8b', 0.1), color: '#607d8b',
+                            '&:hover': { bgcolor: alpha('#607d8b', 0.2) },
+                            cursor: 'pointer',
+                        }}
+                    />
+                </Tooltip>
             ) : <Typography variant="body2" color="text.disabled">—</Typography>;
         case 'scheduledDeparture':
             return (
@@ -173,8 +167,8 @@ const WaybillRow = ({
                             outlineOffset: '-2px',
                             animation: 'highlightPulse 1.6s ease-in-out 2',
                             '@keyframes highlightPulse': {
-                                '0%':   { backgroundColor: alpha(mainColor, 0.08) },
-                                '50%':  { backgroundColor: alpha(mainColor, 0.2)  },
+                                '0%': { backgroundColor: alpha(mainColor, 0.08) },
+                                '50%': { backgroundColor: alpha(mainColor, 0.2) },
                                 '100%': { backgroundColor: alpha(mainColor, 0.08) },
                             },
                         }
