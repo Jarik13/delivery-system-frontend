@@ -111,7 +111,6 @@ export const itemIcons = {
     "payment-types": <LocalAtm />,
     "clients": <People />,
     "employees": <Badge />,
-    "payments": <Payments />,
     "trips": <DirectionsBus />,
     "waybills": <Receipt />, 
     "route-lists": <ListAlt />,
