@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { 
-    AppBar, Toolbar, Typography, Box, CssBaseline 
+import {
+  AppBar, Toolbar, Typography, Box, CssBaseline
 } from '@mui/material';
 import Sidebar from './components/Sidebar';
 import AppRoutes from './components/AppRoutes';
@@ -22,7 +22,7 @@ function App() {
 
         <Sidebar />
 
-        <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
+        <Box component="main" sx={{ flexGrow: 1, p: 3, minWidth: 0, overflow: 'hidden', }} >
           <Toolbar />
           <AppRoutes />
         </Box>
