@@ -4,7 +4,7 @@ import {
     Box, Typography, Button, Stepper, Step, StepLabel,
     IconButton, CircularProgress, alpha
 } from '@mui/material';
-import { LocalShipping, CheckCircle, ChevronLeft, Edit, Close } from '@mui/icons-material';
+import { DirectionsBus, CheckCircle, ChevronLeft, Edit, Close } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -69,16 +69,19 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
                 <Box sx={{
                     p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                    borderRadius: '16px 16px 0 0',
                     color: 'white',
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        {isEditMode ? <Edit sx={{ fontSize: 28 }} /> : <LocalShipping sx={{ fontSize: 28 }} />}
+                        <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1, borderRadius: '12px', display: 'flex' }}>
+                            {isEditMode ? <Edit sx={{ fontSize: 28, color: 'white' }} /> : <DirectionsBus sx={{ fontSize: 28, color: 'white' }} />}
+                        </Box>
                         <Box>
-                            <Typography variant="h6" fontWeight={700}>
+                            <Typography variant="h6" fontWeight={700} color="white">
                                 {isEditMode ? `Редагування рейсу №${tripToEdit?.tripNumber || ''}` : 'Новий рейс'}
                             </Typography>
-                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
                                 {isEditMode ? 'Внесіть зміни та збережіть' : 'Створення магістрального рейсу'}
                             </Typography>
                         </Box>

@@ -4,7 +4,7 @@ import {
     Dialog, DialogTitle, DialogContent,
     IconButton, alpha, Chip
 } from '@mui/material';
-import { LocalShipping, Add, Map as MapIcon, Close, AltRoute } from '@mui/icons-material';
+import { DirectionsBus, Add, Map as MapIcon, Close } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
@@ -148,7 +148,7 @@ const TripsPage = () => {
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
-                        <AltRoute fontSize="medium" />
+                        <DirectionsBus fontSize="medium" />
                     </Box>
                     <Box>
                         <Typography variant="h6" fontWeight="bold">Магістральні рейси</Typography>
