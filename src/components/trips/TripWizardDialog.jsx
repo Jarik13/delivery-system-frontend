@@ -85,6 +85,32 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                 setStepErrors({ waypoints: 'Маршрут повинен містити хоча б два міста' });
                 return;
             }
+
+            try {
+                await DictionaryApi.create('trips', {
+                    driverId: form.driverId ?? null,
+                    vehicleId: form.vehicleId ?? null,
+                    scheduledDepartureTime: null,
+                    scheduledArrivalTime: null,
+                    waypoints: segments
+                        .filter(s => s.cityId)
+                        .map((s, idx) => ({ cityId: s.cityId, sequenceNumber: idx }))
+                });
+            } catch (error) {
+                const serverErrors = error.response?.data?.validationErrors;
+                if (serverErrors) {
+                    const step1Keys = ['waypoints', 'scheduledDepartureTime', 'scheduledArrivalTime'];
+                    const step1Errors = Object.fromEntries(
+                        Object.entries(serverErrors).filter(([k]) =>
+                            k === 'waypoints' || k.startsWith('waypoints[')
+                        )
+                    );
+                    if (Object.keys(step1Errors).length > 0) {
+                        setStepErrors(step1Errors);
+                        return;
+                    }
+                }
+            }
         }
 
         go(nextStep);
