@@ -4,13 +4,18 @@ import {
     Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Box, Typography, Snackbar, Alert, MenuItem, Select,
     FormControl, InputLabel, Tooltip, useTheme, alpha, FormHelperText,
+    CircularProgress, Chip, Popover,
 } from '@mui/material';
-import { Add, Edit, Delete, Apartment, Place, Store, AccessTime, CalendarMonth } from '@mui/icons-material';
+import { Add, Edit, Delete, Apartment, Place, Store, AccessTime, Close } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import LocationSelector from '../components/LocationSelector';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import DataPagination from '../components/pagination/DataPagination';
+
+const DAYS_ORDER = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота', 'Неділя'];
+const DAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+const fmtTime = (t) => (t ? String(t).slice(0, 5) : '—');
 
 const BranchesPage = () => {
     const theme = useTheme();
@@ -22,16 +27,16 @@ const BranchesPage = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
 
-    const [filters, setFilters] = useState({
-        name: '',
-        address: '',
-        branchTypes: [],
-    });
-
+    const [filters, setFilters] = useState({ name: '', address: '', branchTypes: [] });
     const [open, setOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState({});
     const [fieldErrors, setFieldErrors] = useState({});
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+
+    const [scheduleAnchor, setScheduleAnchor] = useState(null);
+    const [scheduleBranch, setScheduleBranch] = useState(null);
+    const [scheduleData, setScheduleData] = useState([]);
+    const [scheduleLoading, setScheduleLoading] = useState(false);
 
     useEffect(() => {
         DictionaryApi.getAll('branch-types', 0, 100)
@@ -59,6 +64,22 @@ const BranchesPage = () => {
         return () => clearTimeout(t);
     }, [loadTableData]);
 
+    const handleShowSchedule = async (e, row) => {
+        e.stopPropagation();
+        setScheduleAnchor(e.currentTarget);
+        setScheduleBranch({ id: row.id, name: row.name, cityName: row.cityName });
+        setScheduleData([]);
+        setScheduleLoading(true);
+        try {
+            const res = await DictionaryApi.getByParam('work-schedules', 'branchId', row.id);
+            setScheduleData(res.data.content ?? res.data ?? []);
+        } catch {
+            setNotification({ open: true, message: 'Помилка завантаження графіку', severity: 'error' });
+        } finally {
+            setScheduleLoading(false);
+        }
+    };
+
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
         setPage(0);
@@ -79,8 +100,6 @@ const BranchesPage = () => {
             setNotification({ open: true, message: 'Збережено успішно', severity: 'success' });
         } catch (error) {
             const serverData = error.response?.data;
-            if (serverData?.validationErrors) setFieldErrors(serverData.validationErrors);
-            setNotification({ open: true, message: serverData?.message || 'Помилка збереження', severity: 'error' });
             if (serverData?.validationErrors) setFieldErrors(serverData.validationErrors);
             setNotification({ open: true, message: serverData?.message || 'Помилка збереження', severity: 'error' });
         }
@@ -114,6 +133,24 @@ const BranchesPage = () => {
         },
     ];
 
+    const scheduleByDay = DAYS_ORDER.reduce((acc, day) => {
+        acc[day] = scheduleData.find(s =>
+            (s.dayOfWeekName ?? '').toLowerCase() === day.toLowerCase()
+        ) ?? null;
+        return acc;
+    }, {});
+
+    const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+
+    const isOpenNow = () => {
+        const s = scheduleByDay[DAYS_ORDER[todayIdx]];
+        if (!s) return false;
+        const [sh, sm] = fmtTime(s.startTime).split(':').map(Number);
+        const [eh, em] = fmtTime(s.endTime).split(':').map(Number);
+        const now = new Date().getHours() * 60 + new Date().getMinutes();
+        return now >= sh * 60 + sm && now <= eh * 60 + em;
+    };
+
     return (
         <Box sx={{ px: 2, pb: 2, pt: 0, maxWidth: '100%' }}>
             <Paper elevation={0} sx={{
@@ -123,10 +160,15 @@ const BranchesPage = () => {
                 boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
                         <Apartment fontSize="medium" />
                     </Box>
-                    <Typography variant="h6" fontWeight="bold">Відділення</Typography>
+                    <Box>
+                        <Typography variant="h6" fontWeight="bold">Відділення</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
+                            Мережа відділень та пунктів обслуговування
+                        </Typography>
+                    </Box>
                 </Box>
                 <Button variant="contained" size="small" startIcon={<Add />}
                     onClick={() => openModal()}
@@ -168,20 +210,19 @@ const BranchesPage = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell><Typography variant="body2">{row.address}</Typography></TableCell>
-
                                     <TableCell>
-                                        <Tooltip title="Переглянути графік">
-                                            <IconButton
-                                                size="small"
-                                                color="primary"
-                                                onClick={(e) => handleShowSchedule(e, row.id)}
-                                                sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}
-                                            >
+                                        <Tooltip title="Переглянути графік роботи">
+                                            <IconButton size="small"
+                                                onClick={(e) => handleShowSchedule(e, row)}
+                                                sx={{
+                                                    color: mainColor,
+                                                    bgcolor: alpha(mainColor, 0.07),
+                                                    '&:hover': { bgcolor: alpha(mainColor, 0.16) },
+                                                }}>
                                                 <AccessTime fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
                                     </TableCell>
-
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Store color="action" fontSize="small" />
@@ -217,6 +258,137 @@ const BranchesPage = () => {
                     onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
                 />
             </Paper>
+
+            <Popover
+                open={Boolean(scheduleAnchor)}
+                anchorEl={scheduleAnchor}
+                onClose={() => setScheduleAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            mt: 0.5,
+                            borderRadius: 3,
+                            width: 280,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+                            overflow: 'hidden',
+                        },
+                    },
+                }}
+            >
+                <Box sx={{
+                    px: 2, py: 1.5,
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                    color: 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                    <Box>
+                        <Typography variant="subtitle2" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                            {scheduleBranch?.name}
+                        </Typography>
+                        {scheduleBranch?.cityName && (
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                                {scheduleBranch.cityName}
+                            </Typography>
+                        )}
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        {!scheduleLoading && scheduleData.length > 0 && (
+                            <Chip size="small"
+                                label={isOpenNow() ? 'Відчинено' : 'Зачинено'}
+                                sx={{
+                                    height: 20, fontSize: 10, fontWeight: 800,
+                                    bgcolor: isOpenNow()
+                                        ? 'rgba(74,222,128,0.22)'
+                                        : 'rgba(255,255,255,0.13)',
+                                    color: isOpenNow() ? '#4ade80' : 'rgba(255,255,255,0.75)',
+                                    border: `1px solid ${isOpenNow()
+                                        ? 'rgba(74,222,128,0.45)'
+                                        : 'rgba(255,255,255,0.22)'}`,
+                                }}
+                            />
+                        )}
+                        <IconButton size="small" onClick={() => setScheduleAnchor(null)}
+                            sx={{
+                                color: 'white', p: 0.25,
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' }
+                            }}>
+                            <Close sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Box>
+                </Box>
+
+                <Box sx={{ px: 1.5, py: 1.5 }}>
+                    {scheduleLoading ? (
+                        <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+                            <CircularProgress size={24} sx={{ color: mainColor }} />
+                        </Box>
+                    ) : scheduleData.length === 0 ? (
+                        <Box sx={{ py: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" color="text.disabled">
+                                Графік не налаштовано
+                            </Typography>
+                        </Box>
+                    ) : (
+                        DAYS_ORDER.map((day, idx) => {
+                            const s = scheduleByDay[day];
+                            const isToday = idx === todayIdx;
+
+                            return (
+                                <Box key={day} sx={{
+                                    display: 'flex', alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    px: 1, py: 0.6,
+                                    borderRadius: 1.5, mb: 0.25,
+                                    bgcolor: isToday ? alpha(mainColor, 0.07) : 'transparent',
+                                }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{
+                                            width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                                            bgcolor: s ? '#22c55e' : '#e2e8f0',
+                                        }} />
+                                        <Typography variant="body2" sx={{
+                                            fontSize: 12.5,
+                                            fontWeight: isToday ? 800 : 400,
+                                            color: isToday ? mainColor
+                                                : idx < 5 ? 'text.primary' : 'text.secondary',
+                                            minWidth: 90,
+                                        }}>
+                                            {DAY_SHORT[idx]}
+                                            <Typography component="span" sx={{ ml: 0.5, fontSize: 12.5 }}>
+                                                {day.slice(DAY_SHORT[idx].length)}
+                                            </Typography>
+                                            {isToday && (
+                                                <Typography component="span" sx={{
+                                                    ml: 0.5, fontSize: 9,
+                                                    fontWeight: 700, color: mainColor,
+                                                }}>
+                                                    •
+                                                </Typography>
+                                            )}
+                                        </Typography>
+                                    </Box>
+
+                                    {s ? (
+                                        <Typography sx={{
+                                            fontFamily: 'monospace', fontSize: 12.5,
+                                            fontWeight: isToday ? 800 : 500,
+                                            color: isToday ? mainColor : 'text.primary',
+                                        }}>
+                                            {fmtTime(s.startTime)}–{fmtTime(s.endTime)}
+                                        </Typography>
+                                    ) : (
+                                        <Typography sx={{ fontSize: 12, color: 'text.disabled', fontWeight: 500 }}>
+                                            вихідний
+                                        </Typography>
+                                    )}
+                                </Box>
+                            );
+                        })
+                    )}
+                </Box>
+            </Popover>
 
             <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm"
                 PaperProps={{ sx: { borderRadius: 3 } }}>

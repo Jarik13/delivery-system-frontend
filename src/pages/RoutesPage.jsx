@@ -177,10 +177,13 @@ const RoutesPage = () => {
                 boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '50%', display: 'flex' }}>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
                         <Map fontSize="medium" color="inherit" />
                     </Box>
-                    <Typography variant="h6" fontWeight="bold">Магістральні маршрути</Typography>
+                    <Box>
+                        <Typography variant="h6" fontWeight="bold">Магістральні маршрути</Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>Міжміські маршрути між відділеннями</Typography>
+                    </Box>
                 </Box>
                 <Button
                     variant="contained" size="small"
