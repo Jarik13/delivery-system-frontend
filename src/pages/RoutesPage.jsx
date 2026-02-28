@@ -297,28 +297,28 @@ const RoutesPage = () => {
                 <DialogContent sx={{ p: 3, mt: 1 }}>
                     <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <RouteBranchSelector
-                                title="Точка відправлення" icon={TripOrigin} color="primary.main"
-                                cityId={originCityId} branchId={currentItem.originBranchId}
-                                onCityChange={(id) => { setOriginCityId(id); handleFieldChange('originBranchId', ''); }}
-                                onBranchChange={(id) => handleFieldChange('originBranchId', id)}
-                                error={!!fieldErrors.originBranchId}
-                            />
-                            {fieldErrors.originBranchId && (
-                                <FormHelperText error sx={{ ml: 2 }}>{fieldErrors.originBranchId}</FormHelperText>
-                            )}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <RouteBranchSelector
+                                    title="Точка відправлення" icon={TripOrigin} color="primary.main"
+                                    cityId={originCityId} branchId={currentItem.originBranchId}
+                                    onCityChange={(id) => { setOriginCityId(id); handleFieldChange('originBranchId', ''); }}
+                                    onBranchChange={(id) => handleFieldChange('originBranchId', id)}
+                                    error={!!fieldErrors.originBranchId}
+                                    errorText={fieldErrors.originBranchId}
+                                />
+                            </Box>
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <RouteBranchSelector
-                                title="Точка призначення" icon={LocationOn} color="success.main"
-                                cityId={destCityId} branchId={currentItem.destinationBranchId}
-                                onCityChange={(id) => { setDestCityId(id); handleFieldChange('destinationBranchId', ''); }}
-                                onBranchChange={(id) => handleFieldChange('destinationBranchId', id)}
-                                error={!!fieldErrors.destinationBranchId}
-                            />
-                            {fieldErrors.destinationBranchId && (
-                                <FormHelperText error sx={{ ml: 2 }}>{fieldErrors.destinationBranchId}</FormHelperText>
-                            )}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <RouteBranchSelector
+                                    title="Точка призначення" icon={LocationOn} color="success.main"
+                                    cityId={destCityId} branchId={currentItem.destinationBranchId}
+                                    onCityChange={(id) => { setDestCityId(id); handleFieldChange('destinationBranchId', ''); }}
+                                    onBranchChange={(id) => handleFieldChange('destinationBranchId', id)}
+                                    error={!!fieldErrors.destinationBranchId}
+                                    errorText={fieldErrors.destinationBranchId}
+                                />
+                            </Box>
                         </Box>
                     </Box>
 
