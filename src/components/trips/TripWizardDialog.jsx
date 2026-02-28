@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Dialog, DialogContent, DialogActions,
     Box, Typography, Button, Stepper, Step, StepLabel,
@@ -23,8 +23,10 @@ import FullscreenMapOverlay from './components/FullscreenMapOverlay';
 import StepCrew from './steps/StepCrew';
 import StepRoute from './steps/StepRoute';
 import StepSchedule from './steps/StepSchedule';
+import { DictionaryApi } from '../../api/dictionaries';
 
 const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}, tripToEdit = null }) => {
+    const [stepErrors, setStepErrors] = useState({});
     const { drivers = [], vehicles = [] } = references;
 
     const form$ = useTripForm({ open, tripToEdit, onSuccess, onClose });
@@ -49,6 +51,44 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         handleMarkerDragEnd,
         handleSave,
     } = form$;
+
+    const handleNext = async (nextStep) => {
+        setStepErrors({});
+
+        if (activeStep === 0) {
+            try {
+                await DictionaryApi.create('trips', {
+                    driverId: form.driverId ?? null,
+                    vehicleId: form.vehicleId ?? null,
+                    scheduledDepartureTime: null,
+                    scheduledArrivalTime: null,
+                    waypoints: []
+                });
+            } catch (error) {
+                const serverErrors = error.response?.data?.validationErrors;
+                if (serverErrors) {
+                    const step0Keys = ['driverId', 'vehicleId'];
+                    const step0Errors = Object.fromEntries(
+                        Object.entries(serverErrors).filter(([k]) => step0Keys.includes(k))
+                    );
+                    if (Object.keys(step0Errors).length > 0) {
+                        setStepErrors(step0Errors);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (activeStep === 1) {
+            const citiesCount = segments.filter(s => s.cityName).length;
+            if (citiesCount < 2) {
+                setStepErrors({ waypoints: 'Маршрут повинен містити хоча б два міста' });
+                return;
+            }
+        }
+
+        go(nextStep);
+    };
 
     return (
         <>
@@ -114,6 +154,8 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         form={form} setForm={setForm}
                                         drivers={drivers} vehicles={vehicles}
                                         mainColor={mainColor}
+                                        errors={stepErrors}
+                                        onClearError={(field) => setStepErrors(prev => ({ ...prev, [field]: null }))}
                                     />
                                 )}
                                 {activeStep === 1 && (
@@ -139,6 +181,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         draggingSegId={draggingSegId}
                                         handleMarkerDragStart={handleMarkerDragStart}
                                         handleMarkerDragEnd={handleMarkerDragEnd}
+                                        errors={stepErrors}
                                     />
                                 )}
                                 {activeStep === 2 && (
@@ -162,8 +205,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                         <Button onClick={() => go(activeStep - 1)} startIcon={<ChevronLeft />}>Назад</Button>
                     )}
                     {activeStep < STEPS.length - 1 ? (
-                        <Button variant="contained" onClick={() => go(activeStep + 1)}
-                            sx={{ bgcolor: mainColor, px: 3 }}>
+                        <Button variant="contained" onClick={() => handleNext(activeStep + 1)} sx={{ bgcolor: mainColor, px: 3 }}>
                             Далі
                         </Button>
                     ) : (

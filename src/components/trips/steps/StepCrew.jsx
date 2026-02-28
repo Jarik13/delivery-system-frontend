@@ -4,7 +4,7 @@ import { DirectionsCar, LocalShipping } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { stepVariants } from '../utils';
 
-const StepCrew = ({ direction, form, setForm, drivers, vehicles, mainColor }) => (
+const StepCrew = ({ direction, form, setForm, drivers, vehicles, mainColor, errors = {}, onClearError }) => (
     <motion.div key="s0" custom={direction} variants={stepVariants}
         initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -21,10 +21,16 @@ const StepCrew = ({ direction, form, setForm, drivers, vehicles, mainColor }) =>
                 getOptionLabel={(o) =>
                     `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim()
                     + (o.licenseNumber ? ` — ${o.licenseNumber}` : '')}
-                onChange={(_, v) => setForm(f => ({ ...f, driverId: v?.id ?? null }))}
+                onChange={(_, v) => {
+                    setForm(f => ({ ...f, driverId: v?.id ?? null }));
+                    onClearError?.('driverId');
+                }}
                 renderInput={(p) => (
                     <TextField {...p} label="Водій" fullWidth
-                        InputProps={{ ...p.InputProps, startAdornment: <DirectionsCar sx={{ mr: 1, color: mainColor }} /> }} />
+                        error={!!errors.driverId}
+                        helperText={errors.driverId}
+                        InputProps={{ ...p.InputProps, startAdornment: <DirectionsCar sx={{ mr: 1, color: mainColor }} /> }}
+                    />
                 )}
             />
 
@@ -37,10 +43,16 @@ const StepCrew = ({ direction, form, setForm, drivers, vehicles, mainColor }) =>
                     (o.bodyTypeName ? `, ${o.bodyTypeName}` : '') +
                     (o.loadCapacity ? `, ${o.loadCapacity} т` : '') +
                     (o.activityStatusName ? ` [${o.activityStatusName}]` : '')}
-                onChange={(_, v) => setForm(f => ({ ...f, vehicleId: v?.id ?? null }))}
+                onChange={(_, v) => {
+                    setForm(f => ({ ...f, vehicleId: v?.id ?? null }));
+                    onClearError?.('vehicleId');
+                }}
                 renderInput={(p) => (
                     <TextField {...p} label="Транспортний засіб" fullWidth
-                        InputProps={{ ...p.InputProps, startAdornment: <LocalShipping sx={{ mr: 1, color: mainColor }} /> }} />
+                        error={!!errors.vehicleId}
+                        helperText={errors.vehicleId}
+                        InputProps={{ ...p.InputProps, startAdornment: <LocalShipping sx={{ mr: 1, color: mainColor }} /> }}
+                    />
                 )}
             />
 
