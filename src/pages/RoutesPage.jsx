@@ -89,12 +89,10 @@ const RoutesPage = () => {
 
     const handleFieldChange = (key, value) => {
         setCurrentItem(prev => ({ ...prev, [key]: value }));
-        if (fieldErrors[key]) {
-            setFieldErrors(prev => ({ ...prev, [key]: null }));
-        }
+        setFieldErrors(prev => ({ ...prev, [key]: null }));
     };
 
-    const openModal = async (item = { originBranchId: '', destinationBranchId: '', needSorting: false }) => {
+    const openModal = async (item = { originBranchId: null, destinationBranchId: null, needSorting: false, distanceKm: '' }) => {
         setFieldErrors({});
         if (item.id) {
             try {
@@ -287,7 +285,8 @@ const RoutesPage = () => {
                 />
             </TableContainer>
 
-            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg" PaperProps={{ sx: { borderRadius: 4, maxWidth: '1050px', width: '100%' } }}>
+            <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="lg"
+                PaperProps={{ sx: { borderRadius: 4, maxWidth: '1050px', width: '100%' } }}>
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #eee', pb: 2 }}>
                     <LocalShipping sx={{ color: mainColor }} />
                     <Typography variant="h6" fontWeight="bold">
@@ -297,45 +296,34 @@ const RoutesPage = () => {
                 <DialogContent sx={{ p: 3, mt: 1 }}>
                     <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch' }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <RouteBranchSelector
-                                    title="Точка відправлення" icon={TripOrigin} color="primary.main"
-                                    cityId={originCityId} branchId={currentItem.originBranchId}
-                                    onCityChange={(id) => { setOriginCityId(id); handleFieldChange('originBranchId', ''); }}
-                                    onBranchChange={(id) => handleFieldChange('originBranchId', id)}
-                                    error={!!fieldErrors.originBranchId}
-                                    errorText={fieldErrors.originBranchId}
-                                />
-                            </Box>
+                            <RouteBranchSelector
+                                title="Точка відправлення" icon={TripOrigin} color="primary.main"
+                                cityId={originCityId} branchId={currentItem.originBranchId}
+                                onCityChange={(id) => { setOriginCityId(id); handleFieldChange('originBranchId', null); }}
+                                onBranchChange={(id) => handleFieldChange('originBranchId', id)}
+                                error={!!fieldErrors.originBranchId}
+                                errorText={fieldErrors.originBranchId}
+                            />
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <RouteBranchSelector
-                                    title="Точка призначення" icon={LocationOn} color="success.main"
-                                    cityId={destCityId} branchId={currentItem.destinationBranchId}
-                                    onCityChange={(id) => { setDestCityId(id); handleFieldChange('destinationBranchId', ''); }}
-                                    onBranchChange={(id) => handleFieldChange('destinationBranchId', id)}
-                                    error={!!fieldErrors.destinationBranchId}
-                                    errorText={fieldErrors.destinationBranchId}
-                                />
-                            </Box>
+                            <RouteBranchSelector
+                                title="Точка призначення" icon={LocationOn} color="success.main"
+                                cityId={destCityId} branchId={currentItem.destinationBranchId}
+                                onCityChange={(id) => { setDestCityId(id); handleFieldChange('destinationBranchId', null); }}
+                                onBranchChange={(id) => handleFieldChange('destinationBranchId', id)}
+                                error={!!fieldErrors.destinationBranchId}
+                                errorText={fieldErrors.destinationBranchId}
+                            />
                         </Box>
                     </Box>
-
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={12} md={6}>
                             <TextField
-                                label="Відстань (км)"
-                                type="number"
-                                fullWidth
-                                variant="outlined"
+                                label="Відстань (км)" type="number" fullWidth variant="outlined"
                                 value={currentItem.distanceKm || ''}
                                 onChange={(e) => handleFieldChange('distanceKm', e.target.value)}
-                                error={!!fieldErrors.distanceKm}
-                                helperText={fieldErrors.distanceKm}
-                                InputProps={{
-                                    startAdornment: <Straighten sx={{ color: 'action.active', mr: 1, fontSize: 20 }} />,
-                                }}
+                                error={!!fieldErrors.distanceKm} helperText={fieldErrors.distanceKm}
+                                InputProps={{ startAdornment: <Straighten sx={{ color: 'action.active', mr: 1, fontSize: 20 }} /> }}
                                 sx={{ mt: 1 }}
                             />
                         </Grid>
@@ -345,7 +333,11 @@ const RoutesPage = () => {
                                 borderRadius: 2, bgcolor: 'transparent', borderColor: '#ccc'
                             }}>
                                 <FormControlLabel
-                                    control={<Checkbox checked={!!currentItem.needSorting} onChange={(e) => handleFieldChange('needSorting', e.target.checked)} color="warning" />}
+                                    control={
+                                        <Checkbox checked={!!currentItem.needSorting}
+                                            onChange={(e) => handleFieldChange('needSorting', e.target.checked)}
+                                            color="warning" />
+                                    }
                                     label={<Typography fontWeight={500}>Потребує сортування на терміналі</Typography>}
                                     sx={{ width: '100%', ml: 0 }}
                                 />
@@ -353,12 +345,12 @@ const RoutesPage = () => {
                         </Grid>
                     </Grid>
                 </DialogContent>
-
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #eee' }}>
-                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold' }}>Скасувати</Button>
+                    <Button onClick={() => setOpen(false)} sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
+                        Скасувати
+                    </Button>
                     <Button onClick={handleSave} variant="contained" disableElevation
-                        sx={{ bgcolor: mainColor, px: 4, borderRadius: 2, fontWeight: 'bold' }}
-                    >
+                        sx={{ bgcolor: mainColor, px: 4, borderRadius: 2, fontWeight: 'bold' }}>
                         Зберегти
                     </Button>
                 </DialogActions>
