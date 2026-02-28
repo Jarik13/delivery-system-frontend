@@ -58,10 +58,11 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
 
         try {
             const calculationRequest = {
+                contentDescription: formData.parcel.contentDescription,
                 actualWeight: parseFloat(formData.parcel.actualWeight),
                 declaredValue: parseFloat(formData.parcel.declaredValue) || 0,
                 parcelTypeId: formData.parcel.parcelTypeId,
-                storageConditionIds: formData.parcel.storageConditionIds,
+                storageConditionIds: formData.parcel.storageConditionIds ?? [],
                 boxVariantId: formData.box.useBox ? formData.box.boxVariantId : null,
                 shipmentTypeId: formData.shipmentTypeId,
                 originCityId: formData.origin.cityId,
@@ -80,6 +81,75 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
             fetchCalculatedPrice();
         }
     }, [activeStep, fetchCalculatedPrice]);
+
+    const STEP1_FIELDS = ['shipmentTypeId', 'originCityId', 'destinationCityId', 'senderId', 'recipientId'];
+
+    const handleNext = async () => {
+        setFieldErrors({});
+
+        if (activeStep === 0) {
+            try {
+                const req = {
+                    actualWeight: formData.parcel.actualWeight ? parseFloat(formData.parcel.actualWeight) : null,
+                    declaredValue: formData.parcel.declaredValue ? parseFloat(formData.parcel.declaredValue) : null,
+                    contentDescription: formData.parcel.contentDescription || null,
+                    parcelTypeId: formData.parcel.parcelTypeId,
+                    storageConditionIds: formData.parcel.storageConditionIds ?? [],
+                    boxVariantId: formData.box.useBox ? formData.box.boxVariantId : null,
+                    shipmentTypeId: formData.shipmentTypeId || null,
+                    originCityId: formData.origin.cityId || null,
+                    destinationCityId: formData.destination.cityId || null,
+                };
+                await DictionaryApi.calculatePrices(req);
+            } catch (error) {
+                const serverErrors = error.response?.data?.validationErrors;
+                if (serverErrors) {
+                    const step0Errors = Object.entries(serverErrors).filter(
+                        ([key]) => !STEP1_FIELDS.includes(key)
+                    );
+
+                    if (step0Errors.length > 0) {
+                        const mapped = {};
+                        for (const [key, val] of step0Errors) {
+                            if (['actualWeight', 'declaredValue', 'parcelTypeId', 'storageConditionIds', 'contentDescription'].includes(key)) {
+                                mapped[`parcel.${key}`] = val;
+                            } else if (key === 'boxVariantId') {
+                                mapped['box.boxVariantId'] = val;
+                            } else {
+                                mapped[key] = val;
+                            }
+                        }
+                        setFieldErrors(mapped);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if (activeStep === 1) {
+            const errors = {};
+            if (!formData.senderId) errors['senderId'] = 'Оберіть відправника';
+            if (!formData.recipientId) errors['recipientId'] = 'Оберіть отримувача';
+            if (!formData.shipmentTypeId) errors['shipmentTypeId'] = 'Оберіть тип доставки';
+            if (!formData.origin.cityId) errors['origin.cityId'] = 'Оберіть місто відправлення';
+            if (!formData.origin.deliveryPointId && formData.origin.type !== 'address') errors['origin.deliveryPointId'] = 'Оберіть пункт відправлення';
+            if (!formData.destination.cityId) errors['destination.cityId'] = 'Оберіть місто призначення';
+            if (!formData.destination.deliveryPointId && formData.destination.type !== 'address') errors['destination.deliveryPointId'] = 'Оберіть пункт призначення';
+
+            if (Object.keys(errors).length > 0) {
+                setFieldErrors(errors);
+                return;
+            }
+        }
+
+        setDirection(1);
+        setActiveStep(prev => prev + 1);
+    };
+
+    const handleBack = () => {
+        setDirection(-1);
+        setActiveStep(prev => prev - 1);
+    };
 
     const handleSave = async () => {
         try {
@@ -128,9 +198,18 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4 } }}>
-            <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5, borderBottom: '1px solid #f0f0f0' }}>
-                <LocalShipping sx={{ color: mainColor, fontSize: 28 }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>Нове відправлення</Typography>
+            <Box sx={{
+                p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5,
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                borderRadius: '16px 16px 0 0'
+            }}>
+                <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1, borderRadius: '12px', display: 'flex' }}>
+                    <LocalShipping sx={{ color: 'white', fontSize: 28 }} />
+                </Box>
+                <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>Нове відправлення</Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>Заповніть всі кроки для оформлення ТТН</Typography>
+                </Box>
             </Box>
 
             <DialogContent sx={{ minHeight: 480, pt: 3 }}>
@@ -149,22 +228,102 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
                                     <Inventory sx={{ color: mainColor, fontSize: 18 }} /> Параметри посилки
                                 </Typography>
-                                <TextField label="Опис вмісту" fullWidth multiline rows={2} value={formData.parcel.contentDescription} onChange={(e) => setFormData({ ...formData, parcel: { ...formData.parcel, contentDescription: e.target.value } })} />
+
+                                <TextField
+                                    label="Опис вмісту" fullWidth multiline rows={2}
+                                    value={formData.parcel.contentDescription}
+                                    onChange={(e) => {
+                                        setFormData({ ...formData, parcel: { ...formData.parcel, contentDescription: e.target.value } });
+                                        setFieldErrors(prev => ({ ...prev, 'parcel.contentDescription': null }));
+                                    }}
+                                    error={!!fieldErrors['parcel.contentDescription']}
+                                    helperText={fieldErrors['parcel.contentDescription']}
+                                />
+
                                 <Grid container spacing={2}>
-                                    <Grid item xs={6}><TextField label="Вага (кг)" fullWidth type="number" value={formData.parcel.actualWeight} onChange={(e) => setFormData({ ...formData, parcel: { ...formData.parcel, actualWeight: e.target.value } })} /></Grid>
-                                    <Grid item xs={6}><TextField label="Оголошена вартість" fullWidth type="number" value={formData.parcel.declaredValue} onChange={(e) => setFormData({ ...formData, parcel: { ...formData.parcel, declaredValue: e.target.value } })} /></Grid>
+                                    <Grid item xs={6}>
+                                        <TextField
+                                            label="Вага (кг)" fullWidth type="number"
+                                            value={formData.parcel.actualWeight}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, parcel: { ...formData.parcel, actualWeight: e.target.value } });
+                                                setFieldErrors(prev => ({ ...prev, 'parcel.actualWeight': null }));
+                                            }}
+                                            error={!!fieldErrors['parcel.actualWeight']}
+                                            helperText={fieldErrors['parcel.actualWeight']}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <TextField
+                                            label="Оголошена вартість" fullWidth type="number"
+                                            value={formData.parcel.declaredValue}
+                                            onChange={(e) => {
+                                                setFormData({ ...formData, parcel: { ...formData.parcel, declaredValue: e.target.value } });
+                                                setFieldErrors(prev => ({ ...prev, 'parcel.declaredValue': null }));
+                                            }}
+                                            error={!!fieldErrors['parcel.declaredValue']}
+                                            helperText={fieldErrors['parcel.declaredValue']}
+                                        />
+                                    </Grid>
                                 </Grid>
-                                <Autocomplete options={parcelTypes} getOptionLabel={(o) => o.name || ''} onChange={(_, v) => setFormData({ ...formData, parcel: { ...formData.parcel, parcelTypeId: v?.id } })} renderInput={(p) => <TextField {...p} label="Тип посилки" />} />
-                                <Autocomplete multiple options={storageConditions} getOptionLabel={(o) => o.name || ''} onChange={(_, v) => setFormData({ ...formData, parcel: { ...formData.parcel, storageConditionIds: v.map(i => i.id) } })}
-                                    renderInput={(p) => <TextField {...p} label="Умови зберігання" />} renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip label={opt.name} {...getTagProps({ idx })} size="small" sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} key={opt.id} />)} />
-                                <Box sx={{ mt: 1, p: 2, borderRadius: 2, bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent', border: formData.box.useBox ? `1px dashed ${mainColor}` : '1px solid #eee' }}>
-                                    <FormControlLabel control={<Checkbox sx={{ '&.Mui-checked': { color: mainColor } }} checked={formData.box.useBox} onChange={(e) => setFormData({ ...formData, box: { ...formData.box, useBox: e.target.checked } })} />} label="Потрібна коробка" />
+
+                                <Autocomplete
+                                    options={parcelTypes}
+                                    getOptionLabel={(o) => o.name || ''}
+                                    onChange={(_, v) => {
+                                        setFormData({ ...formData, parcel: { ...formData.parcel, parcelTypeId: v?.id ?? null } });
+                                        setFieldErrors(prev => ({ ...prev, 'parcel.parcelTypeId': null }));
+                                    }}
+                                    renderInput={(p) => (
+                                        <TextField {...p} label="Тип посилки"
+                                            error={!!fieldErrors['parcel.parcelTypeId']}
+                                            helperText={fieldErrors['parcel.parcelTypeId']}
+                                        />
+                                    )}
+                                />
+
+                                <Autocomplete
+                                    multiple
+                                    options={storageConditions}
+                                    getOptionLabel={(o) => o.name || ''}
+                                    onChange={(_, v) => {
+                                        setFormData({ ...formData, parcel: { ...formData.parcel, storageConditionIds: v.map(i => i.id) } });
+                                        setFieldErrors(prev => ({ ...prev, 'parcel.storageConditionIds': null }));
+                                    }}
+                                    renderInput={(p) => (
+                                        <TextField {...p} label="Умови зберігання"
+                                            error={!!fieldErrors['parcel.storageConditionIds']}
+                                            helperText={fieldErrors['parcel.storageConditionIds']}
+                                        />
+                                    )}
+                                    renderTags={(val, getTagProps) => val.map((opt, idx) => (
+                                        <Chip label={opt.name} {...getTagProps({ idx })} size="small"
+                                            sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} key={opt.id} />
+                                    ))}
+                                />
+                                <Box sx={{
+                                    mt: 1, p: 2, borderRadius: 2,
+                                    bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent',
+                                    border: formData.box.useBox ? `1px dashed ${mainColor}` : '1px solid #eee'
+                                }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox sx={{ '&.Mui-checked': { color: mainColor } }}
+                                                checked={formData.box.useBox}
+                                                onChange={(e) => setFormData({ ...formData, box: { ...formData.box, useBox: e.target.checked, boxVariantId: null } })}
+                                            />
+                                        }
+                                        label="Потрібна коробка"
+                                    />
                                     {formData.box.useBox && (
                                         <Autocomplete
                                             sx={{ mt: 2 }}
                                             options={boxVariants}
-                                            getOptionLabel={(o) => `${o.boxTypeName + ' ' + o.name || 'Коробка'} - ${o.price} ₴`}
-                                            onChange={(_, v) => setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id } })}
+                                            getOptionLabel={(o) => `${o.boxTypeName} ${o.name} - ${o.price} ₴`}
+                                            onChange={(_, v) => {
+                                                setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id ?? null } });
+                                                setFieldErrors(prev => ({ ...prev, 'box.boxVariantId': null }));
+                                            }}
                                             renderOption={(props, o) => (
                                                 <Box component="li" {...props}>
                                                     <Box>
@@ -177,7 +336,12 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                     </Box>
                                                 </Box>
                                             )}
-                                            renderInput={(p) => <TextField {...p} label="Розмір коробки" size="small" />}
+                                            renderInput={(p) => (
+                                                <TextField {...p} label="Розмір коробки" size="small"
+                                                    error={!!fieldErrors['box.boxVariantId']}
+                                                    helperText={fieldErrors['box.boxVariantId']}
+                                                />
+                                            )}
                                         />
                                     )}
                                 </Box>
@@ -194,51 +358,80 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <Grid container spacing={2}>
                                     <Grid size={4}>
                                         <Autocomplete
-                                            fullWidth
-                                            options={clients}
+                                            fullWidth options={clients}
                                             getOptionLabel={(o) => {
                                                 const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
-                                                const phone = o.phoneNumber ? ` (${o.phoneNumber})` : '';
-                                                return name + phone || '';
+                                                return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
                                             }}
-                                            onChange={(_, v) => setFormData({ ...formData, senderId: v?.id })}
+                                            onChange={(_, v) => {
+                                                setFormData({ ...formData, senderId: v?.id });
+                                                setFieldErrors(prev => ({ ...prev, senderId: null }));
+                                            }}
                                             renderInput={(p) => (
-                                                <TextField {...p} label="Відправник" size="small" />
+                                                <TextField {...p} label="Відправник" size="small"
+                                                    error={!!fieldErrors.senderId}
+                                                    helperText={fieldErrors.senderId}
+                                                />
                                             )}
                                         />
                                     </Grid>
 
                                     <Grid size={4}>
                                         <Autocomplete
-                                            fullWidth
-                                            options={clients}
+                                            fullWidth options={clients}
                                             getOptionLabel={(o) => {
                                                 const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
-                                                const phone = o.phoneNumber ? ` (${o.phoneNumber})` : '';
-                                                return name + phone || '';
+                                                return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
                                             }}
-                                            onChange={(_, v) => setFormData({ ...formData, recipientId: v?.id })}
+                                            onChange={(_, v) => {
+                                                setFormData({ ...formData, recipientId: v?.id });
+                                                setFieldErrors(prev => ({ ...prev, recipientId: null }));
+                                            }}
                                             renderInput={(p) => (
-                                                <TextField {...p} label="Отримувач" size="small" />
+                                                <TextField {...p} label="Отримувач" size="small"
+                                                    error={!!fieldErrors.recipientId}
+                                                    helperText={fieldErrors.recipientId}
+                                                />
                                             )}
                                         />
                                     </Grid>
 
                                     <Grid size={4}>
                                         <Autocomplete
-                                            fullWidth
-                                            options={shipmentTypes}
+                                            fullWidth options={shipmentTypes}
                                             getOptionLabel={(o) => o.name || ''}
-                                            onChange={(_, v) => setFormData({ ...formData, shipmentTypeId: v?.id })}
+                                            onChange={(_, v) => {
+                                                setFormData({ ...formData, shipmentTypeId: v?.id });
+                                                setFieldErrors(prev => ({ ...prev, shipmentTypeId: null }));
+                                            }}
                                             renderInput={(p) => (
-                                                <TextField {...p} label="Тип доставки" size="small" />
+                                                <TextField {...p} label="Тип доставки" size="small"
+                                                    error={!!fieldErrors.shipmentTypeId}
+                                                    helperText={fieldErrors.shipmentTypeId}
+                                                />
                                             )}
                                         />
                                     </Grid>
                                 </Grid>
                                 <Divider />
-                                <DeliveryPointSelector point={formData.origin} label="Звідки" onChange={(v) => setFormData({ ...formData, origin: v })} />
-                                <DeliveryPointSelector point={formData.destination} label="Куди" onChange={(v) => setFormData({ ...formData, destination: v })} />
+                                <DeliveryPointSelector
+                                    point={formData.origin} label="Звідки"
+                                    onChange={(v) => setFormData({ ...formData, origin: v })}
+                                    errors={{
+                                        cityId: fieldErrors['origin.cityId'],
+                                        deliveryPointId: fieldErrors['origin.deliveryPointId']
+                                    }}
+                                    onClearError={() => setFieldErrors(prev => ({ ...prev, 'origin.cityId': null, 'origin.deliveryPointId': null }))}
+                                />
+                                <DeliveryPointSelector
+                                    point={formData.destination} label="Куди"
+                                    onChange={(v) => setFormData({ ...formData, destination: v })}
+                                    errors={{
+                                        cityId: fieldErrors['destination.cityId'],
+                                        deliveryPointId: fieldErrors['destination.deliveryPointId']
+                                    }}
+                                    onClearError={() => setFieldErrors(prev => ({ ...prev, 'destination.cityId': null, 'destination.deliveryPointId': null }))}
+                                />
                             </Box>
                         </motion.div>
                     )}
@@ -286,11 +479,13 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
             <DialogActions sx={{ p: 3, borderTop: '1px solid #f0f0f0' }}>
                 <Button onClick={onClose}>Скасувати</Button>
                 <Box sx={{ flexGrow: 1 }} />
-                {activeStep > 0 && <Button onClick={() => setActiveStep(activeStep - 1)}>Назад</Button>}
+                {activeStep > 0 && <Button onClick={handleBack}>Назад</Button>}
                 {activeStep < 2 ? (
-                    <Button variant="contained" onClick={() => setActiveStep(activeStep + 1)} sx={{ bgcolor: mainColor }}>Далі</Button>
+                    <Button variant="contained" onClick={handleNext} sx={{ bgcolor: mainColor }}>Далі</Button>
                 ) : (
-                    <Button variant="contained" color="success" onClick={handleSave} startIcon={<CheckCircle />}>Оформити ТТН</Button>
+                    <Button variant="contained" color="success" onClick={handleSave} startIcon={<CheckCircle />}>
+                        Оформити ТТН
+                    </Button>
                 )}
             </DialogActions>
         </Dialog>

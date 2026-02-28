@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import { DictionaryApi } from '../../api/dictionaries';
 
-const DeliveryPointSelector = ({ point, onChange, label }) => {
+const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearError }) => {
     const [regions, setRegions] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [cities, setCities] = useState([]);
@@ -204,20 +204,32 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
                 </ToggleButton>
             </ToggleButtonGroup>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Explore color="primary" />
-                <FormControl fullWidth size="small">
-                    <InputLabel>1. Оберіть область</InputLabel>
-                    <Select
-                        value={selectedRegion}
-                        label="1. Оберіть область"
-                        onChange={handleRegionChange}
-                    >
-                        {regions.map(r => (
-                            <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
+                <Explore color="primary" sx={{ mt: 1 }} />
+                <Box sx={{ flex: 1 }}>
+                    <FormControl fullWidth size="small" error={!!errors.cityId && !selectedRegion}>
+                        <InputLabel>1. Оберіть область</InputLabel>
+                        <Select
+                            value={selectedRegion}
+                            label="1. Оберіть область"
+                            onChange={handleRegionChange}
+                        >
+                            {regions.map(r => (
+                                <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    {!!errors.cityId && !selectedRegion && (
+                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
+                            {errors.cityId}
+                        </Typography>
+                    )}
+                    {!!errors.deliveryPointId && !selectedRegion && (
+                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
+                            {errors.deliveryPointId}
+                        </Typography>
+                    )}
+                </Box>
             </Box>
 
             <Collapse in={!!selectedRegion} unmountOnExit>
@@ -256,20 +268,17 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                         <LocationCity color="primary" />
                         <Autocomplete
-                            fullWidth
-                            size="small"
-                            options={cities}
+                            fullWidth size="small" options={cities}
                             getOptionLabel={(o) => o.name || ''}
                             isOptionEqualToValue={(option, value) => option.id === value.id}
                             value={cities.find(c => c.id === selectedCity) || null}
                             onChange={handleCityChange}
-                            renderOption={(props, option) => (
-                                <li {...props} key={option.id}>
-                                    {option.name}
-                                </li>
-                            )}
+                            renderOption={(props, option) => <li {...props} key={option.id}>{option.name}</li>}
                             renderInput={(params) => (
-                                <TextField {...params} label="3. Оберіть місто / село" />
+                                <TextField {...params} label="3. Оберіть місто / село"
+                                    error={!!errors.cityId}
+                                    helperText={errors.cityId || (!!errors.deliveryPointId && !selectedCity ? errors.deliveryPointId : '')}
+                                />
                             )}
                         />
                     </Box>
@@ -290,20 +299,20 @@ const DeliveryPointSelector = ({ point, onChange, label }) => {
                                     : <LocationOn color="success" />
                             }
                             <Autocomplete
-                                fullWidth
-                                size="small"
-                                options={leafItems}
+                                fullWidth size="small" options={leafItems}
                                 getOptionLabel={(o) => o.name || o.number || ''}
                                 isOptionEqualToValue={(option, value) => option.id === value.id}
                                 value={getLeafValue()}
-                                onChange={handleLeafChange}
-                                renderOption={(props, option) => (
-                                    <li {...props} key={option.id}>
-                                        {option.name || option.number || ''}
-                                    </li>
-                                )}
+                                onChange={(e, v) => {
+                                    handleLeafChange(e, v);
+                                    onClearError?.();
+                                }}
+                                renderOption={(props, option) => <li {...props} key={option.id}>{option.name || option.number || ''}</li>}
                                 renderInput={(params) => (
-                                    <TextField {...params} label={`4. Оберіть ${getLeafLabel()}`} />
+                                    <TextField {...params} label={`4. Оберіть ${getLeafLabel()}`}
+                                        error={!!errors.deliveryPointId}
+                                        helperText={errors.deliveryPointId}
+                                    />
                                 )}
                             />
                         </Box>
