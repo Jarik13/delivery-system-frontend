@@ -159,7 +159,27 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                     renderInput={(p) => <TextField {...p} label="Умови зберігання" />} renderTags={(val, getTagProps) => val.map((opt, idx) => <Chip label={opt.name} {...getTagProps({ idx })} size="small" sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} key={opt.id} />)} />
                                 <Box sx={{ mt: 1, p: 2, borderRadius: 2, bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent', border: formData.box.useBox ? `1px dashed ${mainColor}` : '1px solid #eee' }}>
                                     <FormControlLabel control={<Checkbox sx={{ '&.Mui-checked': { color: mainColor } }} checked={formData.box.useBox} onChange={(e) => setFormData({ ...formData, box: { ...formData.box, useBox: e.target.checked } })} />} label="Потрібна коробка" />
-                                    {formData.box.useBox && <Autocomplete sx={{ mt: 2 }} options={boxVariants} getOptionLabel={(o) => `${o.boxTypeName || 'Коробка'} - ${o.price} ₴`} onChange={(_, v) => setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id } })} renderInput={(p) => <TextField {...p} label="Розмір коробки" size="small" />} />}
+                                    {formData.box.useBox && (
+                                        <Autocomplete
+                                            sx={{ mt: 2 }}
+                                            options={boxVariants}
+                                            getOptionLabel={(o) => `${o.boxTypeName + ' ' + o.name || 'Коробка'} - ${o.price} ₴`}
+                                            onChange={(_, v) => setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id } })}
+                                            renderOption={(props, o) => (
+                                                <Box component="li" {...props}>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {o.boxTypeName} {o.name} — {o.price} ₴
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {o.width} × {o.length} × {o.height} см
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            )}
+                                            renderInput={(p) => <TextField {...p} label="Розмір коробки" size="small" />}
+                                        />
+                                    )}
                                 </Box>
                             </Box>
                         </motion.div>
