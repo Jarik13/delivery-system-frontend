@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import {
     Close, Search, DirectionsBus, Route, LocalShipping,
-    CheckCircle, ArrowBack, ArrowForward, Add,
+    CheckCircle, ArrowBack, ArrowForward, Add, Receipt,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { DictionaryApi } from '../../api/dictionaries';
@@ -194,15 +194,22 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             }}
         >
             <Box sx={{
-                px: 3, py: 2.5,
-                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.8)} 100%)`,
-                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                borderRadius: '12px 12px 0 0',
             }}>
-                <Box>
-                    <Typography variant="h6" fontWeight={700}>Нова транспортна накладна</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                        Крок {step + 1} з 3 — {STEPS[step]}
-                    </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1, borderRadius: '12px', display: 'flex' }}>
+                        <Receipt sx={{ fontSize: 28, color: 'white' }} />
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" fontWeight={700} color="white">
+                            Нова транспортна накладна
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                            Оформлення накладної для магістрального рейсу
+                        </Typography>
+                    </Box>
                 </Box>
                 <IconButton onClick={handleClose} sx={{ color: 'white' }}><Close /></IconButton>
             </Box>
