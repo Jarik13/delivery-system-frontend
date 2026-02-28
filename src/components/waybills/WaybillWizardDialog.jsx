@@ -82,14 +82,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
     const [shipmentsLoading, setShipmentsLoading] = useState(false);
     const [selectedShipmentIds, setSelectedShipmentIds] = useState(new Set());
 
-    const handleClose = () => {
-        setStep(0);
-        setTripSearch(''); setTrips([]); setSelectedTrip(null);
-        setSegments([]); setSelectedSegment(null);
-        setShipmentSearch(''); setShipments([]); setSelectedShipmentIds(new Set());
-        setError('');
-        onClose();
-    };
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         if (!open) return;
@@ -145,6 +138,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
         }
         setSaving(true);
         setError('');
+        setFieldErrors({});
         try {
             await DictionaryApi.create('waybills', {
                 tripId: selectedTrip.id,
@@ -155,10 +149,35 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             onSuccess?.(`Накладну для рейсу #${selectedTrip.tripNumber} успішно створено`);
             handleClose();
         } catch (e) {
-            setError(e.response?.data?.message || 'Помилка створення накладної');
+            const validationErrors = e.response?.data?.validationErrors;
+            if (validationErrors) {
+                setFieldErrors(validationErrors);
+                // Визначаємо на якому кроці є помилка і повертаємось
+                if (validationErrors.tripId) {
+                    setStep(0);
+                    setError(validationErrors.tripId);
+                } else if (validationErrors.routeId || validationErrors.tripSequenceNumber) {
+                    setStep(1);
+                    setError(validationErrors.routeId || validationErrors.tripSequenceNumber);
+                } else if (validationErrors.shipmentIds) {
+                    setError(validationErrors.shipmentIds);
+                }
+            } else {
+                setError(e.response?.data?.message || 'Помилка створення накладної');
+            }
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleClose = () => {
+        setStep(0);
+        setTripSearch(''); setTrips([]); setSelectedTrip(null);
+        setSegments([]); setSelectedSegment(null);
+        setShipmentSearch(''); setShipments([]); setSelectedShipmentIds(new Set());
+        setError('');
+        setFieldErrors({});
+        onClose();
     };
 
     const toggleShipment = (id) => {
@@ -426,67 +445,83 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                                 <CircularProgress size={32} sx={{ color: mainColor }} />
                             </Box>
                         ) : (
-                            <TableContainer component={Paper} variant="outlined"
-                                sx={{ borderRadius: 2, maxHeight: 300, overflow: 'auto' }}>
-                                <Table size="small" stickyHeader>
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell padding="checkbox" sx={{ bgcolor: alpha(mainColor, 0.05) }}>
-                                                <Checkbox size="small"
-                                                    indeterminate={selectedShipmentIds.size > 0 && selectedShipmentIds.size < shipments.length}
-                                                    checked={shipments.length > 0 && selectedShipmentIds.size === shipments.length}
-                                                    onChange={toggleAll}
-                                                    sx={{ '&.Mui-checked, &.MuiCheckbox-indeterminate': { color: mainColor } }}
-                                                />
-                                            </TableCell>
-                                            <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Трек-номер</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Відправник</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Отримувач</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Статус</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {shipments.map(s => (
-                                            <TableRow key={s.id} hover selected={selectedShipmentIds.has(s.id)}
-                                                onClick={() => toggleShipment(s.id)}
-                                                sx={{
-                                                    cursor: 'pointer',
-                                                    '&.Mui-selected': {
-                                                        bgcolor: alpha(mainColor, 0.07),
-                                                        '&:hover': { bgcolor: alpha(mainColor, 0.11) },
-                                                    },
-                                                }}>
-                                                <TableCell padding="checkbox">
-                                                    <Checkbox size="small" checked={selectedShipmentIds.has(s.id)}
-                                                        sx={{ '&.Mui-checked': { color: mainColor } }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="caption" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
-                                                        {s.trackingNumber}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="caption">{s.senderFullName || '—'}</Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="caption">{s.recipientFullName || '—'}</Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Chip label={s.shipmentStatusName || '—'} size="small"
-                                                        color={statusColor(s.shipmentStatusName)} variant="outlined" />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {!shipmentsLoading && shipments.length === 0 && (
+                            <>
+                                <TableContainer component={Paper} variant="outlined"
+                                    sx={{ borderRadius: 2, maxHeight: 300, overflow: 'auto' }}>
+                                    <Table size="small" stickyHeader>
+                                        <TableHead>
                                             <TableRow>
-                                                <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                                                    Відправлення в активних статусах не знайдено
+                                                <TableCell padding="checkbox" sx={{ bgcolor: alpha(mainColor, 0.05) }}>
+                                                    <Checkbox size="small"
+                                                        indeterminate={selectedShipmentIds.size > 0 && selectedShipmentIds.size < shipments.length}
+                                                        checked={shipments.length > 0 && selectedShipmentIds.size === shipments.length}
+                                                        onChange={toggleAll}
+                                                        sx={{ '&.Mui-checked, &.MuiCheckbox-indeterminate': { color: mainColor } }}
+                                                    />
                                                 </TableCell>
+                                                <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Трек-номер</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Відправник</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Отримувач</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Статус</TableCell>
                                             </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
+                                        </TableHead>
+                                        <TableBody>
+                                            {shipments.map(s => (
+                                                <TableRow key={s.id} hover selected={selectedShipmentIds.has(s.id)}
+                                                    onClick={() => toggleShipment(s.id)}
+                                                    sx={{
+                                                        cursor: 'pointer',
+                                                        '&.Mui-selected': {
+                                                            bgcolor: alpha(mainColor, 0.07),
+                                                            '&:hover': { bgcolor: alpha(mainColor, 0.11) },
+                                                        },
+                                                    }}>
+                                                    <TableCell padding="checkbox">
+                                                        <Checkbox size="small" checked={selectedShipmentIds.has(s.id)}
+                                                            sx={{ '&.Mui-checked': { color: mainColor } }} />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="caption" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
+                                                            {s.trackingNumber}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="caption">{s.senderFullName || '—'}</Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Typography variant="caption">{s.recipientFullName || '—'}</Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip label={s.shipmentStatusName || '—'} size="small"
+                                                            color={statusColor(s.shipmentStatusName)} variant="outlined" />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {!shipmentsLoading && shipments.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                                                        Відправлення в активних статусах не знайдено
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+
+                                {fieldErrors.shipmentIds && (
+                                    <Box sx={{
+                                        mt: 1.5, p: 1.5, borderRadius: 2,
+                                        bgcolor: 'rgba(211,47,47,0.06)',
+                                        border: '1px solid rgba(211,47,47,0.3)',
+                                        display: 'flex', alignItems: 'center', gap: 1
+                                    }}>
+                                        <Warning sx={{ fontSize: 16, color: 'error.main' }} />
+                                        <Typography variant="caption" color="error" fontWeight={600}>
+                                            {fieldErrors.shipmentIds}
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </>
                         )}
                     </Box>
                 )}
