@@ -234,7 +234,7 @@ const TripsPage = () => {
                     <IconButton onClick={() => setMapTrip(null)} color="inherit"><Close /></IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 0, height: 450, position: 'relative', overflow: 'hidden' }}>
-                    {mapTrip && <LeafletMap trip={mapTrip} />}
+                    {mapTrip && <LeafletMap trip={mapTrip} mainColor={mainColor} />}
                 </DialogContent>
             </Dialog>
         </Box>
