@@ -9,7 +9,6 @@ import DataFilters from '../components/DataFilters';
 import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import RouteListsTable from '../components/route-lists/RouteListsTable';
-// import RouteListWizardDialog from '../components/route-lists/RouteListWizardDialog';
 
 const RouteListsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['route-lists']] || '#673ab7';
@@ -27,21 +26,38 @@ const RouteListsPage = () => {
     const [openWizard, setOpenWizard] = useState(false);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
     const [references, setReferences] = useState({ statuses: [], couriers: [] });
+    const [stats, setStats] = useState(null);
 
-    const defaultFilters = { number: '', courierId: '', statusId: '' };
+    const defaultFilters = {
+        number: '',
+        courierId: '',
+        statuses: [],
+        totalWeightMin: 0,
+        totalWeightMax: 30,
+    };
     const [filters, setFilters] = useState(defaultFilters);
 
     useEffect(() => {
         const loadRefs = async () => {
             try {
-                const [s, c] = await Promise.all([
+                const [s, c, statsRes] = await Promise.all([
                     DictionaryApi.getAll('route-list-statuses', 0, 100),
                     DictionaryApi.getAll('couriers', 0, 1000),
+                    DictionaryApi.getStatistics('route-lists'),
                 ]);
                 setReferences({
                     statuses: s.data.content || [],
                     couriers: c.data.content || [],
                 });
+                if (statsRes.data) {
+                    const d = statsRes.data;
+                    setStats(d);
+                    setFilters(prev => ({
+                        ...prev,
+                        totalWeightMin: d.totalWeightMin ?? 0,
+                        totalWeightMax: d.totalWeightMax ?? 30,
+                    }));
+                }
             } catch (e) { console.error(e); }
         };
         loadRefs();
@@ -51,7 +67,10 @@ const RouteListsPage = () => {
         setLoading(true);
         try {
             const activeFilters = Object.fromEntries(
-                Object.entries(filters).filter(([_, v]) => v !== '' && v !== null)
+                Object.entries(filters).filter(([_, v]) => {
+                    if (Array.isArray(v)) return v.length > 0;
+                    return v !== '' && v !== null;
+                })
             );
             const res = await DictionaryApi.getAll('route-lists', page, rowsPerPage, activeFilters);
             setItems(res.data.content || []);
@@ -64,6 +83,15 @@ const RouteListsPage = () => {
             setLoading(false);
         }
     }, [page, rowsPerPage, filters]);
+
+    const handleClear = () => {
+        setFilters({
+            ...defaultFilters,
+            totalWeightMin: stats?.totalWeightMin ?? 0,
+            totalWeightMax: stats?.totalWeightMax ?? 30,
+        });
+        setPage(0);
+    };
 
     useEffect(() => {
         const t = setTimeout(load, 300);
@@ -106,8 +134,30 @@ const RouteListsPage = () => {
 
     const filterFields = [
         { name: 'number', label: 'Номер листа', type: 'text' },
-        { name: 'statusId', label: 'Статус', type: 'select', options: references.statuses },
-        { name: 'courierId', label: 'Кур\'єр', type: 'select', options: references.couriers },
+        {
+            name: 'statuses',
+            label: 'Статус',
+            type: 'checkbox-group',
+            options: references.statuses,
+        },
+        {
+            name: 'courierId',
+            label: 'Кур\'єр',
+            type: 'select',
+            options: references.couriers.map(c => ({
+                ...c,
+                name: `${c.lastName || ''} ${c.firstName || ''} ${c.middleName || ''}`.trim() || `Кур'єр №${c.id}`
+            })),
+        },
+        {
+            name: 'totalWeightRange',
+            label: 'Вага (кг)',
+            type: 'range',
+            minName: 'totalWeightMin',
+            maxName: 'totalWeightMax',
+            min: stats?.totalWeightMin ?? 0,
+            max: stats?.totalWeightMax ?? 30,
+        },
     ];
 
     return (
@@ -147,7 +197,6 @@ const RouteListsPage = () => {
                                 }}
                             />
                         )}
-
                         <Button
                             variant="contained"
                             size="small"
@@ -164,10 +213,9 @@ const RouteListsPage = () => {
             <DataFilters
                 filters={filters}
                 onChange={(k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(0); }}
-                onClear={() => { setFilters(defaultFilters); setPage(0); }}
+                onClear={handleClear}
                 fields={filterFields}
                 searchPlaceholder="Пошук листа за номером..."
-                quickFilters={['statusId']}
                 accentColor={mainColor}
             />
 
@@ -190,13 +238,6 @@ const RouteListsPage = () => {
                 onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
                 label="Листів:"
             />
-
-            {/* <RouteListWizardDialog
-                open={openWizard}
-                onClose={() => setOpenWizard(false)}
-                mainColor={mainColor}
-                onSuccess={(msg) => { load(); setNotification({ open: true, message: msg, severity: 'success' }); }}
-            /> */}
 
             <Snackbar
                 open={notification.open} autoHideDuration={4000}
