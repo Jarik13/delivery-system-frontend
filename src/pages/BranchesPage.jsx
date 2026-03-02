@@ -14,7 +14,6 @@ import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import DataPagination from '../components/pagination/DataPagination';
 
 const DAYS_ORDER = ['Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота', 'Неділя'];
-const DAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 const fmtTime = (t) => (t ? String(t).slice(0, 5) : '—');
 
 const BranchesPage = () => {
@@ -351,19 +350,12 @@ const BranchesPage = () => {
                                         <Typography variant="body2" sx={{
                                             fontSize: 12.5,
                                             fontWeight: isToday ? 800 : 400,
-                                            color: isToday ? mainColor
-                                                : idx < 5 ? 'text.primary' : 'text.secondary',
+                                            color: isToday ? mainColor : idx < 5 ? 'text.primary' : 'text.secondary',
                                             minWidth: 90,
                                         }}>
-                                            {DAY_SHORT[idx]}
-                                            <Typography component="span" sx={{ ml: 0.5, fontSize: 12.5 }}>
-                                                {day.slice(DAY_SHORT[idx].length)}
-                                            </Typography>
+                                            {day}
                                             {isToday && (
-                                                <Typography component="span" sx={{
-                                                    ml: 0.5, fontSize: 9,
-                                                    fontWeight: 700, color: mainColor,
-                                                }}>
+                                                <Typography component="span" sx={{ ml: 0.5, fontSize: 9, fontWeight: 700, color: mainColor }}>
                                                     •
                                                 </Typography>
                                             )}
