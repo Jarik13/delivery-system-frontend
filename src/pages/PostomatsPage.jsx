@@ -22,8 +22,11 @@ const PostomatsPage = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
 
+    const [statistics, setStatistics] = useState({ cellsCountMin: 0, cellsCountMax: 100 });
+
     const [filters, setFilters] = useState({
-        name: '', code: '', address: '', isActive: '', cellsCountMin: 0, cellsCountMax: 100
+        name: '', code: '', address: '', isActive: '',
+        cellsCountMin: 0, cellsCountMax: 100
     });
 
     const [open, setOpen] = useState(false);
@@ -47,13 +50,30 @@ const PostomatsPage = () => {
         return () => clearTimeout(timer);
     }, [loadTableData]);
 
+
+    useEffect(() => {
+        DictionaryApi.getStatistics('postomats')
+            .then(r => {
+                const { cellsCountMin, cellsCountMax } = r.data;
+                const min = cellsCountMin ?? 0;
+                const max = cellsCountMax ?? 100;
+                setStatistics({ cellsCountMin: min, cellsCountMax: max });
+                setFilters(prev => ({ ...prev, cellsCountMin: min, cellsCountMax: max }));
+            })
+            .catch(console.error);
+    }, []);
+
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
         setPage(0);
     };
 
     const handleClearFilters = () => {
-        setFilters({ name: '', code: '', address: '', isActive: '', cellsCountMin: 0, cellsCountMax: 100 });
+        setFilters({
+            name: '', code: '', address: '', isActive: '',
+            cellsCountMin: statistics.cellsCountMin,
+            cellsCountMax: statistics.cellsCountMax,
+        });
         setPage(0);
     };
 
@@ -113,12 +133,14 @@ const PostomatsPage = () => {
         {
             name: 'isActive', label: 'Статус', type: 'select',
             options: [{ id: 'true', name: 'Активний' }, { id: 'false', name: 'Неактивний' }],
-            md: 2
+            md: 2,
         },
         {
-            label: 'Комірок', type: 'range', minName: 'cellsCountMin', maxName: 'cellsCountMax',
-            min: 0, max: 200, md: 4
-        }
+            label: 'Комірок', type: 'range',
+            minName: 'cellsCountMin', maxName: 'cellsCountMax',
+            min: statistics.cellsCountMin, max: statistics.cellsCountMax,
+            md: 4,
+        },
     ];
 
     return (
