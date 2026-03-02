@@ -1,26 +1,10 @@
 import React from 'react';
 import { TableRow, TableCell, Chip, Typography, Box, alpha } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
-
-const STATUS_COLORS = {
-    'Створено': '#2196f3',
-    'Очікує надходження': '#90caf9',
-    'Прийнято у відділенні': '#673ab7',
-    'Сортування термінал': '#00bcd4',
-    'У дорозі': '#ff9800',
-    'Прибув у відділення': '#8bc34a',
-    "Видано кур'єру": '#e91e63',
-    'Доставлено': '#2e7d32',
-    'Відмова': '#f44336',
-    'Втрачено': '#b71c1c',
-    'Утилізовано': '#616161',
-    'default': '#9e9e9e',
-};
-
-const getStatusColor = (name) => STATUS_COLORS[name] || STATUS_COLORS['default'];
+import { SHIPMENT_STATUS_CONFIG, getStatusColor } from '../../constants/statusColors';
 
 const WaybillShipmentRow = ({ shipment }) => {
-    const statusColor = getStatusColor(shipment.shipmentStatusName);
+    const statusColor = getStatusColor(SHIPMENT_STATUS_CONFIG, shipment.shipmentStatusName);
 
     return (
         <TableRow sx={{

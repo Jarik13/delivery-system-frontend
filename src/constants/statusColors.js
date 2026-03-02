@@ -19,13 +19,13 @@ export const SHIPMENT_STATUS_COLORS = {
 };
 
 export const TRIP_STATUS_CONFIG = {
-    'Заплановано':      { color: '#2196f3', icon: RadioButtonUnchecked },
-    'Завантаження':     { color: '#673ab7', icon: PendingActions },
-    'В дорозі':         { color: '#ff9800', icon: LocalShipping },
-    'Розвантаження':    { color: '#00bcd4', icon: MoveToInbox },
-    'Завершено':        { color: '#2e7d32', icon: CheckCircle },
+    'Заплановано': { color: '#2196f3', icon: RadioButtonUnchecked },
+    'Завантаження': { color: '#673ab7', icon: PendingActions },
+    'В дорозі': { color: '#ff9800', icon: LocalShipping },
+    'Розвантаження': { color: '#00bcd4', icon: MoveToInbox },
+    'Завершено': { color: '#2e7d32', icon: CheckCircle },
     'Аварійна зупинка': { color: '#f44336', icon: WarningAmber },
-    'default':          { color: '#9e9e9e', icon: null },
+    'default': { color: '#9e9e9e', icon: null },
 };
 
 export const ROUTE_LIST_STATUS_COLORS = {

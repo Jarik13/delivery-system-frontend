@@ -10,6 +10,7 @@ import {
     ArticleOutlined, RouteOutlined, OpenInNew,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { getTypeColor, SHIPMENT_TYPE_COLORS } from '../../constants/typeColors';
 
 const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
     const theme = useTheme();
@@ -103,18 +104,21 @@ const ShipmentCard = ({
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1 }}>
-                    {s.shipmentTypeName && (
-                        <Chip
-                            icon={<LocalShipping sx={{ fontSize: '13px !important' }} />}
-                            label={s.shipmentTypeName}
-                            size="small"
-                            sx={{
-                                height: 20, fontSize: '0.65rem', fontWeight: 700,
-                                bgcolor: alpha(mainColor, 0.07), color: mainColor,
-                                border: `1px solid ${alpha(mainColor, 0.2)}`,
-                            }}
-                        />
-                    )}
+                    {s.shipmentTypeName && (() => {
+                        const typeColor = getTypeColor(SHIPMENT_TYPE_COLORS, s.shipmentTypeName);
+                        return (
+                            <Chip
+                                icon={<LocalShipping sx={{ fontSize: '13px !important', color: `${typeColor} !important` }} />}
+                                label={s.shipmentTypeName}
+                                size="small"
+                                sx={{
+                                    height: 20, fontSize: '0.65rem', fontWeight: 700,
+                                    bgcolor: alpha(typeColor, 0.07), color: typeColor,
+                                    border: `1px solid ${alpha(typeColor, 0.2)}`,
+                                }}
+                            />
+                        );
+                    })()}
                     {s.boxVariantName && (
                         <Chip
                             icon={<Inventory2 sx={{ fontSize: '13px !important' }} />}

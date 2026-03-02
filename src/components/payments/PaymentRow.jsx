@@ -2,26 +2,12 @@ import React from 'react';
 import {
     TableRow, TableCell, Chip, Box, Typography, alpha, Checkbox,
 } from '@mui/material';
-import {
-    CreditCard, Money, AccountBalanceWallet, CalendarToday, Tag, LocalShipping,
-} from '@mui/icons-material';
-
-const PAYMENT_TYPE_ICONS = {
-    'Готівка': <Money sx={{ fontSize: 14 }} />,
-    'Карта': <CreditCard sx={{ fontSize: 14 }} />,
-    'default': <AccountBalanceWallet sx={{ fontSize: 14 }} />,
-};
-const getPaymentIcon = (name) => PAYMENT_TYPE_ICONS[name] || PAYMENT_TYPE_ICONS['default'];
-
-const PAYMENT_TYPE_COLORS = {
-    'Готівка': '#4caf50',
-    'Карта': '#2196f3',
-    'default': '#9c27b0',
-};
-const getPaymentColor = (name) => PAYMENT_TYPE_COLORS[name] || PAYMENT_TYPE_COLORS['default'];
+import { CalendarToday, Tag, LocalShipping } from '@mui/icons-material';
+import { PAYMENT_TYPE_CONFIG, getTypeConfig } from '../../constants/typeColors';
 
 const PaymentRow = ({ payment, mainColor, selected, onToggle, visibleCols }) => {
-    const typeColor = getPaymentColor(payment.paymentTypeName);
+    const cfg = getTypeConfig(PAYMENT_TYPE_CONFIG, payment.paymentTypeName);
+    const Icon = cfg.icon;
     const show = (key) => visibleCols.has(key);
 
     return (
@@ -65,15 +51,15 @@ const PaymentRow = ({ payment, mainColor, selected, onToggle, visibleCols }) => 
             {show('paymentTypeName') && (
                 <TableCell>
                     <Chip
-                        icon={getPaymentIcon(payment.paymentTypeName)}
+                        icon={<Icon sx={{ fontSize: 14 }} />}
                         label={payment.paymentTypeName || '—'}
                         size="small"
                         sx={{
-                            bgcolor: alpha(typeColor, 0.1),
-                            color: typeColor,
+                            bgcolor: alpha(cfg.color, 0.1),
+                            color: cfg.color,
                             fontWeight: 700,
-                            border: `1px solid ${alpha(typeColor, 0.25)}`,
-                            '& .MuiChip-icon': { color: typeColor },
+                            border: `1px solid ${alpha(cfg.color, 0.25)}`,
+                            '& .MuiChip-icon': { color: cfg.color },
                         }}
                     />
                 </TableCell>
