@@ -8,6 +8,7 @@ import {
     Person, Scale, CalendarToday,
 } from '@mui/icons-material';
 import RouteSheetPanel from './RouteSheetPanel';
+import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 
 const RouteListRow = ({
     item, mainColor, selected, onToggle,
@@ -17,9 +18,11 @@ const RouteListRow = ({
     const [expanded, setExpanded] = useState(false);
 
     const shipmentsList = item?.items ?? item?.shipments ?? item?.routeSheetItems ?? item?.sheets ?? [];
-    const total     = shipmentsList.length;
+    const total = shipmentsList.length;
     const delivered = shipmentsList.filter(s => s?.isDelivered)?.length || 0;
-    const progress  = total > 0 ? Math.round((delivered / total) * 100) : 0;
+    const progress = total > 0 ? Math.round((delivered / total) * 100) : 0;
+
+    const statusColor = getStatusColor(ROUTE_LIST_STATUS_COLORS, item.statusName);
 
     const handleExpandClick = (e) => {
         e.stopPropagation();
@@ -40,8 +43,8 @@ const RouteListRow = ({
                             outlineOffset: '-2px',
                             animation: 'highlightPulse 1.6s ease-in-out 2',
                             '@keyframes highlightPulse': {
-                                '0%':   { backgroundColor: alpha(mainColor, 0.08) },
-                                '50%':  { backgroundColor: alpha(mainColor, 0.2)  },
+                                '0%': { backgroundColor: alpha(mainColor, 0.08) },
+                                '50%': { backgroundColor: alpha(mainColor, 0.2) },
                                 '100%': { backgroundColor: alpha(mainColor, 0.08) },
                             },
                         }
@@ -95,12 +98,12 @@ const RouteListRow = ({
                     <Chip
                         label={item.statusName || 'Сформовано'}
                         size="small"
-                        variant="outlined"
                         sx={{
                             fontWeight: 700,
-                            borderColor: item.statusName === 'Завершено' ? '#4caf50' : alpha(mainColor, 0.5),
-                            color: item.statusName === 'Завершено' ? '#4caf50' : mainColor,
                             fontSize: 11,
+                            bgcolor: alpha(statusColor, 0.12),
+                            color: statusColor,
+                            border: `1px solid ${alpha(statusColor, 0.35)}`,
                         }}
                     />
                 </TableCell>

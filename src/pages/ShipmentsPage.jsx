@@ -7,21 +7,7 @@ import ShipmentGrid from '../components/shipments/ShipmentGrid';
 import ShipmentWizardDialog from '../components/shipments/ShipmentWizardDialog';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import DataPagination from '../components/pagination/DataPagination';
-
-const STATUS_COLORS = {
-    'Створено': '#2196f3',
-    'Очікує надходження': '#90caf9',
-    'Прийнято у відділенні': '#673ab7',
-    'Сортування термінал': '#00bcd4',
-    'У дорозі': '#ff9800',
-    'Прибув у відділення': '#8bc34a',
-    'Видано кур\'єру': '#e91e63',
-    'Доставлено': '#2e7d32',
-    'Відмова': '#f44336',
-    'Втрачено': '#b71c1c',
-    'Утилізовано': '#616161',
-    'default': '#9e9e9e'
-};
+import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../constants/statusColors';
 
 const ShipmentsPage = () => {
     const groupName = ITEM_GROUP_MAP['shipments'] || 'Керування логістикою';
@@ -77,7 +63,7 @@ const ShipmentsPage = () => {
                 ]);
 
                 setReferences({
-                    statuses: (s.data.content || []).map(st => ({ ...st, color: STATUS_COLORS[st.name] || STATUS_COLORS.default })),
+                    statuses: (s.data.content || []).map(st => ({ ...st, color: getStatusColor(SHIPMENT_STATUS_COLORS, st.name) })),
                     clients: c.data.content || [],
                     shipmentTypes: t.data.content || [],
                     parcelTypes: pt.data.content || [],
@@ -262,7 +248,7 @@ const ShipmentsPage = () => {
             />
 
             <ShipmentGrid
-                shipments={shipments} mainColor={mainColor} statusColors={STATUS_COLORS}
+                shipments={shipments} mainColor={mainColor} statusColors={SHIPMENT_STATUS_COLORS}
                 expandedHistory={expandedHistory} expandedFinance={expandedFinance} movements={movements}
                 onDelete={handleDelete} onToggleHistory={toggleHistory}
                 onToggleFinance={(id) => setExpandedFinance(prev => ({ ...prev, [id]: !prev[id] }))}
