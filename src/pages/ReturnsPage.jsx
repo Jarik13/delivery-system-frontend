@@ -11,15 +11,20 @@ import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import { RETURN_REASON_COLORS, getTypeColor } from '../constants/typeColors';
 
+const DEFAULT_AMOUNT_MIN = 0;
+const DEFAULT_AMOUNT_MAX = 50000;
+
 const defaultFilters = {
     returnTrackingNumber: '',
     shipmentTrackingNumber: '',
     returnReasons: [],
     initiationDateFrom: '',
     initiationDateTo: '',
+    refundAmountMin: DEFAULT_AMOUNT_MIN,
+    refundAmountMax: DEFAULT_AMOUNT_MAX,
 };
 
-const buildFilterFields = (returnReasons) => [
+const buildFilterFields = (returnReasons, statistics) => [
     { name: 'returnTrackingNumber', label: 'Трек-номер повернення', type: 'text', placeholder: 'RET-...' },
     { name: 'shipmentTrackingNumber', label: 'Трек-номер відправлення', type: 'text', placeholder: '590000...' },
     {
@@ -27,6 +32,15 @@ const buildFilterFields = (returnReasons) => [
         label: 'Причина повернення',
         type: 'checkbox-group',
         options: returnReasons.map(r => ({ id: r.id, name: r.name })),
+    },
+    {
+        label: 'Сума повернення (₴)',
+        type: 'range',
+        minName: 'refundAmountMin',
+        maxName: 'refundAmountMax',
+        min: statistics.refundAmountMin,
+        max: statistics.refundAmountMax,
+        step: 50,
     },
     { name: 'initiationDateFrom', label: 'Дата ініціації від', type: 'datetime' },
     { name: 'initiationDateTo', label: 'Дата ініціації до', type: 'datetime' },
@@ -48,10 +62,24 @@ const ReturnsPage = () => {
     const [returnReasons, setReturnReasons] = useState([]);
     const [filters, setFilters] = useState(defaultFilters);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+    const [statistics, setStatistics] = useState({
+        refundAmountMin: DEFAULT_AMOUNT_MIN,
+        refundAmountMax: DEFAULT_AMOUNT_MAX,
+    });
 
     useEffect(() => {
         DictionaryApi.getAll('return-reasons', 0, 100)
             .then(r => setReturnReasons(r.data.content || []))
+            .catch(console.error);
+
+        DictionaryApi.getStatistics('returns')
+            .then(r => {
+                const { refundAmountMin, refundAmountMax } = r.data;
+                const min = refundAmountMin ?? DEFAULT_AMOUNT_MIN;
+                const max = refundAmountMax ?? DEFAULT_AMOUNT_MAX;
+                setStatistics({ refundAmountMin: min, refundAmountMax: max });
+                setFilters(prev => ({ ...prev, refundAmountMin: min, refundAmountMax: max }));
+            })
             .catch(console.error);
     }, []);
 
@@ -62,8 +90,10 @@ const ReturnsPage = () => {
         if (f.returnReasons?.length) params.returnReasons = f.returnReasons.join(',');
         if (f.initiationDateFrom) params.initiationDateFrom = f.initiationDateFrom;
         if (f.initiationDateTo) params.initiationDateTo = f.initiationDateTo;
+        if (f.refundAmountMin !== statistics.refundAmountMin) params.refundAmountMin = f.refundAmountMin;
+        if (f.refundAmountMax !== statistics.refundAmountMax) params.refundAmountMax = f.refundAmountMax;
         return params;
-    }, []);
+    }, [statistics]);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -89,9 +119,13 @@ const ReturnsPage = () => {
     }, []);
 
     const handleFilterClear = useCallback(() => {
-        setFilters(defaultFilters);
+        setFilters({
+            ...defaultFilters,
+            refundAmountMin: statistics.refundAmountMin,
+            refundAmountMax: statistics.refundAmountMax,
+        });
         setPage(0);
-    }, []);
+    }, [statistics]);
 
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
@@ -122,7 +156,7 @@ const ReturnsPage = () => {
                 filters={filters}
                 onChange={handleFilterChange}
                 onClear={handleFilterClear}
-                fields={buildFilterFields(returnReasons)}
+                fields={buildFilterFields(returnReasons, statistics)}
                 searchPlaceholder="Пошук за трек-номером..."
                 accentColor={mainColor}
                 counts={{ total: totalElements }}
