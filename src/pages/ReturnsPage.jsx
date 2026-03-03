@@ -20,7 +20,7 @@ const defaultFilters = {
 };
 
 const buildFilterFields = (returnReasons) => [
-    { name: 'returnTrackingNumber',  label: 'Трек-номер повернення', type: 'text', placeholder: 'RET-...' },
+    { name: 'returnTrackingNumber', label: 'Трек-номер повернення', type: 'text', placeholder: 'RET-...' },
     { name: 'shipmentTrackingNumber', label: 'Трек-номер відправлення', type: 'text', placeholder: '590000...' },
     {
         name: 'returnReasons',
@@ -29,7 +29,7 @@ const buildFilterFields = (returnReasons) => [
         options: returnReasons.map(r => ({ id: r.id, name: r.name })),
     },
     { name: 'initiationDateFrom', label: 'Дата ініціації від', type: 'datetime' },
-    { name: 'initiationDateTo',   label: 'Дата ініціації до',  type: 'datetime' },
+    { name: 'initiationDateTo', label: 'Дата ініціації до', type: 'datetime' },
 ];
 
 const fmtDate = (d) => d ? new Date(d).toLocaleString('uk-UA', {
@@ -40,14 +40,14 @@ const fmtDate = (d) => d ? new Date(d).toLocaleString('uk-UA', {
 const ReturnsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['returns']] || '#f44336';
 
-    const [items, setItems]                 = useState([]);
-    const [loading, setLoading]             = useState(false);
-    const [page, setPage]                   = useState(0);
-    const [rowsPerPage, setRowsPerPage]     = useState(10);
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
     const [returnReasons, setReturnReasons] = useState([]);
-    const [filters, setFilters]             = useState(defaultFilters);
-    const [notification, setNotification]   = useState({ open: false, message: '', severity: 'success' });
+    const [filters, setFilters] = useState(defaultFilters);
+    const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     useEffect(() => {
         DictionaryApi.getAll('return-reasons', 0, 100)
@@ -57,11 +57,11 @@ const ReturnsPage = () => {
 
     const buildParams = useCallback((f) => {
         const params = {};
-        if (f.returnTrackingNumber?.trim())   params.returnTrackingNumber  = f.returnTrackingNumber.trim();
+        if (f.returnTrackingNumber?.trim()) params.returnTrackingNumber = f.returnTrackingNumber.trim();
         if (f.shipmentTrackingNumber?.trim()) params.shipmentTrackingNumber = f.shipmentTrackingNumber.trim();
-        if (f.returnReasons?.length)          params.returnReasons          = f.returnReasons.join(',');
-        if (f.initiationDateFrom)             params.initiationDateFrom     = f.initiationDateFrom;
-        if (f.initiationDateTo)               params.initiationDateTo       = f.initiationDateTo;
+        if (f.returnReasons?.length) params.returnReasons = f.returnReasons.join(',');
+        if (f.initiationDateFrom) params.initiationDateFrom = f.initiationDateFrom;
+        if (f.initiationDateTo) params.initiationDateTo = f.initiationDateTo;
         return params;
     }, []);
 
@@ -138,8 +138,8 @@ const ReturnsPage = () => {
                         <Table size="small">
                             <TableHead>
                                 <TableRow sx={{ bgcolor: alpha(mainColor, 0.05) }}>
-                                    <TableCell sx={{ fontWeight: 700 }}>Трек-номер повернення</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Відправлення</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Трек-номер повернення</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Причина</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Сума повернення</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Дата ініціації</TableCell>
@@ -164,15 +164,6 @@ const ReturnsPage = () => {
                                             '&:hover': { bgcolor: alpha(mainColor, 0.02) },
                                         }}>
                                             <TableCell>
-                                                <Typography variant="caption" sx={{
-                                                    fontFamily: 'monospace', fontWeight: 700,
-                                                    bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1, fontSize: 11,
-                                                }}>
-                                                    {r.returnTrackingNumber || '—'}
-                                                </Typography>
-                                            </TableCell>
-
-                                            <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <LocalShipping sx={{ fontSize: 13, color: '#999' }} />
                                                     <Typography variant="caption" sx={{
@@ -182,6 +173,15 @@ const ReturnsPage = () => {
                                                         {r.shipmentTrackingNumber || `#${r.shipmentId}`}
                                                     </Typography>
                                                 </Box>
+                                            </TableCell>
+
+                                            <TableCell>
+                                                <Typography variant="caption" sx={{
+                                                    fontFamily: 'monospace', fontWeight: 700,
+                                                    bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1, fontSize: 11,
+                                                }}>
+                                                    {r.returnTrackingNumber || '—'}
+                                                </Typography>
                                             </TableCell>
 
                                             <TableCell>
@@ -217,7 +217,8 @@ const ReturnsPage = () => {
                                             </TableCell>
 
                                             <TableCell>
-                                                <Typography variant="body2" color={r.completionDate ? 'success.main' : 'text.disabled'}
+                                                <Typography variant="body2"
+                                                    color={r.completionDate ? 'success.main' : 'text.disabled'}
                                                     fontWeight={r.completionDate ? 700 : 400}>
                                                     {fmtDate(r.completionDate)}
                                                 </Typography>
