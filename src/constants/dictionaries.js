@@ -27,6 +27,12 @@ export const MENU_GROUPS = [
                 endpoint: 'payments'
             },
             {
+                label: 'Повернення',
+                path: 'returns',
+                isCustomPage: true,
+                endpoint: 'returns'
+            },
+            {
                 label: 'Рейси',
                 path: 'trips',
                 isCustomPage: true,
