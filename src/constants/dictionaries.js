@@ -78,6 +78,7 @@ export const MENU_GROUPS = [
             { label: 'Типи КПП', path: 'fleet-transmission-types', endpoint: 'fleet-transmission-types', columns: DEFAULT_COLS },
             { label: 'Типи приводу', path: 'fleet-drive-types', endpoint: 'fleet-drive-types', columns: DEFAULT_COLS },
             { label: 'Статуси авто', path: 'vehicle-activity-statuses', endpoint: 'vehicle-activity-statuses', columns: DEFAULT_COLS },
+            { label: 'Статуси рейсів', path: 'trip-statuses', endpoint: 'trip-statuses', columns: DEFAULT_COLS },
         ]
     },
     {
@@ -110,7 +111,6 @@ export const MENU_GROUPS = [
         items: [
             { label: 'Типи відділень', path: 'branch-types', endpoint: 'branch-types', columns: DEFAULT_COLS },
             { label: 'Типи оплати', path: 'payment-types', endpoint: 'payment-types', columns: DEFAULT_COLS },
-            { label: 'Статуси рейсів', path: 'trip-statuses', endpoint: 'trip-statuses', columns: DEFAULT_COLS },
         ]
     }
 ];

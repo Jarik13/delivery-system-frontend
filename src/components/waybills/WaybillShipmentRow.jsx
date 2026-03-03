@@ -1,10 +1,10 @@
 import React from 'react';
 import { TableRow, TableCell, Chip, Typography, Box, alpha } from '@mui/material';
 import { ArrowForward } from '@mui/icons-material';
-import { SHIPMENT_STATUS_CONFIG, getStatusColor } from '../../constants/statusColors';
+import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 
 const WaybillShipmentRow = ({ shipment }) => {
-    const statusColor = getStatusColor(SHIPMENT_STATUS_CONFIG, shipment.shipmentStatusName);
+    const statusColor = getStatusColor(SHIPMENT_STATUS_COLORS, shipment.shipmentStatusName);
 
     return (
         <TableRow sx={{

@@ -79,7 +79,6 @@ export const ITEM_GROUP_MAP = {
 
     "branch-types": GROUPS.FINANCE,
     "payment-types": GROUPS.FINANCE,
-    "trip-statuses-fin": GROUPS.FINANCE,
     "clients": GROUPS.FINANCE,
     "employees": GROUPS.FINANCE
 };
