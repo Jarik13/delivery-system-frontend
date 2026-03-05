@@ -257,6 +257,14 @@ const RouteListsPage = () => {
                 fields={filterFields}
                 searchPlaceholder="Пошук листа за номером..."
                 accentColor={mainColor}
+                counts={{
+                    total: totalElements,
+                    ...(stats?.countByStatus
+                        ? Object.fromEntries(
+                            Object.entries(stats.countByStatus).map(([id, count]) => [`statuses_${id}`, count])
+                        )
+                        : {}),
+                }}
             />
 
             <RouteListsTable
