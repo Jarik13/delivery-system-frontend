@@ -10,7 +10,8 @@ import {
     DirectionsCarFilled, DirectionsCarOutlined,
     Schedule, AccessTime, AllInbox, TrackChanges, AcUnit, HelpOutline,
     TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage,
-    Receipt
+    Receipt,
+    AdminPanelSettings
 } from '@mui/icons-material';
 
 export const GROUPS = {
@@ -18,7 +19,8 @@ export const GROUPS = {
     NETWORK: "Мережа доставки",
     FLEET: "Логістика та Автопарк",
     PACKAGING: "Вантажі та Пакування",
-    FINANCE: "Організація та Фінанси"
+    FINANCE: "Організація та Фінанси",
+    ADMIN: "Адміністрування",
 };
 
 export const GROUP_COLORS = {
@@ -27,6 +29,7 @@ export const GROUP_COLORS = {
     [GROUPS.FLEET]: '#f44336',
     [GROUPS.PACKAGING]: '#9c27b0',
     [GROUPS.FINANCE]: '#009688',
+    [GROUPS.ADMIN]: '#f44336',
     "default": '#757575'
 };
 
@@ -76,12 +79,15 @@ export const ITEM_GROUP_MAP = {
     "storage-conditions": GROUPS.PACKAGING,
     "return-reasons": GROUPS.PACKAGING,
     "box-variants": GROUPS.PACKAGING,
-    "route-list-statuses": GROUPS.FINANCE, 
+    "route-list-statuses": GROUPS.FINANCE,
 
     "branch-types": GROUPS.FINANCE,
     "payment-types": GROUPS.FINANCE,
     "clients": GROUPS.FINANCE,
-    "employees": GROUPS.FINANCE
+    "employees": GROUPS.FINANCE,
+
+    "users": GROUPS.ADMIN,
+    "admin": GROUPS.ADMIN,
 };
 
 // --- 5. ІКОНКИ ПУНКТІВ МЕНЮ ---
@@ -112,9 +118,11 @@ export const itemIcons = {
     "clients": <People />,
     "employees": <Badge />,
     "trips": <DirectionsBus />,
-    "waybills": <Receipt />, 
+    "waybills": <Receipt />,
     "route-lists": <ListAlt />,
-    "route-list-statuses": <ChecklistRtl />, 
+    "route-list-statuses": <ChecklistRtl />,
     "payments": <Payments />,
-    "returns": <AssignmentReturned />
+    "returns": <AssignmentReturned />,
+    "admin": <AdminPanelSettings />,
+    "users": <People />,
 };

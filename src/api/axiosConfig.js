@@ -7,4 +7,24 @@ const api = axios.create({
     paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
 });
 
+api.interceptors.request.use(config => {
+    const auth = sessionStorage.getItem('auth');
+    if (auth) {
+        const { accessToken } = JSON.parse(auth);
+        if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+});
+
+api.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.response?.status === 401) {
+            sessionStorage.removeItem('auth');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default api;

@@ -1,5 +1,11 @@
 import api from './axiosConfig';
 
+export const AuthApi = {
+    login: (email, password) => api.post('/auth/login', { email, password }),
+    logout: () => api.post('/auth/logout'),
+    refresh: () => api.post('/auth/refresh'),
+};
+
 export const DictionaryApi = {
     getAll: (endpoint, page = 0, size = 10, filters = {}) => {
         return api.get(`/${endpoint}`, {
@@ -36,4 +42,12 @@ export const DictionaryApi = {
             ...config,
         });
     },
+};
+
+export const UserApi = {
+    getAll: () => api.get('/users'),
+    create: (data) => api.post('/users', data),
+    delete: (keycloakId) => api.delete(`/users/${keycloakId}`),
+    resendEmail: (keycloakId) => api.post(`/users/${keycloakId}/resend-email`),
+    updateRole: (keycloakId, role) => api.patch(`/users/${keycloakId}/role`, { role }),
 };
