@@ -23,13 +23,22 @@ const ROLES = [
 
 const getRoleInfo = (role) => ROLES.find(r => r.value === role) || { label: role, color: '#757575' };
 
+const EMPTY_FORM = {
+    email: '',
+    firstName: '',
+    lastName: '',
+    middleName: '',
+    phoneNumber: '',
+    role: 'EMPLOYEE',
+};
+
 const SuperAdminPage = () => {
     const { auth, logout } = useAuth();
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState({ email: '', firstName: '', lastName: '', role: 'EMPLOYEE' });
+    const [form, setForm] = useState(EMPTY_FORM);
     const [formError, setFormError] = useState('');
     const [creating, setCreating] = useState(false);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
@@ -49,31 +58,31 @@ const SuperAdminPage = () => {
     useEffect(() => { loadUsers(); }, []);
 
     const handleCreate = async () => {
-        if (!form.email || !form.firstName || !form.lastName) {
-            setFormError('Заповніть всі поля');
-            return;
-        }
-        if (!/\S+@\S+\.\S+/.test(form.email)) {
-            setFormError('Введіть коректний email');
-            return;
-        }
         setFormError('');
         setCreating(true);
         try {
-            await UserApi.create(form);
+            const payload = {
+                ...form,
+                phoneNumber: form.phoneNumber?.trim() || null,
+                middleName: form.middleName?.trim() || null,
+                firstName: form.firstName?.trim() || null,
+                lastName: form.lastName?.trim() || null,
+            };
+            await UserApi.create(payload);
             setNotification({
                 open: true,
                 message: `Користувача створено. Посилання надіслано на ${form.email}`,
                 severity: 'success',
             });
-            setForm({ email: '', firstName: '', lastName: '', role: 'EMPLOYEE' });
+            setForm(EMPTY_FORM);
             loadUsers();
         } catch (e) {
-            setNotification({
-                open: true,
-                message: e.message || 'Помилка створення користувача',
-                severity: 'error',
-            });
+            const errors = e?.response?.data?.validationErrors;
+            if (errors) {
+                setFormError(Object.values(errors).join(', '));
+            } else {
+                setFormError(e?.response?.data?.message || 'Помилка створення користувача');
+            }
         } finally {
             setCreating(false);
         }
@@ -105,8 +114,20 @@ const SuperAdminPage = () => {
         navigate('/login');
     };
 
+    const field = (label, key, props = {}) => (
+        <TextField
+            size="small"
+            label={label}
+            value={form[key]}
+            onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            {...props}
+        />
+    );
+
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc', p: 3 }}>
+            {/* Шапка */}
             <Paper elevation={0} sx={{
                 p: 2.5, mb: 3, borderRadius: 3,
                 background: 'linear-gradient(135deg, #f44336 0%, #c62828 100%)',
@@ -133,6 +154,7 @@ const SuperAdminPage = () => {
                 </Button>
             </Paper>
 
+            {/* Форма */}
             <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
                 <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <PersonAdd fontSize="small" color="primary" />
@@ -141,16 +163,21 @@ const SuperAdminPage = () => {
 
                 {formError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{formError}</Alert>}
 
+                {/* Перший рядок */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                    {field('Email *', 'email', { sx: { flex: '1 1 220px' }, type: 'email' })}
+                    {field('Прізвище', 'lastName', { sx: { flex: '1 1 160px' } })}
+                    {field("Ім'я", 'firstName', { sx: { flex: '1 1 160px' } })}
+                    {field('По батькові', 'middleName', { sx: { flex: '1 1 160px' } })}
+                </Box>
+
+                {/* Другий рядок */}
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                    <TextField size="small" label="Email" value={form.email}
-                        onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                        sx={{ flex: '1 1 220px' }} />
-                    <TextField size="small" label="Ім'я" value={form.firstName}
-                        onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))}
-                        sx={{ flex: '1 1 160px' }} />
-                    <TextField size="small" label="Прізвище" value={form.lastName}
-                        onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))}
-                        sx={{ flex: '1 1 160px' }} />
+                    {field('Телефон', 'phoneNumber', {
+                        sx: { flex: '1 1 180px' },
+                        placeholder: '+380XXXXXXXXX',
+                    })}
+
                     <FormControl size="small" sx={{ flex: '1 1 160px' }}>
                         <InputLabel>Роль</InputLabel>
                         <Select value={form.role} label="Роль"
@@ -165,18 +192,26 @@ const SuperAdminPage = () => {
                             ))}
                         </Select>
                     </FormControl>
+
                     <Button variant="contained"
                         startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <Add />}
                         onClick={handleCreate} disabled={creating}
-                        sx={{ bgcolor: '#673ab7', borderRadius: 2, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#512da8' }, height: 40 }}>
+                        sx={{
+                            bgcolor: '#673ab7', borderRadius: 2,
+                            textTransform: 'none', fontWeight: 600,
+                            '&:hover': { bgcolor: '#512da8' },
+                            height: 40, ml: 'auto',
+                        }}>
                         Створити
                     </Button>
                 </Box>
+
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
-                    Після створення користувач отримає email з посиланням для встановлення пароля
+                    * Обов'язкове поле. Після створення користувач отримає email з посиланням для встановлення пароля.
                 </Typography>
             </Paper>
 
+            {/* Таблиця */}
             <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                 <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Typography variant="subtitle1" fontWeight={700}>
@@ -204,8 +239,8 @@ const SuperAdminPage = () => {
                     <Table>
                         <TableHead>
                             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                                {['Email', "Ім'я", 'Роль', 'Статус', 'Дії'].map((h, i) => (
-                                    <TableCell key={h} align={i === 4 ? 'right' : 'left'}
+                                {['Email', 'ПІБ', 'Телефон', 'Роль', 'Статус', 'Дії'].map((h, i) => (
+                                    <TableCell key={h} align={i === 5 ? 'right' : 'left'}
                                         sx={{ fontWeight: 700, color: '#64748b', fontSize: 12, textTransform: 'uppercase' }}>
                                         {h}
                                     </TableCell>
@@ -215,13 +250,23 @@ const SuperAdminPage = () => {
                         <TableBody>
                             {users.map(user => {
                                 const roleInfo = getRoleInfo(user.role);
+                                const fullName = [user.lastName, user.firstName, user.middleName]
+                                    .filter(Boolean).join(' ') || '—';
                                 return (
                                     <TableRow key={user.keycloakId} hover sx={{ '&:last-child td': { border: 0 } }}>
-                                        <TableCell sx={{ fontSize: 13, fontWeight: 500 }}>{user.email}</TableCell>
-                                        <TableCell sx={{ fontSize: 13 }}>{user.firstName} {user.lastName}</TableCell>
+                                        <TableCell sx={{ fontSize: 13, fontWeight: 500 }}>
+                                            {user.email}
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: 13 }}>
+                                            {fullName}
+                                        </TableCell>
+                                        <TableCell sx={{ fontSize: 13, color: user.phoneNumber ? 'inherit' : '#94a3b8' }}>
+                                            {user.phoneNumber || '—'}
+                                        </TableCell>
                                         <TableCell>
                                             <Chip label={roleInfo.label} size="small" sx={{
-                                                bgcolor: alpha(roleInfo.color, 0.1), color: roleInfo.color,
+                                                bgcolor: alpha(roleInfo.color, 0.1),
+                                                color: roleInfo.color,
                                                 fontWeight: 700, fontSize: 11,
                                                 border: `1px solid ${alpha(roleInfo.color, 0.2)}`,
                                             }} />

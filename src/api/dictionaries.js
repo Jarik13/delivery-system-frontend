@@ -3,7 +3,6 @@ import api from './axiosConfig';
 export const AuthApi = {
     login: (email, password) => api.post('/auth/login', { email, password }),
     logout: () => api.post('/auth/logout'),
-    refresh: () => api.post('/auth/refresh'),
 };
 
 export const DictionaryApi = {
