@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Paper, Button, Box, Typography, Snackbar, Alert, alpha } from '@mui/material';
-import { Add, LocalShipping } from '@mui/icons-material';
+import { Paper, Button, Box, Typography, Snackbar, Alert, alpha, Tabs, Tab } from '@mui/material';
+import { Add, LocalShipping, Archive, FlashOn } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import ShipmentGrid from '../components/shipments/ShipmentGrid';
@@ -8,6 +8,8 @@ import ShipmentWizardDialog from '../components/shipments/ShipmentWizardDialog';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import DataPagination from '../components/pagination/DataPagination';
 import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../constants/statusColors';
+
+const ARCHIVE_STATUSES = ['Доставлено', 'Відмова', 'Втрачено', 'Утилізовано'];
 
 const ShipmentsPage = () => {
     const groupName = ITEM_GROUP_MAP['shipments'] || 'Керування логістикою';
@@ -19,6 +21,7 @@ const ShipmentsPage = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [stats, setStats] = useState(null);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+    const [activeTab, setActiveTab] = useState(0);
 
     const [expandedHistory, setExpandedHistory] = useState({});
     const [expandedFinance, setExpandedFinance] = useState({});
@@ -63,7 +66,10 @@ const ShipmentsPage = () => {
                 ]);
 
                 setReferences({
-                    statuses: (s.data.content || []).map(st => ({ ...st, color: getStatusColor(SHIPMENT_STATUS_COLORS, st.name) })),
+                    statuses: (s.data.content || []).map(st => ({
+                        ...st,
+                        color: getStatusColor(SHIPMENT_STATUS_COLORS, st.name)
+                    })),
                     clients: c.data.content || [],
                     shipmentTypes: t.data.content || [],
                     parcelTypes: pt.data.content || [],
@@ -91,6 +97,17 @@ const ShipmentsPage = () => {
         loadAllReferences();
     }, []);
 
+    const getTabStatusIds = useCallback(() => {
+        if (filters.shipmentStatuses.length > 0) return null;
+        const archiveIds = references.statuses
+            .filter(s => ARCHIVE_STATUSES.includes(s.name))
+            .map(s => s.id);
+        const activeIds = references.statuses
+            .filter(s => !ARCHIVE_STATUSES.includes(s.name))
+            .map(s => s.id);
+        return activeTab === 0 ? activeIds : archiveIds;
+    }, [activeTab, references.statuses, filters.shipmentStatuses]);
+
     const loadTableData = useCallback(async () => {
         try {
             const activeFilters = Object.fromEntries(
@@ -99,16 +116,30 @@ const ShipmentsPage = () => {
                     return v !== '' && v !== null;
                 })
             );
+
+            const tabStatusIds = getTabStatusIds();
+            if (tabStatusIds && tabStatusIds.length > 0) {
+                activeFilters.shipmentStatuses = tabStatusIds;
+            }
+
             const response = await DictionaryApi.getAll('shipments', page, rowsPerPage, activeFilters);
             setShipments(response.data.content || []);
             setTotalElements(response.data.totalElements || 0);
         } catch (error) { console.error(error); }
-    }, [page, rowsPerPage, filters]);
+    }, [page, rowsPerPage, filters, getTabStatusIds]);
 
     useEffect(() => {
         const timer = setTimeout(() => { loadTableData(); }, 400);
         return () => clearTimeout(timer);
     }, [loadTableData]);
+
+    const handleTabChange = (_, newValue) => {
+        setActiveTab(newValue);
+        setPage(0);
+        setFilters(prev => ({ ...prev, shipmentStatuses: [] }));
+        setExpandedHistory({});
+        setExpandedFinance({});
+    };
 
     const toggleHistory = async (shipmentId) => {
         if (expandedHistory[shipmentId]) {
@@ -125,21 +156,17 @@ const ShipmentsPage = () => {
     };
 
     const handleClearFilters = () => {
-        if (!stats) {
-            setFilters(defaultFilters);
-        } else {
-            setFilters({
-                ...defaultFilters,
-                weightMin: stats.minWeight, weightMax: stats.maxWeight,
-                totalPriceMin: stats.minTotalPrice, totalPriceMax: stats.maxTotalPrice,
-                deliveryPriceMin: stats.minDeliveryPrice, deliveryPriceMax: stats.maxDeliveryPrice,
-                weightPriceMin: stats.minWeightPrice, weightPriceMax: stats.maxWeightPrice,
-                distancePriceMin: stats.minDistancePrice, distancePriceMax: stats.maxDistancePrice,
-                boxVariantPriceMin: stats.minBoxVariantPrice, boxVariantPriceMax: stats.maxBoxVariantPrice,
-                specialPackagingPriceMin: stats.minSpecialPackagingPrice, specialPackagingPriceMax: stats.maxSpecialPackagingPrice,
-                insuranceFeeMin: stats.minInsuranceFee, insuranceFeeMax: stats.maxInsuranceFee,
-            });
-        }
+        setFilters(stats ? {
+            ...defaultFilters,
+            weightMin: stats.minWeight, weightMax: stats.maxWeight,
+            totalPriceMin: stats.minTotalPrice, totalPriceMax: stats.maxTotalPrice,
+            deliveryPriceMin: stats.minDeliveryPrice, deliveryPriceMax: stats.maxDeliveryPrice,
+            weightPriceMin: stats.minWeightPrice, weightPriceMax: stats.maxWeightPrice,
+            distancePriceMin: stats.minDistancePrice, distancePriceMax: stats.maxDistancePrice,
+            boxVariantPriceMin: stats.minBoxVariantPrice, boxVariantPriceMax: stats.maxBoxVariantPrice,
+            specialPackagingPriceMin: stats.minSpecialPackagingPrice, specialPackagingPriceMax: stats.maxSpecialPackagingPrice,
+            insuranceFeeMin: stats.minInsuranceFee, insuranceFeeMax: stats.maxInsuranceFee,
+        } : defaultFilters);
         setPage(0);
     };
 
@@ -155,56 +182,52 @@ const ShipmentsPage = () => {
         }
     };
 
+    const tabStatuses = references.statuses.filter(s =>
+        activeTab === 0 ? !ARCHIVE_STATUSES.includes(s.name) : ARCHIVE_STATUSES.includes(s.name)
+    );
+
     const filterFields = [
         { name: 'trackingNumber', label: 'Трек-номер', type: 'text' },
         { name: 'parcelDescription', label: 'Вміст', type: 'text' },
-        { name: 'shipmentStatuses', label: 'Статус', type: 'checkbox-group', options: references.statuses },
+        { name: 'shipmentStatuses', label: 'Статус', type: 'checkbox-group', options: tabStatuses },
         { name: 'shipmentTypes', label: 'Тип доставки', type: 'checkbox-group', options: references.shipmentTypes },
         {
-            name: 'weightRange',
-            label: 'Вага (кг)', type: 'range',
+            name: 'weightRange', label: 'Вага (кг)', type: 'range',
             minName: 'weightMin', maxName: 'weightMax',
             min: stats?.minWeight || 0, max: stats?.maxWeight || 100,
         },
         {
-            name: 'totalPriceRange',
-            label: 'Загальна вартість', type: 'range',
+            name: 'totalPriceRange', label: 'Загальна вартість', type: 'range',
             minName: 'totalPriceMin', maxName: 'totalPriceMax',
             min: stats?.minTotalPrice || 0, max: stats?.maxTotalPrice || 10000,
         },
         {
-            name: 'deliveryPriceRange',
-            label: 'Базовий тариф', type: 'range',
+            name: 'deliveryPriceRange', label: 'Базовий тариф', type: 'range',
             minName: 'deliveryPriceMin', maxName: 'deliveryPriceMax',
             min: stats?.minDeliveryPrice || 0, max: stats?.maxDeliveryPrice || 5000,
         },
         {
-            name: 'weightPriceRange',
-            label: 'Доплата за вагу', type: 'range',
+            name: 'weightPriceRange', label: 'Доплата за вагу', type: 'range',
             minName: 'weightPriceMin', maxName: 'weightPriceMax',
             min: stats?.minWeightPrice || 0, max: stats?.maxWeightPrice || 2000,
         },
         {
-            name: 'distancePriceRange',
-            label: 'Доплата за відстань', type: 'range',
+            name: 'distancePriceRange', label: 'Доплата за відстань', type: 'range',
             minName: 'distancePriceMin', maxName: 'distancePriceMax',
             min: stats?.minDistancePrice || 0, max: stats?.maxDistancePrice || 2000,
         },
         {
-            name: 'insuranceFeeRange',
-            label: 'Страховий збір', type: 'range',
+            name: 'insuranceFeeRange', label: 'Страховий збір', type: 'range',
             minName: 'insuranceFeeMin', maxName: 'insuranceFeeMax',
             min: stats?.minInsuranceFee || 0, max: stats?.maxInsuranceFee || 1000,
         },
         {
-            name: 'boxPriceRange',
-            label: 'Ціна коробки', type: 'range',
+            name: 'boxPriceRange', label: 'Ціна коробки', type: 'range',
             minName: 'boxVariantPriceMin', maxName: 'boxVariantPriceMax',
             min: stats?.minBoxVariantPrice || 0, max: stats?.maxBoxVariantPrice || 500,
         },
         {
-            name: 'packPriceRange',
-            label: 'Спец. пакування', type: 'range',
+            name: 'packPriceRange', label: 'Спец. пакування', type: 'range',
             minName: 'specialPackagingPriceMin', maxName: 'specialPackagingPriceMax',
             min: stats?.minSpecialPackagingPrice || 0, max: stats?.maxSpecialPackagingPrice || 500,
         },
@@ -217,24 +240,54 @@ const ShipmentsPage = () => {
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
             <Paper elevation={0} sx={{
-                p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white', borderRadius: 3,
+                mb: 2, borderRadius: 3, overflow: 'hidden',
+                boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
-                        <LocalShipping fontSize="medium" />
+                <Box sx={{
+                    p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                    color: 'white',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
+                            <LocalShipping fontSize="medium" />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight="bold">Відправлення</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                                {activeTab === 0 ? 'Активні відправлення в обробці' : 'Архів завершених відправлень'}
+                            </Typography>
+                        </Box>
                     </Box>
-                    <Box>
-                        <Typography variant="h6" fontWeight="bold">Відправлення</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8 }}>Керування логістичними маршрутами</Typography>
-                    </Box>
+                    <Button variant="contained" size="small"
+                        sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                        startIcon={<Add />} onClick={() => setOpenWizard(true)}>
+                        Створити ТТН
+                    </Button>
                 </Box>
-                <Button variant="contained" size="small"
-                    sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                    startIcon={<Add />} onClick={() => setOpenWizard(true)}>
-                    Створити ТТН
-                </Button>
+
+                <Tabs
+                    value={activeTab}
+                    onChange={handleTabChange}
+                    sx={{
+                        bgcolor: alpha(mainColor, 0.05),
+                        borderBottom: `1px solid ${alpha(mainColor, 0.15)}`,
+                        '& .MuiTab-root': { fontWeight: 600, minHeight: 48 },
+                        '& .Mui-selected': { color: mainColor },
+                        '& .MuiTabs-indicator': { bgcolor: mainColor },
+                    }}
+                >
+                    <Tab
+                        icon={<FlashOn fontSize="small" />}
+                        iconPosition="start"
+                        label={`Активні`}
+                    />
+                    <Tab
+                        icon={<Archive fontSize="small" />}
+                        iconPosition="start"
+                        label={`Архів`}
+                    />
+                </Tabs>
             </Paper>
 
             <DataFilters
