@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-    Box, Paper, Typography, alpha, Snackbar, Alert, Button, Chip,
+    Box, Paper, Typography, alpha, Snackbar, Alert, Button, Chip, Tabs, Tab,
 } from '@mui/material';
-import { Assignment, Add } from '@mui/icons-material';
+import { Assignment, Add, FlashOn, Archive } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import RouteListsTable from '../components/route-lists/RouteListsTable';
+
+const ARCHIVE_ROUTE_LIST_STATUSES = ['Завершено', 'Скасовано'];
 
 const RouteListsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['route-lists']] || '#673ab7';
@@ -27,6 +29,7 @@ const RouteListsPage = () => {
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
     const [references, setReferences] = useState({ statuses: [], couriers: [] });
     const [stats, setStats] = useState(null);
+    const [activeTab, setActiveTab] = useState(0);
 
     const defaultFilters = {
         number: '',
@@ -63,6 +66,17 @@ const RouteListsPage = () => {
         loadRefs();
     }, []);
 
+    const getTabStatusIds = useCallback(() => {
+        if (filters.statuses.length > 0) return null;
+        const archiveIds = references.statuses
+            .filter(s => ARCHIVE_ROUTE_LIST_STATUSES.includes(s.name))
+            .map(s => s.id);
+        const activeIds = references.statuses
+            .filter(s => !ARCHIVE_ROUTE_LIST_STATUSES.includes(s.name))
+            .map(s => s.id);
+        return activeTab === 0 ? activeIds : archiveIds;
+    }, [activeTab, references.statuses, filters.statuses]);
+
     const load = useCallback(async () => {
         setLoading(true);
         try {
@@ -72,6 +86,12 @@ const RouteListsPage = () => {
                     return v !== '' && v !== null;
                 })
             );
+
+            const tabStatusIds = getTabStatusIds();
+            if (tabStatusIds && tabStatusIds.length > 0) {
+                activeFilters.statuses = tabStatusIds;
+            }
+
             const res = await DictionaryApi.getAll('route-lists', page, rowsPerPage, activeFilters);
             setItems(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
@@ -82,7 +102,7 @@ const RouteListsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, filters]);
+    }, [page, rowsPerPage, filters, getTabStatusIds]);
 
     const handleClear = () => {
         setFilters({
@@ -91,6 +111,12 @@ const RouteListsPage = () => {
             totalWeightMax: stats?.totalWeightMax ?? 30,
         });
         setPage(0);
+    };
+
+    const handleTabChange = (_, newValue) => {
+        setActiveTab(newValue);
+        setPage(0);
+        setFilters(prev => ({ ...prev, statuses: [] }));
     };
 
     useEffect(() => {
@@ -132,14 +158,13 @@ const RouteListsPage = () => {
         );
     };
 
+    const tabStatuses = references.statuses.filter(s =>
+        activeTab === 0 ? !ARCHIVE_ROUTE_LIST_STATUSES.includes(s.name) : ARCHIVE_ROUTE_LIST_STATUSES.includes(s.name)
+    );
+
     const filterFields = [
         { name: 'number', label: 'Номер листа', type: 'text' },
-        {
-            name: 'statuses',
-            label: 'Статус',
-            type: 'checkbox-group',
-            options: references.statuses,
-        },
+        { name: 'statuses', label: 'Статус', type: 'checkbox-group', options: tabStatuses },
         {
             name: 'courierId',
             label: 'Кур\'єр',
@@ -179,7 +204,7 @@ const RouteListsPage = () => {
                         <Box>
                             <Typography variant="h6" fontWeight="bold">Маршрутні листи</Typography>
                             <Typography variant="caption" sx={{ opacity: 0.9, display: 'block' }}>
-                                Керування чергою доставки та кур'єрами
+                                {activeTab === 0 ? 'Активні листи та поточні доставки' : 'Архів завершених та скасованих листів'}
                             </Typography>
                         </Box>
                     </Box>
@@ -208,6 +233,21 @@ const RouteListsPage = () => {
                         </Button>
                     </Box>
                 </Box>
+
+                <Tabs
+                    value={activeTab}
+                    onChange={handleTabChange}
+                    sx={{
+                        bgcolor: alpha(mainColor, 0.05),
+                        borderBottom: `1px solid ${alpha(mainColor, 0.15)}`,
+                        '& .MuiTab-root': { fontWeight: 600, minHeight: 48 },
+                        '& .Mui-selected': { color: mainColor },
+                        '& .MuiTabs-indicator': { bgcolor: mainColor },
+                    }}
+                >
+                    <Tab icon={<FlashOn fontSize="small" />} iconPosition="start" label="Активні" />
+                    <Tab icon={<Archive fontSize="small" />} iconPosition="start" label="Архівні" />
+                </Tabs>
             </Paper>
 
             <DataFilters
