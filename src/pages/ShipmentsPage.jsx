@@ -297,7 +297,19 @@ const ShipmentsPage = () => {
                 fields={filterFields}
                 searchPlaceholder="Трек-номер..."
                 accentColor={mainColor}
-                counts={{ total: totalElements }}
+                counts={{
+                    total: totalElements,
+                    ...(stats?.countByStatus
+                        ? Object.fromEntries(
+                            Object.entries(stats.countByStatus).map(([id, count]) => [`shipmentStatuses_${id}`, count])
+                        )
+                        : {}),
+                    ...(stats?.countByType
+                        ? Object.fromEntries(
+                            Object.entries(stats.countByType).map(([id, count]) => [`shipmentTypes_${id}`, count])
+                        )
+                        : {}),
+                }}
             />
 
             <ShipmentGrid
