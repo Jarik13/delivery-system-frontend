@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Box, Paper, Typography, Button, CircularProgress,
     Dialog, DialogTitle, DialogContent,
-    IconButton, alpha, Chip
+    IconButton, alpha, Chip, Tabs, Tab
 } from '@mui/material';
-import { DirectionsBus, Add, Map as MapIcon, Close } from '@mui/icons-material';
+import { DirectionsBus, Add, Map as MapIcon, Close, FlashOn, Archive } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
 import DataFilters from '../components/DataFilters';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
@@ -14,6 +14,8 @@ import DataPagination from '../components/pagination/DataPagination';
 import TripWizardDialog from '../components/trips/TripWizardDialog';
 import { useSearchParams } from 'react-router-dom';
 
+const ARCHIVE_TRIP_STATUSES = ['Завершено', 'Аварійна зупинка'];
+
 const TripsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['trips']] || '#1976d2';
 
@@ -22,6 +24,7 @@ const TripsPage = () => {
     const [statuses, setStatuses] = useState([]);
     const [drivers, setDrivers] = useState([]);
     const [vehicles, setVehicles] = useState([]);
+    const [activeTab, setActiveTab] = useState(0);
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -70,21 +73,15 @@ const TripsPage = () => {
                     DictionaryApi.getAll('drivers', 0, 1000),
                     DictionaryApi.getAll('vehicles', 0, 1000),
                 ]);
-
                 setStatuses(statusRes.data.content || []);
-
-                const mappedDrivers = (driverRes.data.content || []).map(d => ({
+                setDrivers((driverRes.data.content || []).map(d => ({
                     ...d,
                     name: `${d.lastName || ''} ${d.firstName || ''} ${d.middleName || ''}`.trim() || `Водій №${d.id}`
-                }));
-                setDrivers(mappedDrivers);
-
-                const mappedVehicles = (vehicleRes.data.content || []).map(v => ({
+                })));
+                setVehicles((vehicleRes.data.content || []).map(v => ({
                     ...v,
                     name: `${v.licensePlate} (${v.brandName || 'Без бренду'})`.trim()
-                }));
-                setVehicles(mappedVehicles);
-
+                })));
             } catch (err) {
                 console.error("Помилка завантаження довідників", err);
             }
@@ -92,39 +89,50 @@ const TripsPage = () => {
         fetchReferences();
     }, []);
 
+    const getTabStatusIds = useCallback(() => {
+        if (filters.tripStatuses.length > 0) return null;
+        const archiveIds = statuses
+            .filter(s => ARCHIVE_TRIP_STATUSES.includes(s.name))
+            .map(s => s.id);
+        const activeIds = statuses
+            .filter(s => !ARCHIVE_TRIP_STATUSES.includes(s.name))
+            .map(s => s.id);
+        return activeTab === 0 ? activeIds : archiveIds;
+    }, [activeTab, statuses, filters.tripStatuses]);
+
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const params = { ...filters };
+
+            const tabStatusIds = getTabStatusIds();
+            if (tabStatusIds && tabStatusIds.length > 0) {
+                params.tripStatuses = tabStatusIds;
+            }
+
             const res = await DictionaryApi.getAll('trips', page, rowsPerPage, params);
             setTrips(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
         } finally { setLoading(false); }
-    }, [page, rowsPerPage, filters]);
+    }, [page, rowsPerPage, filters, getTabStatusIds]);
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    const handleTabChange = (_, newValue) => {
+        setActiveTab(newValue);
+        setPage(0);
+        setFilters(prev => ({ ...prev, tripStatuses: [] }));
+    };
+
+    const tabStatuses = statuses.filter(s =>
+        activeTab === 0 ? !ARCHIVE_TRIP_STATUSES.includes(s.name) : ARCHIVE_TRIP_STATUSES.includes(s.name)
+    );
+
     const filterFields = [
         { name: 'tripNumber', label: 'Номер рейсу', type: 'text' },
-        {
-            name: 'tripStatuses',
-            label: 'Статус рейсу',
-            type: 'checkbox-group',
-            options: statuses,
-        },
-        {
-            name: 'driverId',
-            label: 'Водій',
-            type: 'select',
-            options: drivers.map(d => ({ ...d, name: d.name }))
-        },
-        {
-            name:
-                'vehicleId',
-            label: 'Транспортний засіб',
-            type: 'select',
-            options: vehicles.map(v => ({ ...v, name: v.name }))
-        },
+        { name: 'tripStatuses', label: 'Статус рейсу', type: 'checkbox-group', options: tabStatuses },
+        { name: 'driverId', label: 'Водій', type: 'select', options: drivers },
+        { name: 'vehicleId', label: 'Транспортний засіб', type: 'select', options: vehicles },
         { name: 'originCity', label: 'Місто відправлення', type: 'text' },
         { name: 'destinationCity', label: 'Місто призначення', type: 'text' },
         { name: 'anyCity', label: 'Будь-яке місто маршруту', type: 'text' },
@@ -141,40 +149,61 @@ const TripsPage = () => {
     return (
         <Box sx={{ px: 2, pb: 4 }}>
             <Paper elevation={0} sx={{
-                p: 2, mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                color: 'white', borderRadius: 3,
+                mb: 2, borderRadius: 3, overflow: 'hidden',
                 boxShadow: `0 4px 20px ${alpha(mainColor, 0.25)}`,
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
-                        <DirectionsBus fontSize="medium" />
+                <Box sx={{
+                    p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                    color: 'white',
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1.5, borderRadius: '16px', display: 'flex' }}>
+                            <DirectionsBus fontSize="medium" />
+                        </Box>
+                        <Box>
+                            <Typography variant="h6" fontWeight="bold">Магістральні рейси</Typography>
+                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                                {activeTab === 0 ? 'Активні та заплановані рейси' : 'Архів завершених рейсів'}
+                            </Typography>
+                        </Box>
                     </Box>
-                    <Box>
-                        <Typography variant="h6" fontWeight="bold">Магістральні рейси</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.8 }}>Схеми доставки між відділеннями</Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {highlightId && !loading && (
+                            <Chip
+                                label={`↓ Рейс #${highlightId}`}
+                                size="small"
+                                onDelete={() => setSearchParams({})}
+                                sx={{
+                                    bgcolor: 'rgba(255,255,255,0.25)', color: 'white',
+                                    fontWeight: 700, border: '1px solid rgba(255,255,255,0.4)',
+                                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
+                                }}
+                            />
+                        )}
+                        <Button variant="contained" size="small"
+                            sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                            startIcon={<Add />} onClick={() => setWizardTrip(null)}>
+                            Створити новий рейс
+                        </Button>
                     </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    {highlightId && !loading && (
-                        <Chip
-                            label={`↓ Рейс #${highlightId}`}
-                            size="small"
-                            onDelete={() => setSearchParams({})}
-                            sx={{
-                                bgcolor: 'rgba(255,255,255,0.25)', color: 'white',
-                                fontWeight: 700, border: '1px solid rgba(255,255,255,0.4)',
-                                '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.7)' },
-                            }}
-                        />
-                    )}
-                    <Button variant="contained" size="small"
-                        sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                        startIcon={<Add />} onClick={() => setWizardTrip(null)}>
-                        Створити новий рейс
-                    </Button>
-                </Box>
+                <Tabs
+                    value={activeTab}
+                    onChange={handleTabChange}
+                    sx={{
+                        bgcolor: alpha(mainColor, 0.05),
+                        borderBottom: `1px solid ${alpha(mainColor, 0.15)}`,
+                        '& .MuiTab-root': { fontWeight: 600, minHeight: 48 },
+                        '& .Mui-selected': { color: mainColor },
+                        '& .MuiTabs-indicator': { bgcolor: mainColor },
+                    }}
+                >
+                    <Tab icon={<FlashOn fontSize="small" />} iconPosition="start" label="Активні" />
+                    <Tab icon={<Archive fontSize="small" />} iconPosition="start" label="Архівні" />
+                </Tabs>
             </Paper>
 
             <DataFilters
