@@ -5,51 +5,14 @@ import {
 } from '@mui/material';
 import {
     ExpandMore, ExpandLess, Scale,
-    Straighten, LocationOn, AccessTime, LocalShipping,
+    Straighten, LocationOn, AccessTime,
     Map as MapIcon, Delete, Person, DirectionsCar,
     Inventory2, Room, History, Edit,
-    ArticleOutlined, OpenInNew,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import StatusChip from './StatusChip';
-
-const LinkedDocChip = ({ icon, label, number, color, onClick }) => (
-    <Tooltip title={`Відкрити ${label} ${number}`} placement="top">
-        <Box
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
-            sx={{
-                display: 'inline-flex', alignItems: 'center', gap: 0.5,
-                px: 1, py: 0.35,
-                borderRadius: 1.5,
-                border: `1px solid ${alpha(color, 0.3)}`,
-                bgcolor: alpha(color, 0.06),
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                '&:hover': {
-                    bgcolor: alpha(color, 0.14),
-                    borderColor: alpha(color, 0.6),
-                    transform: 'translateY(-1px)',
-                    boxShadow: `0 2px 6px ${alpha(color, 0.2)}`,
-                },
-            }}
-        >
-            {React.cloneElement(icon, { sx: { fontSize: 12, color } })}
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color, lineHeight: 1 }}>
-                {label}
-            </Typography>
-            <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color, lineHeight: 1 }}>
-                {number}
-            </Typography>
-            <OpenInNew sx={{ fontSize: 10, color: alpha(color, 0.6) }} />
-        </Box>
-    </Tooltip>
-);
 
 const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false, highlightRowRef = null }) => {
     const [expanded, setExpanded] = useState(false);
-    const navigate = useNavigate();
-
-    const waybills = trip.waybills || [];
 
     const formatTime = (dateStr) => dateStr
         ? new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -88,7 +51,6 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                         transform: 'translateY(-2px)',
                     },
                 }),
-
                 '&::before': {
                     content: '""',
                     position: 'absolute',
@@ -132,7 +94,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                 </Box>
                             </Box>
 
-                            <Stack direction="row" spacing={1} sx={{ mb: waybills.length > 0 ? 1 : 0 }}>
+                            <Stack direction="row" spacing={1} sx={{ mb: trip.waypoints?.length > 0 ? 1 : 0 }}>
                                 <Chip
                                     icon={<Scale sx={{ fontSize: '14px !important' }} />}
                                     label={`${trip.totalWeight?.toLocaleString()} кг`}
@@ -153,7 +115,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                 />
                             </Stack>
 
-                            {waybills.length > 0 && (
+                            {trip.waypoints?.length > 0 && (
                                 <Box sx={{
                                     mt: 0.5, p: 0.75, borderRadius: 1.5,
                                     bgcolor: alpha(color, 0.03),
@@ -164,18 +126,29 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                         color: 'text.disabled',
                                         textTransform: 'uppercase', letterSpacing: 0.6, mb: 0.6,
                                     }}>
-                                        Пов'язані документи
+                                        Проміжні пункти
                                     </Typography>
-                                    <Box sx={{ display: 'flex', gap: 0.6, flexWrap: 'wrap' }}>
-                                        {waybills.map(wb => (
-                                            <LinkedDocChip
-                                                key={wb.id}
-                                                icon={<ArticleOutlined />}
-                                                label="Накладна"
-                                                number={`№${wb.number}`}
-                                                color={color}
-                                                onClick={() => navigate(`/waybills?highlight=${wb.id}`)}
-                                            />
+                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                                        {trip.waypoints.map((wp, i) => (
+                                            <React.Fragment key={i}>
+                                                <Chip
+                                                    icon={<Room sx={{ fontSize: '11px !important' }} />}
+                                                    label={wp}
+                                                    size="small"
+                                                    sx={{
+                                                        height: 20, fontSize: '0.65rem', fontWeight: 700,
+                                                        bgcolor: 'white',
+                                                        border: `1px solid ${alpha(color, 0.2)}`,
+                                                        color: 'text.primary',
+                                                        '& .MuiChip-icon': { color },
+                                                    }}
+                                                />
+                                                {i < trip.waypoints.length - 1 && (
+                                                    <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled', lineHeight: 1 }}>
+                                                        →
+                                                    </Typography>
+                                                )}
+                                            </React.Fragment>
                                         ))}
                                     </Box>
                                 </Box>
