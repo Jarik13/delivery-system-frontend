@@ -1,132 +1,158 @@
-import { label } from "framer-motion/client";
-
 const DEFAULT_COLS = [
     { id: 'name', label: 'Назва' }
 ];
 
+export const ROLES = {
+    SUPER_ADMIN: 'ROLE_SUPER_ADMIN',
+    ADMIN: 'ROLE_ADMIN',
+    EMPLOYEE: 'ROLE_EMPLOYEE',
+    DISPATCHER: 'ROLE_DISPATCHER',
+    COURIER: 'ROLE_COURIER',
+};
+
 export const MENU_GROUPS = [
     {
         title: "Керування логістикою",
+        roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN],
         items: [
             {
-                label: 'Посилки',
-                path: 'parcels',
-                isCustomPage: true,
-                endpoint: 'parcels'
+                label: 'Посилки', path: 'parcels', isCustomPage: true, endpoint: 'parcels',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Відправлення',
-                path: 'shipments',
-                isCustomPage: true,
-                endpoint: 'shipments'
+                label: 'Відправлення', path: 'shipments', isCustomPage: true, endpoint: 'shipments',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Платежі',
-                path: 'payments',
-                isCustomPage: true,
-                endpoint: 'payments'
+                label: 'Платежі', path: 'payments', isCustomPage: true, endpoint: 'payments',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Повернення',
-                path: 'returns',
-                isCustomPage: true,
-                endpoint: 'returns'
+                label: 'Повернення', path: 'returns', isCustomPage: true, endpoint: 'returns',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Рейси',
-                path: 'trips',
-                isCustomPage: true,
-                endpoint: 'trips'
+                label: 'Рейси', path: 'trips', isCustomPage: true, endpoint: 'trips',
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Накладні',
-                path: 'waybills',
-                isCustomPage: true,
-                endpoint: 'waybills'
+                label: 'Накладні', path: 'waybills', isCustomPage: true, endpoint: 'waybills',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Маршрутні листи',
-                path: 'route-lists',
-                isCustomPage: true,
-                endpoint: 'route-lists'
+                label: 'Маршрутні листи', path: 'route-lists', isCustomPage: true, endpoint: 'route-lists',
+                roles: [ROLES.COURIER, ROLES.DISPATCHER, ROLES.ADMIN]
             },
         ]
     },
     {
         title: "Мережа доставки",
+        roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN],
         items: [
             {
-                label: 'Відділення',
-                path: 'branches',
-                isCustomPage: true,
-                endpoint: 'branches'
+                label: 'Відділення', path: 'branches', isCustomPage: true, endpoint: 'branches',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
             {
-                label: 'Поштомати',
-                path: 'postomats',
-                isCustomPage: true,
-                endpoint: 'postomats'
+                label: 'Поштомати', path: 'postomats', isCustomPage: true, endpoint: 'postomats',
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
         ]
     },
     {
         title: "Логістика та Автопарк",
+        roles: [ROLES.DISPATCHER, ROLES.ADMIN],
         items: [
             {
-                label: 'Магістральні маршрути',
-                path: 'routes',
-                isCustomPage: true,
-                endpoint: 'routes'
+                label: 'Магістральні маршрути', path: 'routes', isCustomPage: true, endpoint: 'routes',
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
             },
-            { label: 'Марки авто', path: 'fleet-brands', endpoint: 'fleet-brands', columns: DEFAULT_COLS },
-            { label: 'Типи кузовів', path: 'fleet-body-types', endpoint: 'fleet-body-types', columns: DEFAULT_COLS },
-            { label: 'Типи пального', path: 'fleet-fuel-types', endpoint: 'fleet-fuel-types', columns: DEFAULT_COLS },
-            { label: 'Типи КПП', path: 'fleet-transmission-types', endpoint: 'fleet-transmission-types', columns: DEFAULT_COLS },
-            { label: 'Типи приводу', path: 'fleet-drive-types', endpoint: 'fleet-drive-types', columns: DEFAULT_COLS },
-            { label: 'Статуси авто', path: 'vehicle-activity-statuses', endpoint: 'vehicle-activity-statuses', columns: DEFAULT_COLS },
-            { label: 'Статуси рейсів', path: 'trip-statuses', endpoint: 'trip-statuses', columns: DEFAULT_COLS },
+            {
+                label: 'Марки авто', path: 'fleet-brands', endpoint: 'fleet-brands', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Типи кузовів', path: 'fleet-body-types', endpoint: 'fleet-body-types', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Типи пального', path: 'fleet-fuel-types', endpoint: 'fleet-fuel-types', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Типи КПП', path: 'fleet-transmission-types', endpoint: 'fleet-transmission-types', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Типи приводу', path: 'fleet-drive-types', endpoint: 'fleet-drive-types', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Статуси авто', path: 'vehicle-activity-statuses', endpoint: 'vehicle-activity-statuses', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Статуси рейсів', path: 'trip-statuses', endpoint: 'trip-statuses', columns: DEFAULT_COLS,
+                roles: [ROLES.DISPATCHER, ROLES.ADMIN]
+            },
         ]
     },
     {
         title: "Вантажі та Пакування",
+        roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN],
         items: [
-            { label: 'Типи коробок', path: 'box-types', endpoint: 'box-types', columns: DEFAULT_COLS },
-            { label: 'Типи посилок', path: 'parcel-types', endpoint: 'parcel-types', columns: DEFAULT_COLS },
-            { label: 'Типи відправлень', path: 'shipment-types', endpoint: 'shipment-types', columns: DEFAULT_COLS },
-            { label: 'Статуси вантажу', path: 'shipment-statuses', endpoint: 'shipment-statuses', columns: DEFAULT_COLS },
             {
-                label: 'Умови зберігання',
-                path: 'storage-conditions',
-                endpoint: 'storage-conditions',
-                columns: [
-                    { id: 'name', label: 'Назва' },
-                    { id: 'description', label: 'Опис технічних вимог' }
-                ]
+                label: 'Типи коробок', path: 'box-types', endpoint: 'box-types', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
             },
-            { label: 'Причини повернення', path: 'return-reasons', endpoint: 'return-reasons', columns: DEFAULT_COLS },
             {
-                label: 'Статуси маршрутних листів',
-                path: 'route-list-statuses',
-                endpoint: 'route-list-statuses',
-                columns: DEFAULT_COLS
+                label: 'Типи посилок', path: 'parcel-types', endpoint: 'parcel-types', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Типи відправлень', path: 'shipment-types', endpoint: 'shipment-types', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Статуси вантажу', path: 'shipment-statuses', endpoint: 'shipment-statuses', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Умови зберігання', path: 'storage-conditions', endpoint: 'storage-conditions',
+                columns: [{ id: 'name', label: 'Назва' }, { id: 'description', label: 'Опис технічних вимог' }],
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Причини повернення', path: 'return-reasons', endpoint: 'return-reasons', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Статуси маршрутних листів', path: 'route-list-statuses', endpoint: 'route-list-statuses', columns: DEFAULT_COLS,
+                roles: [ROLES.COURIER, ROLES.DISPATCHER, ROLES.ADMIN]
             },
         ]
     },
     {
         title: "Організація та Фінанси",
+        roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN],
         items: [
-            { label: 'Типи відділень', path: 'branch-types', endpoint: 'branch-types', columns: DEFAULT_COLS },
-            { label: 'Типи оплати', path: 'payment-types', endpoint: 'payment-types', columns: DEFAULT_COLS },
+            {
+                label: 'Типи відділень', path: 'branch-types', endpoint: 'branch-types', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
+            {
+                label: 'Типи оплати', path: 'payment-types', endpoint: 'payment-types', columns: DEFAULT_COLS,
+                roles: [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN]
+            },
         ]
     },
     {
         title: "Адміністрування",
+        roles: [ROLES.SUPER_ADMIN],
         items: [
             {
-                label: 'Управління користувачами',
-                path: 'admin',
-                isCustomPage: true,
-                endpoint: 'admin'
+                label: 'Управління користувачами', path: 'admin', isCustomPage: true, endpoint: 'admin',
+                roles: [ROLES.SUPER_ADMIN]
             },
         ]
     },
