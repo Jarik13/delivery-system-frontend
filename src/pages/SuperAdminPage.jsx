@@ -7,11 +7,10 @@ import {
 } from '@mui/material';
 import {
     Add, Delete, AdminPanelSettings, PersonAdd,
-    MarkEmailRead, Logout, Refresh, History, FiberManualRecord,
+    MarkEmailRead, Refresh, History, FiberManualRecord,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import { AuthApi, UserApi, DictionaryApi } from '../api/dictionaries';
-import { useNavigate } from 'react-router-dom';
+import { UserApi, DictionaryApi } from '../api/dictionaries';
 import { Client } from '@stomp/stompjs';
 
 const ROLES = [
@@ -37,8 +36,7 @@ const EMPTY_FORM = {
 };
 
 const SuperAdminPage = () => {
-    const { auth, logout } = useAuth();
-    const navigate = useNavigate();
+    const { auth } = useAuth();
     const stompClient = useRef(null);
 
     const [tab, setTab] = useState(0);
@@ -155,12 +153,6 @@ const SuperAdminPage = () => {
         }
     };
 
-    const handleLogout = async () => {
-        await AuthApi.logout();
-        logout();
-        navigate('/login');
-    };
-
     const field = (label, key, props = {}) => (
         <TextField size="small" label={label} value={form[key]}
             onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
@@ -194,10 +186,6 @@ const SuperAdminPage = () => {
                             </Typography>
                         </Box>
                     </Tooltip>
-                    <Button variant="contained" startIcon={<Logout />} onClick={handleLogout}
-                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, textTransform: 'none', fontWeight: 600 }}>
-                        Вийти
-                    </Button>
                 </Box>
             </Paper>
 

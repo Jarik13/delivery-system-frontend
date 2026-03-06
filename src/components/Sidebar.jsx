@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     Drawer, Toolbar, List, ListItemButton, ListItemText,
-    Collapse, TextField, InputAdornment, Box, IconButton, Divider
+    Collapse, TextField, InputAdornment, Box, IconButton, Divider,
+    Typography, Button,
 } from '@mui/material';
-import { ExpandLess, ExpandMore, Search, Clear, Category } from '@mui/icons-material';
+import { ExpandLess, ExpandMore, Search, Clear, Category, Logout } from '@mui/icons-material';
 import { MENU_GROUPS } from '../constants/dictionaries';
 import { GROUP_COLORS, groupIcons, itemIcons } from '../constants/menuConfig';
 import { useAuth } from '../context/AuthContext';
+import { AuthApi } from '../api/dictionaries';
 
 const drawerWidth = 280;
 
 const Sidebar = () => {
     const location = useLocation();
-    const { auth } = useAuth();
+    const navigate = useNavigate();
+    const { auth, logout } = useAuth();
     const userRole = auth?.role;
 
     const [searchText, setSearchText] = useState('');
@@ -57,6 +60,12 @@ const Sidebar = () => {
         }
     }, [searchText]);
 
+    const handleLogout = async () => {
+        try { await AuthApi.logout(); } catch (e) { console.error(e); }
+        logout();
+        navigate('/login');
+    };
+
     return (
         <Drawer
             variant="permanent"
@@ -68,6 +77,8 @@ const Sidebar = () => {
                     boxSizing: 'border-box',
                     backgroundColor: '#f5f7fa',
                     backgroundImage: 'linear-gradient(180deg, #f5f7fa 0%, #edf2f7 100%)',
+                    display: 'flex',
+                    flexDirection: 'column',
                 },
             }}
         >
@@ -92,7 +103,8 @@ const Sidebar = () => {
                 />
             </Box>
             <Divider sx={{ borderColor: 'rgba(0,0,0,0.06)', mx: 2 }} />
-            <Box sx={{ overflow: 'auto', pt: 1, pb: 5 }}>
+
+            <Box sx={{ overflow: 'auto', pt: 1, flexGrow: 1 }}>
                 <List component="nav" disablePadding>
                     {filteredMenu.map((group, index) => {
                         const isOpen = openGroups[group.title] || false;
@@ -164,6 +176,26 @@ const Sidebar = () => {
                         );
                     })}
                 </List>
+            </Box>
+
+            <Box>
+                <Divider sx={{ borderColor: 'rgba(0,0,0,0.06)' }} />
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 1, px: 0.5 }}>
+                        {auth?.email}
+                    </Typography>
+                    <Button
+                        fullWidth
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        startIcon={<Logout fontSize="small" />}
+                        onClick={handleLogout}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                    >
+                        Вийти
+                    </Button>
+                </Box>
             </Box>
         </Drawer>
     );
