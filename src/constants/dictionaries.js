@@ -118,5 +118,16 @@ export const MENU_GROUPS = [
             { label: 'Типи відділень', path: 'branch-types', endpoint: 'branch-types', columns: DEFAULT_COLS },
             { label: 'Типи оплати', path: 'payment-types', endpoint: 'payment-types', columns: DEFAULT_COLS },
         ]
-    }
+    },
+    {
+        title: "Адміністрування",
+        items: [
+            {
+                label: 'Управління користувачами',
+                path: 'admin',
+                isCustomPage: true,
+                endpoint: 'admin'
+            },
+        ]
+    },
 ];

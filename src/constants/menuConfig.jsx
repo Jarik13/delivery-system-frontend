@@ -38,7 +38,8 @@ export const groupIcons = {
     [GROUPS.NETWORK]: <Business />,
     [GROUPS.FLEET]: <LocalShipping />,
     [GROUPS.PACKAGING]: <Inbox />,
-    [GROUPS.FINANCE]: <AttachMoney />
+    [GROUPS.FINANCE]: <AttachMoney />,
+    [GROUPS.ADMIN]: <AdminPanelSettings />,
 };
 
 
