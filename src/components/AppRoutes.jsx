@@ -24,10 +24,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return children;
 };
 
-const ALL_EXCEPT_SUPER_ADMIN = [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.COURIER, ROLES.ADMIN];
-const LOGISTICS = [ROLES.EMPLOYEE, ROLES.DISPATCHER, ROLES.ADMIN];
-const FLEET = [ROLES.DISPATCHER, ROLES.ADMIN];
-const COURIER_ROLES = [ROLES.COURIER, ROLES.DISPATCHER, ROLES.ADMIN];
+const ALL_EXCEPT_SUPER_ADMIN = [ROLES.EMPLOYEE, ROLES.DRIVER, ROLES.COURIER, ROLES.ADMIN];
+const ED = [ROLES.EMPLOYEE, ROLES.DRIVER];
+const CDA = [ROLES.COURIER, ROLES.DRIVER];
 
 const AppRoutes = () => {
     const { auth } = useAuth();
@@ -52,36 +51,16 @@ const AppRoutes = () => {
                 </ProtectedRoute>
             } />
 
-            <Route path="/branches" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><BranchesPage /></ProtectedRoute>
-            } />
-            <Route path="/postomats" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><PostomatsPage /></ProtectedRoute>
-            } />
-            <Route path="/routes" element={
-                <ProtectedRoute allowedRoles={FLEET}><RoutesPage /></ProtectedRoute>
-            } />
-            <Route path="/parcels" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><ParcelsPage /></ProtectedRoute>
-            } />
-            <Route path="/shipments" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><ShipmentsPage /></ProtectedRoute>
-            } />
-            <Route path="/payments" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><PaymentsPage /></ProtectedRoute>
-            } />
-            <Route path="/returns" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><ReturnsPage /></ProtectedRoute>
-            } />
-            <Route path="/trips" element={
-                <ProtectedRoute allowedRoles={FLEET}><TripsPage /></ProtectedRoute>
-            } />
-            <Route path="/waybills" element={
-                <ProtectedRoute allowedRoles={LOGISTICS}><WaybillsPage /></ProtectedRoute>
-            } />
-            <Route path="/route-lists" element={
-                <ProtectedRoute allowedRoles={COURIER_ROLES}><RouteListsPage /></ProtectedRoute>
-            } />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={ED}><BranchesPage /></ProtectedRoute>} />
+            <Route path="/postomats" element={<ProtectedRoute allowedRoles={ED}><PostomatsPage /></ProtectedRoute>} />
+            <Route path="/routes" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><RoutesPage /></ProtectedRoute>} />
+            <Route path="/parcels" element={<ProtectedRoute allowedRoles={ED}><ParcelsPage /></ProtectedRoute>} />
+            <Route path="/shipments" element={<ProtectedRoute allowedRoles={ED}><ShipmentsPage /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute allowedRoles={ED}><PaymentsPage /></ProtectedRoute>} />
+            <Route path="/returns" element={<ProtectedRoute allowedRoles={ED}><ReturnsPage /></ProtectedRoute>} />
+            <Route path="/trips" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><TripsPage /></ProtectedRoute>} />
+            <Route path="/waybills" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><WaybillsPage /></ProtectedRoute>} />
+            <Route path="/route-lists" element={<ProtectedRoute allowedRoles={CDA}><RouteListsPage /></ProtectedRoute>} />
 
             {MENU_GROUPS.flatMap(group => group.items).map((item) => (
                 !item.isCustomPage && (
