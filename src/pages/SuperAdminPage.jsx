@@ -1,34 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-    Box, Paper, Typography, Button, TextField,
-    Select, FormControl, InputLabel, alpha, Chip, IconButton,
-    Alert, Snackbar, Table, TableBody, TableCell, TableHead,
-    TableRow, CircularProgress, Tooltip, MenuItem, Tabs, Tab, Badge,
-} from '@mui/material';
-import {
-    Add, Delete, AdminPanelSettings, PersonAdd,
-    MarkEmailRead, Refresh, History, FiberManualRecord,
-} from '@mui/icons-material';
+import { Box, Paper, Typography, Snackbar, Alert, Tabs, Tab, Badge, Tooltip } from '@mui/material';
+import { AdminPanelSettings, History, FiberManualRecord } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { UserApi, DictionaryApi } from '../api/dictionaries';
 import { Client } from '@stomp/stompjs';
-
-const ROLES = [
-    { value: 'EMPLOYEE', label: 'Працівник', color: '#2196f3' },
-    { value: 'COURIER', label: "Кур'єр", color: '#4caf50' },
-    { value: 'DRIVER', label: 'Водій', color: '#ff9800' },
-    { value: 'ADMIN', label: 'Адміністратор', color: '#9c27b0' },
-    { value: 'SUPER_ADMIN', label: 'Супер адмін', color: '#f44336' },
-];
-
-const ACTION_COLORS = {
-    CREATE_USER: '#4caf50',
-    DELETE_USER: '#f44336',
-    UPDATE_ROLE: '#2196f3',
-    RESEND_EMAIL: '#ff9800',
-};
-
-const getRoleInfo = (role) => ROLES.find(r => r.value === role) || { label: role, color: '#757575' };
+import UserForm from '../components/super-admin/UserForm';
+import UsersTable from '../components/super-admin/UsersTable';
+import AuditLogsTable from '../components/super-admin/AuditLogsTable';
 
 const EMPTY_FORM = {
     email: '', firstName: '', lastName: '',
@@ -69,12 +47,22 @@ const SuperAdminPage = () => {
             onStompError: () => setWsConnected(false),
             reconnectDelay: 5000,
         });
-
         client.activate();
         stompClient.current = client;
-
         return () => client.deactivate();
     }, [auth?.accessToken]);
+
+    const loadUsers = async () => {
+        setLoading(true);
+        try {
+            const { data } = await UserApi.getAll();
+            setUsers(data);
+        } catch {
+            setNotification({ open: true, message: 'Помилка завантаження користувачів', severity: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadAuditLogs = async () => {
         setAuditLoading(true);
@@ -92,18 +80,6 @@ const SuperAdminPage = () => {
             setNotification({ open: true, message: 'Помилка завантаження логів', severity: 'error' });
         } finally {
             setAuditLoading(false);
-        }
-    };
-
-    const loadUsers = async () => {
-        setLoading(true);
-        try {
-            const { data } = await UserApi.getAll();
-            setUsers(data);
-        } catch {
-            setNotification({ open: true, message: 'Помилка завантаження користувачів', severity: 'error' });
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -153,13 +129,6 @@ const SuperAdminPage = () => {
         }
     };
 
-    const field = (label, key, props = {}) => (
-        <TextField size="small" label={label} value={form[key]}
-            onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-            onKeyDown={e => e.key === 'Enter' && handleCreate()}
-            {...props} />
-    );
-
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc', p: 3 }}>
             <Paper elevation={0} sx={{
@@ -177,21 +146,18 @@ const SuperAdminPage = () => {
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>{auth?.email}</Typography>
                     </Box>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Tooltip title={wsConnected ? 'WebSocket підключено' : 'WebSocket відключено'}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <FiberManualRecord sx={{ fontSize: 12, color: wsConnected ? '#4caf50' : '#f44336' }} />
-                            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                                {wsConnected ? 'Live' : 'Offline'}
-                            </Typography>
-                        </Box>
-                    </Tooltip>
-                </Box>
+                <Tooltip title={wsConnected ? 'WebSocket підключено' : 'WebSocket відключено'}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <FiberManualRecord sx={{ fontSize: 12, color: wsConnected ? '#4caf50' : '#f44336' }} />
+                        <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                            {wsConnected ? 'Live' : 'Offline'}
+                        </Typography>
+                    </Box>
+                </Tooltip>
             </Paper>
 
             <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', mb: 3, overflow: 'hidden' }}>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)}
-                    sx={{ borderBottom: '1px solid #e2e8f0', px: 2 }}>
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: '1px solid #e2e8f0', px: 2 }}>
                     <Tab label="Користувачі" sx={{ textTransform: 'none', fontWeight: 600 }} />
                     <Tab label={
                         <Badge badgeContent={newLogsCount} color="error" max={99}>
@@ -206,224 +172,32 @@ const SuperAdminPage = () => {
 
             {tab === 0 && (
                 <>
-                    <Paper elevation={0} sx={{ p: 3, mb: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
-                        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <PersonAdd fontSize="small" color="primary" />
-                            Додати користувача
-                        </Typography>
-                        {formError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{formError}</Alert>}
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-                            {field('Email *', 'email', { sx: { flex: '1 1 220px' }, type: 'email' })}
-                            {field('Прізвище', 'lastName', { sx: { flex: '1 1 160px' } })}
-                            {field("Ім'я", 'firstName', { sx: { flex: '1 1 160px' } })}
-                            {field('По батькові', 'middleName', { sx: { flex: '1 1 160px' } })}
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                            {field('Телефон', 'phoneNumber', { sx: { flex: '1 1 180px' }, placeholder: '+380XXXXXXXXX' })}
-                            <FormControl size="small" sx={{ flex: '1 1 160px' }}>
-                                <InputLabel>Роль</InputLabel>
-                                <Select value={form.role} label="Роль"
-                                    onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                                    {ROLES.map(r => (
-                                        <MenuItem key={r.value} value={r.value}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: r.color }} />
-                                                {r.label}
-                                            </Box>
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <Button variant="contained"
-                                startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <Add />}
-                                onClick={handleCreate} disabled={creating}
-                                sx={{ bgcolor: '#673ab7', borderRadius: 2, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#512da8' }, height: 40, ml: 'auto' }}>
-                                Створити
-                            </Button>
-                        </Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
-                            * Обов'язкове поле. Після створення користувач отримає email з посиланням для встановлення пароля.
-                        </Typography>
-                    </Paper>
-
-                    <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                        <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="subtitle1" fontWeight={700}>
-                                Користувачі системи
-                                <Typography component="span" variant="caption" sx={{ ml: 1, color: '#94a3b8', fontWeight: 500 }}>({users.length})</Typography>
-                            </Typography>
-                            <Tooltip title="Оновити">
-                                <IconButton size="small" onClick={loadUsers} disabled={loading}><Refresh fontSize="small" /></IconButton>
-                            </Tooltip>
-                        </Box>
-                        {loading ? (
-                            <Box sx={{ p: 6, textAlign: 'center' }}><CircularProgress size={36} sx={{ color: '#673ab7' }} /></Box>
-                        ) : users.length === 0 ? (
-                            <Box sx={{ p: 6, textAlign: 'center' }}><Typography color="text.secondary">Користувачів ще немає</Typography></Box>
-                        ) : (
-                            <Table>
-                                <TableHead>
-                                    <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                                        {['Email', 'ПІБ', 'Телефон', 'Роль', 'Статус', 'Дії'].map((h, i) => (
-                                            <TableCell key={h} align={i === 5 ? 'right' : 'left'}
-                                                sx={{ fontWeight: 700, color: '#64748b', fontSize: 12, textTransform: 'uppercase' }}>
-                                                {h}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {users.map(user => {
-                                        const roleInfo = getRoleInfo(user.role);
-                                        const fullName = [user.lastName, user.firstName, user.middleName].filter(Boolean).join(' ') || '—';
-                                        return (
-                                            <TableRow key={user.keycloakId} hover sx={{ '&:last-child td': { border: 0 } }}>
-                                                <TableCell sx={{ fontSize: 13, fontWeight: 500 }}>{user.email}</TableCell>
-                                                <TableCell sx={{ fontSize: 13 }}>{fullName}</TableCell>
-                                                <TableCell sx={{ fontSize: 13, color: user.phoneNumber ? 'inherit' : '#94a3b8' }}>{user.phoneNumber || '—'}</TableCell>
-                                                <TableCell>
-                                                    <Chip label={roleInfo.label} size="small" sx={{
-                                                        bgcolor: alpha(roleInfo.color, 0.1), color: roleInfo.color,
-                                                        fontWeight: 700, fontSize: 11, border: `1px solid ${alpha(roleInfo.color, 0.2)}`,
-                                                    }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Chip
-                                                        label={user.emailVerified ? 'Активний' : 'Очікує підтвердження'}
-                                                        size="small"
-                                                        sx={{
-                                                            bgcolor: user.emailVerified ? alpha('#4caf50', 0.1) : alpha('#ff9800', 0.1),
-                                                            color: user.emailVerified ? '#4caf50' : '#ff9800',
-                                                            fontWeight: 600, fontSize: 11,
-                                                        }} />
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                                                        {!user.emailVerified && (
-                                                            <Tooltip title="Надіслати email повторно">
-                                                                <IconButton size="small" onClick={() => handleResendEmail(user.keycloakId)} sx={{ color: '#ff9800' }}>
-                                                                    <MarkEmailRead fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                        )}
-                                                        <Tooltip title="Видалити">
-                                                            <IconButton size="small" onClick={() => handleDelete(user.keycloakId, user.email)} sx={{ color: '#ef4444' }}>
-                                                                <Delete fontSize="small" />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        )}
-                    </Paper>
+                    <UserForm
+                        form={form}
+                        setForm={setForm}
+                        onSubmit={handleCreate}
+                        creating={creating}
+                        formError={formError}
+                    />
+                    <UsersTable
+                        users={users}
+                        loading={loading}
+                        onReload={loadUsers}
+                        onDelete={handleDelete}
+                        onResendEmail={handleResendEmail}
+                    />
                 </>
             )}
 
             {tab === 1 && (
-                <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                    <Box sx={{ p: 2, borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <TextField size="small" label="Виконавець" value={auditFilters.performedBy}
-                            onChange={e => setAuditFilters(p => ({ ...p, performedBy: e.target.value }))}
-                            sx={{ flex: '1 1 200px' }} />
-                        <FormControl size="small" sx={{ flex: '1 1 160px' }}>
-                            <InputLabel>Дія</InputLabel>
-                            <Select multiple value={auditFilters.actions} label="Дія"
-                                onChange={e => setAuditFilters(p => ({ ...p, actions: e.target.value }))}
-                                renderValue={selected => selected.join(', ')}>
-                                {['CREATE_USER', 'DELETE_USER', 'UPDATE_ROLE', 'RESEND_EMAIL'].map(a => (
-                                    <MenuItem key={a} value={a}>{a}</MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <FormControl size="small" sx={{ flex: '1 1 130px' }}>
-                            <InputLabel>Статус</InputLabel>
-                            <Select multiple value={auditFilters.statuses} label="Статус"
-                                onChange={e => setAuditFilters(p => ({ ...p, statuses: e.target.value }))}
-                                renderValue={selected => selected.join(', ')}>
-                                <MenuItem value="SUCCESS">SUCCESS</MenuItem>
-                                <MenuItem value="FAILURE">FAILURE</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <Button variant="outlined" size="small" onClick={loadAuditLogs}
-                            sx={{ textTransform: 'none', borderRadius: 2 }}>
-                            Застосувати
-                        </Button>
-                        <Tooltip title="Оновити">
-                            <IconButton size="small" onClick={loadAuditLogs} disabled={auditLoading}>
-                                <Refresh fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
-                        <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <FiberManualRecord sx={{ fontSize: 10, color: wsConnected ? '#4caf50' : '#f44336' }} />
-                            <Typography variant="caption" color="text.secondary">
-                                {wsConnected ? 'Live оновлення увімкнено' : 'Live оновлення вимкнено'}
-                            </Typography>
-                        </Box>
-                    </Box>
-
-                    {auditLoading ? (
-                        <Box sx={{ p: 6, textAlign: 'center' }}><CircularProgress size={36} sx={{ color: '#673ab7' }} /></Box>
-                    ) : auditLogs.length === 0 ? (
-                        <Box sx={{ p: 6, textAlign: 'center' }}><Typography color="text.secondary">Логів ще немає</Typography></Box>
-                    ) : (
-                        <Table>
-                            <TableHead>
-                                <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                                    {['Час', 'Дія', 'Виконавець', 'Ціль', 'Статус', 'Деталі'].map(h => (
-                                        <TableCell key={h} sx={{ fontWeight: 700, color: '#64748b', fontSize: 12, textTransform: 'uppercase' }}>
-                                            {h}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {auditLogs.map(log => (
-                                    <TableRow key={log.id} hover sx={{ '&:last-child td': { border: 0 } }}>
-                                        <TableCell sx={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>
-                                            {new Date(log.performedAt).toLocaleString('uk-UA')}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip label={log.action} size="small" sx={{
-                                                bgcolor: alpha(ACTION_COLORS[log.action] || '#757575', 0.1),
-                                                color: ACTION_COLORS[log.action] || '#757575',
-                                                fontWeight: 700, fontSize: 11,
-                                                border: `1px solid ${alpha(ACTION_COLORS[log.action] || '#757575', 0.2)}`,
-                                            }} />
-                                        </TableCell>
-                                        <TableCell sx={{ fontSize: 13 }}>{log.performedBy || '—'}</TableCell>
-                                        <TableCell sx={{ fontSize: 13 }}>{log.target || '—'}</TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                label={log.status}
-                                                size="small"
-                                                sx={{
-                                                    bgcolor: log.status === 'SUCCESS' ? alpha('#4caf50', 0.1) : alpha('#f44336', 0.1),
-                                                    color: log.status === 'SUCCESS' ? '#4caf50' : '#f44336',
-                                                    fontWeight: 700, fontSize: 11,
-                                                }} />
-                                        </TableCell>
-                                        <TableCell sx={{ fontSize: 12, color: '#64748b', maxWidth: 300 }}>
-                                            {log.status === 'FAILURE' ? (
-                                                <Typography variant="caption" color="error">{log.errorMessage}</Typography>
-                                            ) : (
-                                                <Typography variant="caption" sx={{
-                                                    overflow: 'hidden', textOverflow: 'ellipsis',
-                                                    whiteSpace: 'nowrap', display: 'block', maxWidth: 280,
-                                                }}>
-                                                    {log.details}
-                                                </Typography>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </Paper>
+                <AuditLogsTable
+                    logs={auditLogs}
+                    loading={auditLoading}
+                    filters={auditFilters}
+                    setFilters={setAuditFilters}
+                    onLoad={loadAuditLogs}
+                    wsConnected={wsConnected}
+                />
             )}
 
             <Snackbar open={notification.open} autoHideDuration={4000}
