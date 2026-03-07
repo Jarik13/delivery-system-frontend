@@ -3,10 +3,13 @@ import {
     Box, Paper, Typography, Button, TextField,
     Select, FormControl, InputLabel, Alert, CircularProgress, MenuItem,
 } from '@mui/material';
-import { Add, PersonAdd } from '@mui/icons-material';
+import { Add, PersonAdd, Business } from '@mui/icons-material';
 import { ROLES_META } from '../../constants/roles';
+import RouteBranchSelector from '../RouteBranchSelector';
 
 const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
+    const isEmployee = form.role === 'EMPLOYEE';
+
     const field = (label, key, props = {}) => (
         <TextField size="small" label={label} value={form[key]}
             onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
@@ -21,18 +24,20 @@ const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
                 Додати користувача
             </Typography>
             {formError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{formError}</Alert>}
+
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                 {field('Email *', 'email', { sx: { flex: '1 1 220px' }, type: 'email' })}
                 {field('Прізвище', 'lastName', { sx: { flex: '1 1 160px' } })}
                 {field("Ім'я", 'firstName', { sx: { flex: '1 1 160px' } })}
                 {field('По батькові', 'middleName', { sx: { flex: '1 1 160px' } })}
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start', mb: 2 }}>
                 {field('Телефон', 'phoneNumber', { sx: { flex: '1 1 180px' }, placeholder: '+380XXXXXXXXX' })}
                 <FormControl size="small" sx={{ flex: '1 1 160px' }}>
                     <InputLabel>Роль</InputLabel>
                     <Select value={form.role} label="Роль"
-                        onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
+                        onChange={e => setForm(p => ({ ...p, role: e.target.value, branchId: '', cityId: '' }))}>
                         {ROLES_META.map(r => (
                             <MenuItem key={r.value} value={r.value}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -43,15 +48,35 @@ const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
                         ))}
                     </Select>
                 </FormControl>
+            </Box>
+
+            {isEmployee && (
+                <Box sx={{ mb: 2 }}>
+                    <RouteBranchSelector
+                        title="Відділення працівника"
+                        icon={Business}
+                        color="#673ab7"
+                        cityId={form.cityId || ''}
+                        branchId={form.branchId || ''}
+                        onCityChange={(cityId) => setForm(p => ({ ...p, cityId, branchId: '' }))}
+                        onBranchChange={(branchId) => setForm(p => ({ ...p, branchId }))}
+                        error={!form.branchId}
+                        errorText="Оберіть відділення для працівника"
+                    />
+                </Box>
+            )}
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button variant="contained"
                     startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <Add />}
                     onClick={onSubmit} disabled={creating}
-                    sx={{ bgcolor: '#673ab7', borderRadius: 2, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#512da8' }, height: 40, ml: 'auto' }}>
+                    sx={{ bgcolor: '#673ab7', borderRadius: 2, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#512da8' }, height: 40 }}>
                     Створити
                 </Button>
             </Box>
+
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1.5, display: 'block' }}>
-                * Обов'язкове поле. Після створення користувач отримає email з посиланням для встановлення пароля.
+                * Обов'язкові поля. Після створення користувач отримає email з посиланням для встановлення пароля.
             </Typography>
         </Paper>
     );

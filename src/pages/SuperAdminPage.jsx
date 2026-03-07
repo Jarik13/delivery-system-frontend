@@ -96,6 +96,7 @@ const SuperAdminPage = () => {
                 middleName: form.middleName?.trim() || null,
                 firstName: form.firstName?.trim() || null,
                 lastName: form.lastName?.trim() || null,
+                branchId:    form.role === 'EMPLOYEE' ? form.branchId : null,
             };
             await UserApi.create(payload);
             setNotification({ open: true, message: `Користувача створено. Посилання надіслано на ${form.email}`, severity: 'success' });
