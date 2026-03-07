@@ -55,7 +55,18 @@ const RouteBranchSelector = ({ title, icon: Icon, cityId, branchId, onBranchChan
                         <MenuItem disabled value=""><em>Відділень не знайдено</em></MenuItem>
                     )}
                     {branches.map(b => (
-                        <MenuItem key={b.id} value={b.id} sx={{ fontSize: '0.85rem' }}>{b.name}</MenuItem>
+                        <MenuItem key={b.id} value={b.id} sx={{ fontSize: '0.85rem' }}>
+                            <Box>
+                                <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.85rem' }}>
+                                    {b.name}
+                                </Typography>
+                                {b.address && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                        {b.address}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </MenuItem>
                     ))}
                 </Select>
                 {error && (
