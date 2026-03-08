@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     Box, CircularProgress, Typography, IconButton,
     Table, TableHead, TableRow, TableCell, TableBody,
-    Chip, alpha, Stack, Tooltip, Slide
+    Chip, alpha, Stack, Tooltip
 } from '@mui/material';
 import {
     Close, ArticleOutlined, Fullscreen, FullscreenExit,
@@ -11,30 +11,14 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { DictionaryApi } from '../../api/dictionaries';
-
-const STATUS_COLORS = {
-    'Створено': '#2196f3',
-    'Очікує надходження': '#90caf9',
-    'Прийнято у відділенні': '#673ab7',
-    'Сортування термінал': '#00bcd4',
-    'У дорозі': '#ff9800',
-    'Прибув у відділення': '#8bc34a',
-    "Видано кур'єру": '#e91e63',
-    'Доставлено': '#2e7d32',
-    'Відмова': '#f44336',
-    'Втрачено': '#b71c1c',
-    'Утилізовано': '#616161',
-    'default': '#9e9e9e',
-};
+import { SHIPMENT_STATUS_COLORS } from '../../constants/statusColors';
 
 const WaybillPanel = ({ data, onClose, mainColor }) => (
     <Box sx={{
         position: 'absolute', top: 0, right: 0, bottom: 0,
         width: { xs: '100%', sm: 620 },
-        bgcolor: 'white',
-        display: 'flex', flexDirection: 'column',
-        zIndex: 1100,
-        boxShadow: '-4px 0 24px rgba(0,0,0,0.18)',
+        bgcolor: 'white', display: 'flex', flexDirection: 'column',
+        zIndex: 1100, boxShadow: '-4px 0 24px rgba(0,0,0,0.18)',
         borderLeft: `3px solid ${mainColor}`,
     }}>
         <Box sx={{
@@ -92,77 +76,51 @@ const WaybillPanel = ({ data, onClose, mainColor }) => (
                                 textTransform: 'uppercase', letterSpacing: 0.5,
                                 bgcolor: '#fafafa', color: 'text.secondary',
                                 whiteSpace: 'nowrap',
-                            }}>
-                                {h}
-                            </TableCell>
+                            }}>{h}</TableCell>
                         ))}
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {(data.shipments || []).map((s) => {
-                        const statusColor = STATUS_COLORS[s.shipmentStatusName] || STATUS_COLORS['default'];
+                        const statusColor = SHIPMENT_STATUS_COLORS[s.shipmentStatusName] || SHIPMENT_STATUS_COLORS['default'];
                         return (
-                            <TableRow
-                                key={s.id}
-                                sx={{
-                                    bgcolor: 'white',
-                                    '&:hover': { bgcolor: '#fafafa' },
-                                    borderLeft: `3px solid ${alpha(statusColor, 0.4)}`,
-                                }}
-                            >
+                            <TableRow key={s.id} sx={{
+                                bgcolor: 'white', '&:hover': { bgcolor: '#fafafa' },
+                                borderLeft: `3px solid ${alpha(statusColor, 0.4)}`,
+                            }}>
                                 <TableCell sx={{ pl: 1.5, py: 1, width: 40 }}>
                                     <Box sx={{
                                         width: 24, height: 24, borderRadius: '50%',
                                         bgcolor: '#f0f0f0', color: '#666',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: 11, fontWeight: 700,
-                                    }}>
-                                        {s.sequenceNumber ?? '—'}
-                                    </Box>
+                                    }}>{s.sequenceNumber ?? '—'}</Box>
                                 </TableCell>
-
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                                     <Typography variant="caption" sx={{
                                         fontFamily: 'monospace', fontWeight: 700,
                                         bgcolor: '#f5f5f5', px: 1, py: 0.25, borderRadius: 1,
                                         color: mainColor, fontSize: 11,
-                                    }}>
-                                        {s.trackingNumber || `#${s.id}`}
-                                    </Typography>
+                                    }}>{s.trackingNumber || `#${s.id}`}</Typography>
                                 </TableCell>
-
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
-                                    <Typography variant="caption" fontWeight={600}>
-                                        {s.senderFullName || '—'}
-                                    </Typography>
+                                    <Typography variant="caption" fontWeight={600}>{s.senderFullName || '—'}</Typography>
                                 </TableCell>
-
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
-                                    <Typography variant="caption" fontWeight={600}>
-                                        {s.recipientFullName || '—'}
-                                    </Typography>
+                                    <Typography variant="caption" fontWeight={600}>{s.recipientFullName || '—'}</Typography>
                                 </TableCell>
-
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                                     <Typography variant="caption" color="text.secondary">
                                         {s.actualWeight != null ? `${s.actualWeight} кг` : '—'}
                                     </Typography>
                                 </TableCell>
-
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap' }}>
                                     {s.shipmentStatusName ? (
-                                        <Chip
-                                            label={s.shipmentStatusName}
-                                            size="small"
-                                            sx={{
-                                                bgcolor: alpha(statusColor, 0.12),
-                                                color: statusColor,
-                                                fontWeight: 700,
-                                                fontSize: 11,
-                                                height: 22,
-                                                border: `1px solid ${alpha(statusColor, 0.3)}`,
-                                            }}
-                                        />
+                                        <Chip label={s.shipmentStatusName} size="small" sx={{
+                                            bgcolor: alpha(statusColor, 0.12), color: statusColor,
+                                            fontWeight: 700, fontSize: 11, height: 22,
+                                            border: `1px solid ${alpha(statusColor, 0.3)}`,
+                                        }} />
                                     ) : '—'}
                                 </TableCell>
                             </TableRow>
@@ -185,6 +143,7 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
 
     useEffect(() => {
         if (!trip?.id) return;
+        setSegments([]);
         DictionaryApi.getById('trips', `${trip.id}/segments`)
             .then(res => setSegments(res.data || []))
             .catch(console.error);
@@ -208,13 +167,17 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
     };
 
     useEffect(() => {
-        const handleKey = (e) => { if (e.key === 'Escape') { setIsFullscreen(false); setWaybillPanel(null); } };
+        const handleKey = (e) => {
+            if (e.key === 'Escape') { setIsFullscreen(false); setWaybillPanel(null); }
+        };
         if (isFullscreen) document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
     }, [isFullscreen]);
 
     useEffect(() => {
         if (!mapRef.current || !trip) return;
+        if (segments.length === 0) return;
+
         let destroyed = false;
 
         if (mapInstanceRef.current) {
@@ -229,46 +192,28 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
 
         const allPoints = [];
 
-        if (trip.originCoordinates?.latitude) {
-            allPoints.push({
-                lat: trip.originCoordinates.latitude,
-                lng: trip.originCoordinates.longitude,
-                name: trip.originCity || 'Старт',
-                type: 'origin',
-                waybillId: null,
-            });
-        }
+        if (segments.length > 0) {
+            const first = segments[0];
+            if (first.originLat && first.originLng) {
+                allPoints.push({
+                    lat: first.originLat,
+                    lng: first.originLng,
+                    name: first.originCity || 'Старт',
+                    type: 'origin',
+                    waybillId: null,
+                });
+            }
 
-        if (Array.isArray(trip.waypointCoordinates)) {
-            const sorted = [...trip.waypointCoordinates]
-                .sort((a, b) => (a.sequenceNumber ?? 999) - (b.sequenceNumber ?? 999));
-
-            sorted.forEach((wp, index) => {
-                const isLast = index === sorted.length - 1;
-                const isDest = wp.latitude === trip.destinationCoordinates?.latitude &&
-                    wp.longitude === trip.destinationCoordinates?.longitude;
-
-                if (wp.latitude && wp.longitude && !(isLast && isDest)) {
-                    const seg = segments.find(s => s.sequenceNumber === wp.sequenceNumber);
+            segments.forEach((seg, idx) => {
+                if (seg.destLat && seg.destLng) {
                     allPoints.push({
-                        lat: wp.latitude,
-                        lng: wp.longitude,
-                        name: wp.cityName || `Зупинка ${index + 1}`,
-                        type: 'waypoint',
-                        waybillId: seg?.waybillId ?? null,
+                        lat: seg.destLat,
+                        lng: seg.destLng,
+                        name: seg.destCity || `Зупинка ${idx + 1}`,
+                        type: idx === segments.length - 1 ? 'destination' : 'waypoint',
+                        waybillId: seg.waybillId ?? null,
                     });
                 }
-            });
-        }
-
-        if (trip.destinationCoordinates?.latitude) {
-            const lastSeg = segments[segments.length - 1];
-            allPoints.push({
-                lat: trip.destinationCoordinates.latitude,
-                lng: trip.destinationCoordinates.longitude,
-                name: trip.destinationCity || 'Фініш',
-                type: 'destination',
-                waybillId: lastSeg?.waybillId ?? null,
             });
         }
 
@@ -297,9 +242,7 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
                         <div style="background:${color};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${label}</div>
                         ${badge}
                     </div>`,
-                    className: '',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14],
+                    className: '', iconSize: [28, 28], iconAnchor: [14, 14],
                 });
 
                 const marker = L.marker([point.lat, point.lng], { icon }).addTo(map);
@@ -309,12 +252,9 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
                     marker.bindPopup(
                         `<div style="text-align:center;padding:4px 2px">
                             <b style="font-size:13px">${point.name}</b><br/>
-                            <span id="${popupId}" style="
-                                display:inline-block;margin-top:6px;
-                                background:#1565c0;color:white;
-                                padding:4px 10px;border-radius:6px;
-                                cursor:pointer;font-size:11px;font-weight:700;
-                            ">📄 Переглянути накладну</span>
+                            <span id="${popupId}" style="display:inline-block;margin-top:6px;background:#1565c0;color:white;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;">
+                                📄 Переглянути накладну
+                            </span>
                         </div>`,
                         { maxWidth: 200 }
                     );
@@ -361,21 +301,16 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
             <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
 
             <Tooltip title={isFullscreen ? 'Вийти з повноекранного режиму' : 'Повноекранний режим'} placement="left">
-                <IconButton
-                    onClick={toggleFullscreen}
-                    sx={{
-                        position: 'absolute', bottom: 16, right: 16, zIndex: 1000,
-                        bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                        border: `1px solid ${alpha(mainColor, 0.2)}`,
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                            bgcolor: mainColor,
-                            color: 'white',
-                            borderColor: mainColor,
-                            boxShadow: `0 4px 12px ${alpha(mainColor, 0.4)}`,
-                        },
-                    }}
-                >
+                <IconButton onClick={toggleFullscreen} sx={{
+                    position: 'absolute', bottom: 16, right: 16, zIndex: 1000,
+                    bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    border: `1px solid ${alpha(mainColor, 0.2)}`,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                        bgcolor: mainColor, color: 'white', borderColor: mainColor,
+                        boxShadow: `0 4px 12px ${alpha(mainColor, 0.4)}`,
+                    },
+                }}>
                     {isFullscreen ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
                 </IconButton>
             </Tooltip>
@@ -390,11 +325,7 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
                         <CircularProgress sx={{ color: mainColor }} />
                     </Box>
                 ) : waybillPanel.data ? (
-                    <WaybillPanel
-                        data={waybillPanel.data}
-                        onClose={() => setWaybillPanel(null)}
-                        mainColor={mainColor}
-                    />
+                    <WaybillPanel data={waybillPanel.data} onClose={() => setWaybillPanel(null)} mainColor={mainColor} />
                 ) : null
             )}
 
@@ -412,11 +343,7 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
 
     if (isFullscreen) {
         return (
-            <Box sx={{
-                position: 'fixed', top: 0, left: 0,
-                width: '100vw', height: '100vh',
-                zIndex: 9999,
-            }}>
+            <Box sx={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999 }}>
                 {mapContent}
             </Box>
         );
