@@ -49,4 +49,5 @@ export const UserApi = {
     delete: (keycloakId) => api.delete(`/users/${keycloakId}`),
     resendEmail: (keycloakId) => api.post(`/users/${keycloakId}/resend-email`),
     updateRole: (keycloakId, role) => api.patch(`/users/${keycloakId}/role`, { role }),
+    updateBranch: (keycloakId, branchId) => api.patch(`/users/${keycloakId}/branch`, { branchId }),
 };

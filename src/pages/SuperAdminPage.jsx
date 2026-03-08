@@ -10,7 +10,7 @@ import AuditLogsTable from '../components/super-admin/AuditLogsTable';
 
 const EMPTY_FORM = {
     email: '', firstName: '', lastName: '',
-    middleName: '', phoneNumber: '', role: 'EMPLOYEE',
+    middleName: '', phoneNumber: '', role: 'EMPLOYEE', branchId: null,
 };
 
 const SuperAdminPage = () => {
@@ -19,6 +19,7 @@ const SuperAdminPage = () => {
 
     const [tab, setTab] = useState(0);
     const [users, setUsers] = useState([]);
+    const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState(EMPTY_FORM);
     const [formError, setFormError] = useState('');
@@ -64,6 +65,15 @@ const SuperAdminPage = () => {
         }
     };
 
+    const loadBranches = async () => {
+        try {
+            const { data } = await DictionaryApi.getAll('branches', 0, 10000);
+            setBranches(data.content || data);
+        } catch {
+            console.error('Помилка завантаження відділень');
+        }
+    };
+
     const loadAuditLogs = async () => {
         setAuditLoading(true);
         try {
@@ -83,8 +93,11 @@ const SuperAdminPage = () => {
         }
     };
 
-    useEffect(() => { loadUsers(); }, []);
+    useEffect(() => { loadUsers(); loadBranches(); }, []);
     useEffect(() => { if (tab === 1) { loadAuditLogs(); setNewLogsCount(0); } }, [tab]);
+
+    const notify = (message, severity = 'success') =>
+        setNotification({ open: true, message, severity });
 
     const handleCreate = async () => {
         setFormError('');
@@ -96,10 +109,10 @@ const SuperAdminPage = () => {
                 middleName: form.middleName?.trim() || null,
                 firstName: form.firstName?.trim() || null,
                 lastName: form.lastName?.trim() || null,
-                branchId:    form.role === 'EMPLOYEE' ? form.branchId : null,
+                branchId: form.role === 'EMPLOYEE' ? form.branchId : null,
             };
             await UserApi.create(payload);
-            setNotification({ open: true, message: `Користувача створено. Посилання надіслано на ${form.email}`, severity: 'success' });
+            notify(`Користувача створено. Посилання надіслано на ${form.email}`);
             setForm(EMPTY_FORM);
             loadUsers();
         } catch (e) {
@@ -114,19 +127,39 @@ const SuperAdminPage = () => {
         if (!window.confirm(`Видалити користувача ${email}?`)) return;
         try {
             await UserApi.delete(keycloakId);
-            setNotification({ open: true, message: 'Користувача видалено', severity: 'success' });
+            notify('Користувача видалено');
             loadUsers();
         } catch {
-            setNotification({ open: true, message: 'Помилка видалення', severity: 'error' });
+            notify('Помилка видалення', 'error');
         }
     };
 
     const handleResendEmail = async (keycloakId) => {
         try {
             await UserApi.resendEmail(keycloakId);
-            setNotification({ open: true, message: 'Email надіслано повторно', severity: 'success' });
+            notify('Email надіслано повторно');
         } catch {
-            setNotification({ open: true, message: 'Помилка відправки email', severity: 'error' });
+            notify('Помилка відправки email', 'error');
+        }
+    };
+
+    const handleUpdateRole = async (keycloakId, role) => {
+        try {
+            await UserApi.updateRole(keycloakId, role);
+            notify('Роль оновлено');
+            loadUsers();
+        } catch {
+            notify('Помилка оновлення ролі', 'error');
+        }
+    };
+
+    const handleUpdateBranch = async (keycloakId, branchId) => {
+        try {
+            await UserApi.updateBranch(keycloakId, branchId);
+            notify('Відділення оновлено');
+            loadUsers();
+        } catch {
+            notify('Помилка оновлення відділення', 'error');
         }
     };
 
@@ -148,7 +181,7 @@ const SuperAdminPage = () => {
                     </Box>
                 </Box>
                 <Tooltip title={wsConnected ? 'WebSocket підключено' : 'WebSocket відключено'}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'default' }}>
                         <FiberManualRecord sx={{ fontSize: 12, color: wsConnected ? '#4caf50' : '#f44336' }} />
                         <Typography variant="caption" sx={{ opacity: 0.8 }}>
                             {wsConnected ? 'Live' : 'Offline'}
@@ -179,13 +212,17 @@ const SuperAdminPage = () => {
                         onSubmit={handleCreate}
                         creating={creating}
                         formError={formError}
+                        branches={branches}
                     />
                     <UsersTable
                         users={users}
+                        branches={branches}
                         loading={loading}
                         onReload={loadUsers}
                         onDelete={handleDelete}
                         onResendEmail={handleResendEmail}
+                        onUpdateRole={handleUpdateRole}
+                        onUpdateBranch={handleUpdateBranch}
                     />
                 </>
             )}
