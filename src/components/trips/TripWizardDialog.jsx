@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     Dialog, DialogContent, DialogActions,
     Box, Typography, Button, Stepper, Step, StepLabel,
-    IconButton, CircularProgress, alpha
+    IconButton, CircularProgress, Alert, alpha
 } from '@mui/material';
 import { DirectionsBus, CheckCircle, ChevronLeft, Edit, Close } from '@mui/icons-material';
 import { AnimatePresence } from 'framer-motion';
@@ -25,8 +25,14 @@ import StepRoute from './steps/StepRoute';
 import StepSchedule from './steps/StepSchedule';
 import { DictionaryApi } from '../../api/dictionaries';
 
+const STEP0_KEYS = ['driverId', 'vehicleId'];
+const STEP1_KEYS = ['waypoints'];
+const STEP2_KEYS = ['scheduledDepartureTime', 'scheduledArrivalTime'];
+
 const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}, tripToEdit = null }) => {
     const [stepErrors, setStepErrors] = useState({});
+    const [saveLoading, setSaveLoading] = useState(false);
+    const [generalError, setGeneralError] = useState(null);
     const { drivers = [], vehicles = [] } = references;
 
     const form$ = useTripForm({ open, tripToEdit, onSuccess, onClose });
@@ -54,6 +60,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
 
     const handleNext = async (nextStep) => {
         setStepErrors({});
+        setGeneralError(null);
 
         if (activeStep === 0) {
             try {
@@ -67,9 +74,8 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             } catch (error) {
                 const serverErrors = error.response?.data?.validationErrors;
                 if (serverErrors) {
-                    const step0Keys = ['driverId', 'vehicleId'];
                     const step0Errors = Object.fromEntries(
-                        Object.entries(serverErrors).filter(([k]) => step0Keys.includes(k))
+                        Object.entries(serverErrors).filter(([k]) => STEP0_KEYS.includes(k))
                     );
                     if (Object.keys(step0Errors).length > 0) {
                         setStepErrors(step0Errors);
@@ -99,7 +105,6 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
             } catch (error) {
                 const serverErrors = error.response?.data?.validationErrors;
                 if (serverErrors) {
-                    const step1Keys = ['waypoints', 'scheduledDepartureTime', 'scheduledArrivalTime'];
                     const step1Errors = Object.fromEntries(
                         Object.entries(serverErrors).filter(([k]) =>
                             k === 'waypoints' || k.startsWith('waypoints[')
@@ -114,6 +119,42 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         }
 
         go(nextStep);
+    };
+
+    const handleSaveWithErrors = async () => {
+        setStepErrors({});
+        setGeneralError(null);
+        setSaveLoading(true);
+
+        try {
+            await handleSave();
+        } catch (error) {
+            const serverErrors = error.response?.data?.validationErrors;
+
+            if (serverErrors) {
+                const hasStep0 = Object.keys(serverErrors).some(k => STEP0_KEYS.includes(k));
+                const hasStep1 = Object.keys(serverErrors).some(k =>
+                    STEP1_KEYS.some(sk => k === sk || k.startsWith(sk + '['))
+                );
+                const hasStep2 = Object.keys(serverErrors).some(k => STEP2_KEYS.includes(k));
+
+                if (hasStep0) {
+                    setStepErrors(serverErrors);
+                    go(0);
+                } else if (hasStep1) {
+                    setStepErrors(serverErrors);
+                    go(1);
+                } else if (hasStep2) {
+                    setStepErrors(serverErrors);
+                } else {
+                    setGeneralError('Помилка валідації. Перевірте всі поля та спробуйте ще раз.');
+                }
+            } else {
+                setGeneralError('Не вдалося зберегти рейс. Спробуйте ще раз.');
+            }
+        } finally {
+            setSaveLoading(false);
+        }
     };
 
     return (
@@ -217,12 +258,22 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         segments={segments}
                                         drivers={drivers} vehicles={vehicles}
                                         mainColor={mainColor}
+                                        errors={stepErrors}
+                                        onClearError={(field) => setStepErrors(prev => ({ ...prev, [field]: null }))}
                                     />
                                 )}
                             </AnimatePresence>
                         </>
                     )}
                 </DialogContent>
+
+                {generalError && (
+                    <Box sx={{ px: 2.5, pb: 0, pt: 1 }}>
+                        <Alert severity="error" onClose={() => setGeneralError(null)}>
+                            {generalError}
+                        </Alert>
+                    </Box>
+                )}
 
                 <DialogActions sx={{ p: 2.5, borderTop: '1px solid #f0f0f0', gap: 1 }}>
                     <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
@@ -237,8 +288,12 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                     ) : (
                         <Button
                             variant="contained"
-                            onClick={handleSave}
-                            startIcon={isEditMode ? <Edit /> : <CheckCircle />}
+                            onClick={handleSaveWithErrors}
+                            disabled={saveLoading}
+                            startIcon={saveLoading
+                                ? <CircularProgress size={16} color="inherit" />
+                                : isEditMode ? <Edit /> : <CheckCircle />
+                            }
                             sx={{ px: 3, bgcolor: mainColor }}
                         >
                             {isEditMode ? 'Зберегти зміни' : 'Створити рейс'}

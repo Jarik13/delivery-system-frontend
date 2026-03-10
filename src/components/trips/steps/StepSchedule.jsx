@@ -4,7 +4,7 @@ import { AccessTime } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { stepVariants } from '../utils';
 
-const StepSchedule = ({ direction, form, setForm, segments, drivers, vehicles, mainColor }) => {
+const StepSchedule = ({ direction, form, setForm, segments, drivers, vehicles, mainColor, errors = {}, onClearError }) => {
     const driver = drivers.find(d => d.id === form.driverId);
     const vehicle = vehicles.find(v => v.id === form.vehicleId);
     const routeNames = segments.filter(s => s.cityName).map(s => s.cityName).join(' → ');
@@ -29,20 +29,34 @@ const StepSchedule = ({ direction, form, setForm, segments, drivers, vehicles, m
                 <Grid container spacing={2}>
                     <Grid item xs={6}>
                         <TextField
-                            label="Плановий час виїзду" type="datetime-local" fullWidth
+                            label="Плановий час виїзду"
+                            type="datetime-local"
+                            fullWidth
                             value={form.scheduledDeparture}
-                            onChange={(e) => setForm(f => ({ ...f, scheduledDeparture: e.target.value }))}
+                            onChange={(e) => {
+                                setForm(f => ({ ...f, scheduledDeparture: e.target.value }));
+                                onClearError?.('scheduledDepartureTime');
+                            }}
                             InputLabelProps={{ shrink: true }}
                             inputProps={{ min: new Date().toISOString().slice(0, 16) }}
+                            error={Boolean(errors.scheduledDepartureTime)}
+                            helperText={errors.scheduledDepartureTime || ''}
                         />
                     </Grid>
                     <Grid item xs={6}>
                         <TextField
-                            label="Очікуваний час прибуття" type="datetime-local" fullWidth
+                            label="Очікуваний час прибуття"
+                            type="datetime-local"
+                            fullWidth
                             value={form.scheduledArrival}
-                            onChange={(e) => setForm(f => ({ ...f, scheduledArrival: e.target.value }))}
+                            onChange={(e) => {
+                                setForm(f => ({ ...f, scheduledArrival: e.target.value }));
+                                onClearError?.('scheduledArrivalTime');
+                            }}
                             InputLabelProps={{ shrink: true }}
                             inputProps={{ min: form.scheduledDeparture || new Date().toISOString().slice(0, 16) }}
+                            error={Boolean(errors.scheduledArrivalTime)}
+                            helperText={errors.scheduledArrivalTime || ''}
                         />
                     </Grid>
                 </Grid>
@@ -55,7 +69,7 @@ const StepSchedule = ({ direction, form, setForm, segments, drivers, vehicles, m
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                             <Typography variant="body2" color="text.secondary">Водій:</Typography>
                             <Typography variant="body2" fontWeight={600}>
-                                {driver ? `${driver.lastName} ${driver.firstName}` : '—'}
+                                {driver ? `${driver.lastName} ${driver.firstName} ${driver.middleName}` : '—'}
                             </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

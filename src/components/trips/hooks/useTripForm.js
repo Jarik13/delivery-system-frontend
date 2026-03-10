@@ -241,7 +241,9 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
                 onSuccess?.('Рейс створено успішно!');
             }
             onClose();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            throw e;
+        }
     }, [form, segments, isEditMode, tripToEdit, onSuccess, onClose]);
 
     const go = useCallback((next) => {
