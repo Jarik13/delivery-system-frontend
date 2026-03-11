@@ -193,6 +193,12 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
         }
     };
 
+    const isBoxSuitable = (box, weight) => {
+        const w = parseFloat(weight) || 0;
+        if (w === 0) return true;
+        return box.maxWeight == null || w <= box.maxWeight;
+    };
+
     const steps = [{ label: 'Посилка', icon: 1 }, { label: 'Маршрут', icon: 2 }, { label: 'Вартість', icon: 3 }];
     const variants = { enter: (d) => ({ x: d > 0 ? 100 : -100, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d < 0 ? 100 : -100, opacity: 0 }) };
 
@@ -320,26 +326,45 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                             sx={{ mt: 2 }}
                                             options={boxVariants}
                                             getOptionLabel={(o) => `${o.boxTypeName} ${o.name} - ${o.price} ₴`}
+                                            getOptionKey={(o) => o.id}
+                                            getOptionDisabled={(o) => !isBoxSuitable(o, formData.parcel.actualWeight)}
                                             onChange={(_, v) => {
                                                 setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id ?? null } });
                                                 setFieldErrors(prev => ({ ...prev, 'box.boxVariantId': null }));
                                             }}
-                                            renderOption={(props, o) => (
-                                                <Box component="li" {...props}>
-                                                    <Box>
-                                                        <Typography variant="body2" fontWeight={600}>
-                                                            {o.boxTypeName} {o.name} — {o.price} ₴
-                                                        </Typography>
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {o.width} × {o.length} × {o.height} см
-                                                        </Typography>
+                                            renderOption={(props, o) => {
+                                                const suitable = isBoxSuitable(o, formData.parcel.actualWeight);
+                                                return (
+                                                    <Box component="li" {...props}>
+                                                        <Box sx={{ width: '100%' }}>
+                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <Typography variant="body2" fontWeight={600}
+                                                                    color={suitable ? 'text.primary' : 'text.disabled'}>
+                                                                    {o.boxTypeName} {o.name} — {o.price} ₴
+                                                                </Typography>
+                                                                {!suitable && (
+                                                                    <Typography variant="caption" color="error" sx={{ ml: 1, fontSize: 10 }}>
+                                                                        макс. {o.maxWeight} кг
+                                                                    </Typography>
+                                                                )}
+                                                            </Box>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {o.width} × {o.length} × {o.height} см
+                                                                {o.maxWeight != null ? ` · до ${o.maxWeight} кг` : ''}
+                                                            </Typography>
+                                                        </Box>
                                                     </Box>
-                                                </Box>
-                                            )}
+                                                );
+                                            }}
                                             renderInput={(p) => (
                                                 <TextField {...p} label="Розмір коробки" size="small"
                                                     error={!!fieldErrors['box.boxVariantId']}
-                                                    helperText={fieldErrors['box.boxVariantId']}
+                                                    helperText={
+                                                        fieldErrors['box.boxVariantId'] ||
+                                                        (parseFloat(formData.parcel.actualWeight) > 0
+                                                            ? 'Недоступні коробки перевищені за допустимою вагою'
+                                                            : 'Введіть вагу для фільтрації підходящих коробок')
+                                                    }
                                                 />
                                             )}
                                         />
