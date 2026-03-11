@@ -1,7 +1,8 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import GenericTable from './GenericTable';
-import { MENU_GROUPS, ROLES } from '../constants/dictionaries';
+import { MENU_GROUPS } from '../constants/dictionaries';
+import { ROLES, E, D, ED, EDC, C, A, EDCA } from '../constants/roles';
 import BranchesPage from '../pages/BranchesPage';
 import PostomatsPage from '../pages/PostomatsPage';
 import RoutesPage from '../pages/RoutesPage';
@@ -20,13 +21,19 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     const { auth } = useAuth();
     if (!auth) return <Navigate to="/login" replace />;
     if (allowedRoles && !allowedRoles.includes(auth.role))
-        return <Navigate to="/" replace />;
+        return <Navigate to={getDefaultPath(auth.role)} replace />;
     return children;
 };
 
-const ALL_EXCEPT_SUPER_ADMIN = [ROLES.EMPLOYEE, ROLES.DRIVER, ROLES.COURIER, ROLES.ADMIN];
-const ED = [ROLES.EMPLOYEE, ROLES.DRIVER];
-const CDA = [ROLES.COURIER, ROLES.DRIVER];
+
+const getDefaultPath = (role) => {
+    switch (role) {
+        case C: return '/route-lists';
+        case D: return '/trips';
+        case A: return '/box-types';
+        default: return '/shipments';
+    }
+};
 
 const AppRoutes = () => {
     const { auth } = useAuth();
@@ -35,7 +42,7 @@ const AppRoutes = () => {
         <Routes>
             <Route path="/login" element={
                 auth
-                    ? <Navigate to={auth.role === ROLES.SUPER_ADMIN ? '/admin' : '/'} replace />
+                    ? <Navigate to={auth.role === ROLES.SUPER_ADMIN ? '/admin' : getDefaultPath(auth.role)} replace />
                     : <LoginPage />
             } />
 
@@ -46,23 +53,23 @@ const AppRoutes = () => {
             } />
 
             <Route path="/" element={
-                <ProtectedRoute allowedRoles={ALL_EXCEPT_SUPER_ADMIN}>
-                    <Navigate to="/shipments" replace />
+                <ProtectedRoute allowedRoles={EDCA}>
+                    <Navigate to={auth ? getDefaultPath(auth.role) : '/login'} replace />
                 </ProtectedRoute>
             } />
 
-            <Route path="/branches" element={<ProtectedRoute allowedRoles={ED}><BranchesPage /></ProtectedRoute>} />
-            <Route path="/postomats" element={<ProtectedRoute allowedRoles={ED}><PostomatsPage /></ProtectedRoute>} />
-            <Route path="/routes" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><RoutesPage /></ProtectedRoute>} />
-            <Route path="/parcels" element={<ProtectedRoute allowedRoles={ED}><ParcelsPage /></ProtectedRoute>} />
-            <Route path="/shipments" element={<ProtectedRoute allowedRoles={ED}><ShipmentsPage /></ProtectedRoute>} />
-            <Route path="/payments" element={<ProtectedRoute allowedRoles={ED}><PaymentsPage /></ProtectedRoute>} />
-            <Route path="/returns" element={<ProtectedRoute allowedRoles={ED}><ReturnsPage /></ProtectedRoute>} />
-            <Route path="/trips" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><TripsPage /></ProtectedRoute>} />
-            <Route path="/waybills" element={<ProtectedRoute allowedRoles={[ROLES.DRIVER]}><WaybillsPage /></ProtectedRoute>} />
-            <Route path="/route-lists" element={<ProtectedRoute allowedRoles={CDA}><RouteListsPage /></ProtectedRoute>} />
+            <Route path="/shipments" element={<ProtectedRoute allowedRoles={E}><ShipmentsPage /></ProtectedRoute>} />
+            <Route path="/parcels" element={<ProtectedRoute allowedRoles={E}><ParcelsPage /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute allowedRoles={E}><PaymentsPage /></ProtectedRoute>} />
+            <Route path="/returns" element={<ProtectedRoute allowedRoles={E}><ReturnsPage /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={E}><BranchesPage /></ProtectedRoute>} />
+            <Route path="/postomats" element={<ProtectedRoute allowedRoles={E}><PostomatsPage /></ProtectedRoute>} />
+            <Route path="/trips" element={<ProtectedRoute allowedRoles={ED}><TripsPage /></ProtectedRoute>} />
+            <Route path="/waybills" element={<ProtectedRoute allowedRoles={ED}><WaybillsPage /></ProtectedRoute>} />
+            <Route path="/route-lists" element={<ProtectedRoute allowedRoles={EDC}><RouteListsPage /></ProtectedRoute>} />
+            <Route path="/routes" element={<ProtectedRoute allowedRoles={D}><RoutesPage /></ProtectedRoute>} />
 
-            {MENU_GROUPS.flatMap(group => group.items).map((item) => (
+            {MENU_GROUPS.flatMap(group => group.items).map((item) =>
                 !item.isCustomPage && (
                     <Route
                         key={item.path}
@@ -78,7 +85,7 @@ const AppRoutes = () => {
                         }
                     />
                 )
-            ))}
+            )}
 
             <Route path="*" element={<h2>Сторінку не знайдено</h2>} />
         </Routes>
