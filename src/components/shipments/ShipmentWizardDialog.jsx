@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Dialog, DialogContent, DialogActions, TextField, Box,
     Typography, Button, Stepper, Step, StepLabel, Grid, Autocomplete,
@@ -44,6 +44,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
     const [direction, setDirection] = useState(0);
     const [fieldErrors, setFieldErrors] = useState({});
     const [formData, setFormData] = useState(initialFormData);
+    const listboxRef = useRef(null);
 
     useEffect(() => {
         if (!open) {
@@ -196,8 +197,31 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
     const isBoxSuitable = (box, weight) => {
         const w = parseFloat(weight) || 0;
         if (w === 0) return true;
-        return box.maxWeight == null || w <= box.maxWeight;
+        const maxW = parseFloat(box.maxWeight);
+        return isNaN(maxW) || w <= maxW;
     };
+
+    const getOptimalBoxId = (weight) => {
+        const w = parseFloat(weight) || 0;
+        if (w === 0) return null;
+        const suitable = boxVariants.filter(b => isBoxSuitable(b, weight) && b.maxWeight != null);
+        if (suitable.length === 0) return null;
+        return suitable.reduce((best, b) =>
+            parseFloat(b.maxWeight) < parseFloat(best.maxWeight) ? b : best
+        ).id;
+    };
+
+    const handleBoxListboxOpen = useCallback(() => {
+        const optimalId = getOptimalBoxId(formData.parcel.actualWeight);
+        if (!optimalId) return;
+
+        setTimeout(() => {
+            const optimalEl = document.querySelector(`[data-optimal-box="true"]`);
+            if (optimalEl) {
+                optimalEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        }, 100);
+    }, [formData.parcel.actualWeight, boxVariants]);
 
     const steps = [{ label: 'Посилка', icon: 1 }, { label: 'Маршрут', icon: 2 }, { label: 'Вартість', icon: 3 }];
     const variants = { enter: (d) => ({ x: d > 0 ? 100 : -100, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d < 0 ? 100 : -100, opacity: 0 }) };
@@ -328,19 +352,40 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                             getOptionLabel={(o) => `${o.boxTypeName} ${o.name} - ${o.price} ₴`}
                                             getOptionKey={(o) => o.id}
                                             getOptionDisabled={(o) => !isBoxSuitable(o, formData.parcel.actualWeight)}
+                                            onOpen={handleBoxListboxOpen}
+                                            ListboxProps={{ ref: listboxRef }}
                                             onChange={(_, v) => {
                                                 setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id ?? null } });
                                                 setFieldErrors(prev => ({ ...prev, 'box.boxVariantId': null }));
                                             }}
-                                            renderOption={(props, o) => {
+                                            renderOption={({ key, ...props }, o) => {
                                                 const suitable = isBoxSuitable(o, formData.parcel.actualWeight);
+                                                const optimalId = getOptimalBoxId(formData.parcel.actualWeight);
+                                                const isOptimal = suitable && o.id === optimalId;
                                                 return (
-                                                    <Box component="li" {...props}>
+                                                    <li
+                                                        key={key}
+                                                        {...props}
+                                                        data-optimal-box={isOptimal ? "true" : undefined}
+                                                        style={{
+                                                            borderLeft: isOptimal ? '3px solid #4caf50' : '3px solid transparent',
+                                                            backgroundColor: isOptimal ? 'rgba(76, 175, 80, 0.1)' : undefined,
+                                                        }}
+                                                    >
                                                         <Box sx={{ width: '100%' }}>
                                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                 <Typography variant="body2" fontWeight={600}
-                                                                    color={suitable ? 'text.primary' : 'text.disabled'}>
+                                                                    color={suitable ? (isOptimal ? '#2e7d32' : 'text.primary') : 'text.disabled'}>
                                                                     {o.boxTypeName} {o.name} — {o.price} ₴
+                                                                    {isOptimal && (
+                                                                        <Chip label="Оптимально" size="small"
+                                                                            sx={{
+                                                                                ml: 1, height: 18, fontSize: 10, fontWeight: 800,
+                                                                                bgcolor: '#4caf50', color: 'white',
+                                                                                '& .MuiChip-label': { px: 0.75 }
+                                                                            }}
+                                                                        />
+                                                                    )}
                                                                 </Typography>
                                                                 {!suitable && (
                                                                     <Typography variant="caption" color="error" sx={{ ml: 1, fontSize: 10 }}>
@@ -353,7 +398,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                                 {o.maxWeight != null ? ` · до ${o.maxWeight} кг` : ''}
                                                             </Typography>
                                                         </Box>
-                                                    </Box>
+                                                    </li>
                                                 );
                                             }}
                                             renderInput={(p) => (
