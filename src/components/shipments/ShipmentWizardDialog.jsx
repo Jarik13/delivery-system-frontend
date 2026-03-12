@@ -389,13 +389,17 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                                 </Typography>
                                                                 {!suitable && (
                                                                     <Typography variant="caption" color="error" sx={{ ml: 1, fontSize: 10 }}>
-                                                                        макс. {o.maxWeight} кг
+                                                                        {o.weightCategoryName ?? `макс. ${o.maxWeight} кг`}
                                                                     </Typography>
                                                                 )}
                                                             </Box>
                                                             <Typography variant="caption" color="text.secondary">
                                                                 {o.width} × {o.length} × {o.height} см
-                                                                {o.maxWeight != null ? ` · до ${o.maxWeight} кг` : ''}
+                                                                {o.weightCategoryName
+                                                                    ? ` · ${o.weightCategoryName}`
+                                                                    : o.maxWeight != null
+                                                                        ? ` · до ${o.maxWeight} кг`
+                                                                        : ''}
                                                             </Typography>
                                                         </Box>
                                                     </li>
