@@ -13,7 +13,7 @@ const RouteListsTable = ({
     highlightId,
     highlightRowRef,
 }) => {
-    const allSelected  = items.length > 0 && selected.length === items.length;
+    const allSelected = items.length > 0 && selected.length === items.length;
     const someSelected = selected.length > 0 && selected.length < items.length;
 
     return (
@@ -48,6 +48,7 @@ const RouteListsTable = ({
                                 <TableCell sx={{ fontWeight: 700 }}>Прогрес</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Загальна вага</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Дата формування</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Плановий виїзд</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>

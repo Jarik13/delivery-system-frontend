@@ -6,6 +6,7 @@ import {
 import {
     ListAlt, ExpandMore, ExpandLess,
     Person, Scale, CalendarToday,
+    Schedule,
 } from '@mui/icons-material';
 import RouteSheetPanel from './RouteSheetPanel';
 import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
@@ -86,7 +87,7 @@ const RouteListRow = ({
                 </TableCell>
 
                 <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                         <Person sx={{ fontSize: 14, color: '#999' }} />
                         <Typography variant="body2" fontWeight={500}>
                             {item.courierFullName || 'Не призначено'}
@@ -128,7 +129,7 @@ const RouteListRow = ({
                 </TableCell>
 
                 <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                         <Scale sx={{ fontSize: 14, color: '#999' }} />
                         <Typography variant="body2">
                             {item.totalWeight != null ? `${item.totalWeight} кг` : '—'}
@@ -137,11 +138,25 @@ const RouteListRow = ({
                 </TableCell>
 
                 <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                         <CalendarToday sx={{ fontSize: 14, color: '#999' }} />
                         <Typography variant="body2" color="text.secondary">
                             {item.createdAt
                                 ? new Date(item.createdAt).toLocaleString('uk-UA', {
+                                    day: '2-digit', month: '2-digit', year: 'numeric',
+                                    hour: '2-digit', minute: '2-digit',
+                                })
+                                : '—'}
+                        </Typography>
+                    </Box>
+                </TableCell>
+
+                <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+                        <Schedule sx={{ fontSize: 14, color: '#999' }} />
+                        <Typography variant="body2" color="text.secondary">
+                            {item.plannedDepartureTime
+                                ? new Date(item.plannedDepartureTime).toLocaleString('uk-UA', {
                                     day: '2-digit', month: '2-digit', year: 'numeric',
                                     hour: '2-digit', minute: '2-digit',
                                 })

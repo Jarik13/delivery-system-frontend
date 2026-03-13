@@ -7,7 +7,7 @@ import RouteSheetItemRow from './RouteSheetItemRow';
 
 const RouteSheetPanel = ({ open, shipments = [], mainColor }) => (
     <TableRow>
-        <TableCell colSpan={8} sx={{ p: 0, borderBottom: 'none' }}>
+        <TableCell colSpan={9} sx={{ p: 0, borderBottom: 'none' }}>
             <Collapse in={open} timeout="auto" unmountOnExit>
                 <Box sx={{
                     bgcolor: alpha(mainColor, 0.02),
