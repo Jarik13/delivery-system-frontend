@@ -9,6 +9,7 @@ import DataFilters from '../components/DataFilters';
 import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import RouteListsTable from '../components/route-lists/RouteListsTable';
+import RouteListWizardDialog from '../components/route-lists/RouteListWizardDialog';
 
 const ARCHIVE_ROUTE_LIST_STATUSES = ['Завершено', 'Скасовано'];
 
@@ -285,6 +286,14 @@ const RouteListsPage = () => {
                 onPageChange={(e, p) => setPage(p)}
                 onRowsPerPageChange={(size) => { setRowsPerPage(size); setPage(0); }}
                 label="Листів:"
+            />
+
+            <RouteListWizardDialog
+                open={openWizard}
+                onClose={() => setOpenWizard(false)}
+                onSuccess={() => { setOpenWizard(false); load(); }}
+                mainColor={mainColor}
+                references={references}
             />
 
             <Snackbar
