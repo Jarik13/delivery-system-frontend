@@ -18,6 +18,22 @@ const extractCityName = (address, fallback) => {
         || fallback;
 };
 
+const buildSegsFromChain = async (chain) => {
+    if (chain.length === 0) return initialSegments();
+    const cityNames = [
+        chain[0].originCityName,
+        ...chain.map(r => r.destinationCityName),
+    ];
+    return Promise.all(cityNames.map(async (name) => {
+        const coords = name ? await fetchCoordinates(name) : null;
+        return makeSegment({
+            cityName: name || '',
+            lat: coords?.lat ?? null,
+            lng: coords?.lng ?? null,
+        });
+    }));
+};
+
 const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     const isEditMode = Boolean(tripToEdit);
 
@@ -36,6 +52,41 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
     const markerRefs = useRef({});
     const fsMarkerRefs = useRef({});
 
+    const [routeSearchQuery, setRouteSearchQuery] = useState('');
+    const [availableRoutes, setAvailableRoutes] = useState([]);
+    const [routesLoading, setRoutesLoading] = useState(false);
+    const [routeChain, setRouteChain] = useState([]);
+    const [selectedRouteIds, setSelectedRouteIds] = useState([]);
+
+    useEffect(() => {
+        if (!open || activeStep !== 1) return;
+        const t = setTimeout(async () => {
+            setRoutesLoading(true);
+            try {
+                const lastCity = routeChain.length > 0
+                    ? routeChain[routeChain.length - 1].destinationCityName
+                    : null;
+
+                const params = lastCity
+                    ? {
+                        originCityName: lastCity,
+                        ...(routeSearchQuery ? { destinationCityName: routeSearchQuery } : {}),
+                    }
+                    : {
+                        ...(routeSearchQuery ? { originCityName: routeSearchQuery } : {}),
+                    };
+
+                const res = await DictionaryApi.getAll('routes', 0, 100, params);
+                setAvailableRoutes(res.data.content || []);
+            } catch (e) {
+                console.error('Помилка завантаження маршрутів:', e);
+            } finally {
+                setRoutesLoading(false);
+            }
+        }, 300);
+        return () => clearTimeout(t);
+    }, [open, activeStep, routeSearchQuery, routeChain]);
+
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -49,6 +100,10 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
             setMapFullscreen(false);
             setSegments(initialSegments());
             setLoadingTrip(false);
+            setRouteChain([]);
+            setSelectedRouteIds([]);
+            setRouteSearchQuery('');
+            setAvailableRoutes([]);
             return;
         }
 
@@ -155,7 +210,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
 
     const handleMarkerDragEnd = useCallback(async (segId, latlng) => {
         setDraggingSegId(null);
-
         updateSeg(segId, {
             lat: latlng.lat,
             lng: latlng.lng,
@@ -164,7 +218,6 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         });
 
         const seg = segmentsRef.current.find(s => s.id === segId);
-
         try {
             const params = new URLSearchParams({
                 lat: latlng.lat, lon: latlng.lng, format: 'json', 'accept-language': 'uk'
@@ -175,24 +228,18 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
                 data.address,
                 `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`
             );
-
             if (seg?.cityId) {
                 try {
                     const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
                     const found = citiesRes.data.content?.[0];
-                    updateSeg(segId, {
-                        cityId: found?.id || null,
-                        cityName: found?.name || cityName,
-                    });
+                    updateSeg(segId, { cityId: found?.id || null, cityName: found?.name || cityName });
                 } catch {
                     updateSeg(segId, { cityId: null, cityName });
                 }
             } else {
                 updateSeg(segId, { cityName });
             }
-        } catch {
-
-        }
+        } catch { }
     }, [updateSeg]);
 
     const handleMapClick = useCallback(async (latlng) => {
@@ -207,10 +254,8 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
                 data.address,
                 `${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`
             );
-
             const citiesRes = await DictionaryApi.getAll('cities', 0, 5, { name: cityName });
             const found = citiesRes.data.content?.[0];
-
             setSegments(prev => [...prev, makeSegment({
                 cityId: found?.id || null,
                 cityName: found?.name || cityName,
@@ -224,14 +269,48 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         }
     }, [mapSelectMode]);
 
+    const addRouteToChain = useCallback(async (route) => {
+        const newChain = [...routeChain, route];
+        setRouteChain(newChain);
+        setSelectedRouteIds(newChain.map(r => r.id));
+        const segs = await buildSegsFromChain(newChain);
+        setSegments(segs);
+        setMapSelectMode(false);
+    }, [routeChain]);
+
+    const removeRouteFromChain = useCallback(async (idx) => {
+        const newChain = routeChain.slice(0, idx);
+        setRouteChain(newChain);
+        setSelectedRouteIds(newChain.map(r => r.id));
+        const segs = await buildSegsFromChain(newChain);
+        setSegments(segs);
+    }, [routeChain]);
+
+    const clearRouteChain = useCallback(() => {
+        setRouteChain([]);
+        setSelectedRouteIds([]);
+        setSegments(initialSegments());
+    }, []);
+
     const handleSave = useCallback(async () => {
+        const waypoints = routeChain.length > 0
+            ? [
+                { cityId: routeChain[0].originCityId, sequenceNumber: 1 },
+                ...routeChain.map((r, idx) => ({
+                    cityId: r.destinationCityId,
+                    sequenceNumber: idx + 2,
+                })),
+            ]
+            : segments.map((seg, idx) => ({ cityId: seg.cityId, sequenceNumber: idx + 1 }));
+
         const payload = {
             driverId: form.driverId,
             vehicleId: form.vehicleId,
             scheduledDepartureTime: form.scheduledDeparture,
             scheduledArrivalTime: form.scheduledArrival,
-            waypoints: segments.map((seg, idx) => ({ cityId: seg.cityId, sequenceNumber: idx + 1 })),
+            waypoints,
         };
+
         try {
             if (isEditMode) {
                 await DictionaryApi.update('trips', tripToEdit.id, payload);
@@ -244,7 +323,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         } catch (e) {
             throw e;
         }
-    }, [form, segments, isEditMode, tripToEdit, onSuccess, onClose]);
+    }, [form, segments, routeChain, isEditMode, tripToEdit, onSuccess, onClose]);
 
     const go = useCallback((next) => {
         setDirection(next > activeStep ? 1 : -1);
@@ -285,6 +364,10 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         handleMarkerDragStart,
         handleMarkerDragEnd,
         handleSave,
+        routeSearchQuery, setRouteSearchQuery,
+        availableRoutes, routesLoading,
+        routeChain, selectedRouteIds,
+        addRouteToChain, removeRouteFromChain, clearRouteChain,
     };
 };
 
