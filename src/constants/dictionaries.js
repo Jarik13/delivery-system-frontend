@@ -11,8 +11,6 @@ export const MENU_GROUPS = [
             { label: 'Посилки', path: 'parcels', isCustomPage: true, endpoint: 'parcels', roles: E },
             { label: 'Платежі', path: 'payments', isCustomPage: true, endpoint: 'payments', roles: E },
             { label: 'Повернення', path: 'returns', isCustomPage: true, endpoint: 'returns', roles: E },
-            { label: 'Відділення', path: 'branches', isCustomPage: true, endpoint: 'branches', roles: E },
-            { label: 'Поштомати', path: 'postomats', isCustomPage: true, endpoint: 'postomats', roles: E },
             { label: 'Рейси', path: 'trips', isCustomPage: true, endpoint: 'trips', roles: ED },
             { label: 'Накладні', path: 'waybills', isCustomPage: true, endpoint: 'waybills', roles: ED },
             { label: 'Маршрутні листи', path: 'route-lists', isCustomPage: true, endpoint: 'route-lists', roles: EDC },
