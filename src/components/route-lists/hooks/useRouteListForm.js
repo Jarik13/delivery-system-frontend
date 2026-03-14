@@ -14,14 +14,12 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
     const [form, setForm]                     = useState(EMPTY_FORM);
     const [loadingData, setLoadingData]       = useState(false);
 
-    // Shipments
     const [availableShipments, setAvailableShipments] = useState([]);
     const [loadingShipments, setLoadingShipments]     = useState(false);
     const [selectedShipmentIds, setSelectedShipmentIds] = useState(new Set());
     const [shipmentSearch, setShipmentSearch] = useState('');
     const [streetFilter, setStreetFilter]     = useState('');
 
-    // ── Reset on open ────────────────────────────────────────────────────────
     useEffect(() => {
         if (!open) return;
         setActiveStep(0);
@@ -49,7 +47,6 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
         }
     }, [open, isEditMode, routeListToEdit?.id]);
 
-    // ── Load available shipments when step 1 is reached ─────────────────────
     useEffect(() => {
         if (activeStep !== 1) return;
         setLoadingShipments(true);
@@ -59,13 +56,11 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
             .finally(() => setLoadingShipments(false));
     }, [activeStep]);
 
-    // ── Navigation ───────────────────────────────────────────────────────────
     const go = useCallback((next) => {
         setDirection(next > activeStep ? 1 : -1);
         setActiveStep(next);
     }, [activeStep]);
 
-    // ── Shipment selection ───────────────────────────────────────────────────
     const toggleShipment = useCallback((id) => {
         setSelectedShipmentIds(prev => {
             const next = new Set(prev);
@@ -84,7 +79,6 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
         });
     }, []);
 
-    // ── Filtered shipments ───────────────────────────────────────────────────
     const filteredShipments = availableShipments.filter(s => {
         const q = shipmentSearch.toLowerCase();
         const matchSearch = !q
@@ -95,7 +89,6 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
         return matchSearch && matchStreet;
     });
 
-    // Sort: Express first, then by address
     const sortedShipments = [...filteredShipments].sort((a, b) => {
         if (a.isExpress && !b.isExpress) return -1;
         if (!a.isExpress && b.isExpress)  return 1;
@@ -106,7 +99,6 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
     const totalWeight    = selectedShipments.reduce((acc, s) => acc + (s.weight ?? 0), 0);
     const totalCount     = selectedShipments.length;
 
-    // ── Save ─────────────────────────────────────────────────────────────────
     const handleSave = useCallback(async () => {
         const payload = {
             courierId:            form.courierId,

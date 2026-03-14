@@ -105,7 +105,6 @@ const RouteListWizardDialog = ({
             maxWidth="md"
             PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}
         >
-            {/* Header */}
             <Box sx={{
                 p: 2.5,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -138,7 +137,6 @@ const RouteListWizardDialog = ({
                 </IconButton>
             </Box>
 
-            {/* Content */}
             <DialogContent sx={{ minHeight: 500, pt: 3, px: 3 }}>
                 {loadingData ? (
                     <Box sx={{
@@ -204,7 +202,6 @@ const RouteListWizardDialog = ({
                 )}
             </DialogContent>
 
-            {/* General error */}
             {generalError && (
                 <Box sx={{ px: 2.5, pb: 0, pt: 1 }}>
                     <Alert severity="error" onClose={() => setGeneralError(null)}>
@@ -213,7 +210,6 @@ const RouteListWizardDialog = ({
                 </Box>
             )}
 
-            {/* Actions */}
             <DialogActions sx={{ p: 2.5, borderTop: '1px solid #f0f0f0', gap: 1 }}>
                 <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
                 <Box sx={{ flexGrow: 1 }} />
