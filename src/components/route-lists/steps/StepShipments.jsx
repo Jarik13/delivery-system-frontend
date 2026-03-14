@@ -9,9 +9,9 @@ import { motion } from 'framer-motion';
 import { MAX_WEIGHT, MAX_SHIPMENTS } from '../utils';
 
 const variants = {
-    enter:  (d) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
+    enter: (d) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit:   (d) => ({ x: d > 0 ? -60 : 60, opacity: 0 }),
+    exit: (d) => ({ x: d > 0 ? -60 : 60, opacity: 0 }),
 };
 
 function CapacityBar({ value, max, color, label, unit }) {
@@ -52,24 +52,14 @@ export default function StepShipments({
     toggleShipment,
     toggleAll,
     shipmentSearch, setShipmentSearch,
-    streetFilter,   setStreetFilter,
+    streetFilter, setStreetFilter,
     errors,
 }) {
     const visibleIds = availableShipments.map(s => s.id);
-    const allChecked  = visibleIds.length > 0 && visibleIds.every(id => selectedShipmentIds.has(id));
+    const allChecked = visibleIds.length > 0 && visibleIds.every(id => selectedShipmentIds.has(id));
     const someChecked = visibleIds.some(id => selectedShipmentIds.has(id)) && !allChecked;
 
     const weightFull = totalWeight >= MAX_WEIGHT;
-    const countFull  = totalCount  >= MAX_SHIPMENTS;
-
-    const streets = useMemo(() => {
-        const set = new Set(
-            availableShipments
-                .map(s => s.deliveryAddress?.split(',')[0]?.trim())
-                .filter(Boolean)
-        );
-        return [...set].sort();
-    }, [availableShipments]);
 
     return (
         <motion.div
@@ -82,19 +72,16 @@ export default function StepShipments({
             transition={{ duration: 0.28, ease: 'easeInOut' }}
         >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-                {/* Capacity indicators */}
                 <Box sx={{
                     p: 2, borderRadius: 2.5,
                     border: `1px solid ${alpha(mainColor, 0.2)}`,
                     bgcolor: alpha(mainColor, 0.03),
                     display: 'flex', gap: 3,
                 }}>
-                    <CapacityBar value={totalWeight} max={MAX_WEIGHT}    color={mainColor} label="Вага"          unit="кг" />
-                    <CapacityBar value={totalCount}  max={MAX_SHIPMENTS} color={mainColor} label="Відправлення"  unit="шт" />
+                    <CapacityBar value={totalWeight} max={MAX_WEIGHT} color={mainColor} label="Вага" unit="кг" />
+                    <CapacityBar value={totalCount} max={MAX_SHIPMENTS} color={mainColor} label="Відправлення" unit="шт" />
                 </Box>
 
-                {/* Validation error */}
                 {errors?.shipmentIds && (
                     <Box sx={{
                         p: 1.5, borderRadius: 2,
@@ -105,7 +92,6 @@ export default function StepShipments({
                     </Box>
                 )}
 
-                {/* Filters row */}
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
                     <TextField
                         size="small"
@@ -137,7 +123,6 @@ export default function StepShipments({
                     />
                 </Box>
 
-                {/* Table */}
                 {loadingShipments ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                         <CircularProgress sx={{ color: mainColor }} />
@@ -176,9 +161,9 @@ export default function StepShipments({
                             </TableHead>
                             <TableBody>
                                 {availableShipments.map(s => {
-                                    const checked  = selectedShipmentIds.has(s.id);
+                                    const checked = selectedShipmentIds.has(s.id);
                                     const wouldOverWeight = !checked && (totalWeight + (s.weight ?? 0)) > MAX_WEIGHT;
-                                    const wouldOverCount  = !checked && totalCount >= MAX_SHIPMENTS;
+                                    const wouldOverCount = !checked && totalCount >= MAX_SHIPMENTS;
                                     const disabled = (wouldOverWeight || wouldOverCount) && !checked;
 
                                     return (

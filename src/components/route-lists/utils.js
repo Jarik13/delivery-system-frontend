@@ -5,7 +5,7 @@ export const STEPS = [
     { label: 'Відправлення', icon: Inventory2 },
 ];
 
-export const MAX_WEIGHT = 30;
+export const MAX_WEIGHT = 100;
 export const MAX_SHIPMENTS = 13;
 
 export const formatCourierName = (c) => {
