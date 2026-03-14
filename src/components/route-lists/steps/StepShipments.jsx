@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import {
     Box, Typography, TextField, InputAdornment, Chip, CircularProgress,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Checkbox, alpha, LinearProgress, Tooltip, IconButton,
+    Checkbox, alpha, LinearProgress,
 } from '@mui/material';
-import { Search, FilterList, FlashOn, Scale, Inventory2 } from '@mui/icons-material';
+import { Search, FilterList, FlashOn, Inventory2 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { MAX_WEIGHT, MAX_SHIPMENTS } from '../utils';
 
@@ -60,6 +60,17 @@ export default function StepShipments({
     const someChecked = visibleIds.some(id => selectedShipmentIds.has(id)) && !allChecked;
 
     const weightFull = totalWeight >= MAX_WEIGHT;
+
+    const headerBg = `color-mix(in srgb, ${mainColor} 8%, white)`;
+
+    const headCellSx = {
+        fontWeight: 700,
+        bgcolor: headerBg,
+        position: 'sticky',
+        top: 0,
+        zIndex: 2,
+        borderBottom: `2px solid ${alpha(mainColor, 0.2)}`,
+    };
 
     return (
         <motion.div
@@ -138,11 +149,16 @@ export default function StepShipments({
                         </Typography>
                     </Box>
                 ) : (
-                    <TableContainer sx={{ maxHeight: 320, borderRadius: 2.5, border: `1px solid ${alpha(mainColor, 0.15)}` }}>
+                    <TableContainer sx={{
+                        maxHeight: 320,
+                        borderRadius: 2.5,
+                        border: `1px solid ${alpha(mainColor, 0.15)}`,
+                        overflow: 'auto',
+                    }}>
                         <Table size="small" stickyHeader>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell padding="checkbox" sx={{ bgcolor: alpha(mainColor, 0.05) }}>
+                                    <TableCell padding="checkbox" sx={{ ...headCellSx }}>
                                         <Checkbox
                                             size="small"
                                             checked={allChecked}
@@ -152,11 +168,11 @@ export default function StepShipments({
                                             sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }}
                                         />
                                     </TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Трек-номер</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Отримувач</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Адреса</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }} align="right">Вага, кг</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>Тип</TableCell>
+                                    <TableCell sx={headCellSx}>Трек-номер</TableCell>
+                                    <TableCell sx={headCellSx}>Отримувач</TableCell>
+                                    <TableCell sx={headCellSx}>Адреса</TableCell>
+                                    <TableCell sx={headCellSx} align="right">Вага, кг</TableCell>
+                                    <TableCell sx={headCellSx}>Тип</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
