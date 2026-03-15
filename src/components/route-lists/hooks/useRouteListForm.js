@@ -9,16 +9,22 @@ const EMPTY_FORM = {
 export default function useRouteListForm({ open, routeListToEdit, onSuccess, onClose }) {
     const isEditMode = Boolean(routeListToEdit);
 
-    const [activeStep, setActiveStep]         = useState(0);
-    const [direction, setDirection]           = useState(1);
-    const [form, setForm]                     = useState(EMPTY_FORM);
-    const [loadingData, setLoadingData]       = useState(false);
+    const [activeStep, setActiveStep] = useState(0);
+    const [direction, setDirection] = useState(1);
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [loadingData, setLoadingData] = useState(false);
 
     const [availableShipments, setAvailableShipments] = useState([]);
-    const [loadingShipments, setLoadingShipments]     = useState(false);
+    const [loadingShipments, setLoadingShipments] = useState(false);
     const [selectedShipmentIds, setSelectedShipmentIds] = useState(new Set());
     const [shipmentSearch, setShipmentSearch] = useState('');
-    const [streetFilter, setStreetFilter]     = useState('');
+    const [streetFilter, setStreetFilter] = useState('');
+
+    const [errors, setErrors] = useState({});
+
+    const clearError = useCallback((field) => {
+        setErrors(prev => ({ ...prev, [field]: undefined }));
+    }, []);
 
     useEffect(() => {
         if (!open) return;
@@ -91,28 +97,36 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
 
     const sortedShipments = [...filteredShipments].sort((a, b) => {
         if (a.isExpress && !b.isExpress) return -1;
-        if (!a.isExpress && b.isExpress)  return 1;
+        if (!a.isExpress && b.isExpress) return 1;
         return (a.deliveryAddress ?? '').localeCompare(b.deliveryAddress ?? '');
     });
 
     const selectedShipments = availableShipments.filter(s => selectedShipmentIds.has(s.id));
-    const totalWeight    = selectedShipments.reduce((acc, s) => acc + (s.weight ?? 0), 0);
-    const totalCount     = selectedShipments.length;
+    const totalWeight = selectedShipments.reduce((acc, s) => acc + (s.weight ?? 0), 0);
+    const totalCount = selectedShipments.length;
 
     const handleSave = useCallback(async () => {
-        const payload = {
-            courierId:            form.courierId,
-            plannedDepartureTime: form.plannedDepartureTime,
-            shipmentIds:          [...selectedShipmentIds],
-        };
+        setErrors({});
+        try {
+            const payload = {
+                courierId: form.courierId,
+                plannedDepartureTime: form.plannedDepartureTime,
+                shipmentIds: [...selectedShipmentIds],
+            };
 
-        if (isEditMode) {
-            await DictionaryApi.update('route-lists', routeListToEdit.id, payload);
-        } else {
-            await DictionaryApi.create('route-lists', payload);
+            if (isEditMode) {
+                await DictionaryApi.update('route-lists', routeListToEdit.id, payload);
+            } else {
+                await DictionaryApi.create('route-lists', payload);
+            }
+            onSuccess?.();
+            onClose?.();
+        } catch (err) {
+            const validationErrors = err?.response?.data?.validationErrors;
+            if (validationErrors) {
+                setErrors(validationErrors);
+            }
         }
-        onSuccess?.();
-        onClose?.();
     }, [form, selectedShipmentIds, isEditMode, routeListToEdit, onSuccess, onClose]);
 
     return {
@@ -131,8 +145,10 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
         toggleAll,
 
         shipmentSearch, setShipmentSearch,
-        streetFilter,   setStreetFilter,
+        streetFilter, setStreetFilter,
 
+        errors,
+        onClearError: clearError,
         go,
         handleSave,
     };

@@ -12,6 +12,7 @@ import useRouteListForm from './hooks/useRouteListForm';
 import ColorlibStepIcon from './components/ColorlibStepIcon';
 import StepCourier from './steps/StepCourier';
 import StepShipments from './steps/StepShipments';
+import { DictionaryApi } from '../../api/dictionaries';
 
 const STEP0_KEYS = ['courierId', 'plannedDepartureTime'];
 const STEP1_KEYS = ['shipmentIds'];
@@ -26,6 +27,7 @@ const RouteListWizardDialog = ({
 }) => {
     const [stepErrors, setStepErrors] = useState({});
     const [saveLoading, setSaveLoading] = useState(false);
+    const [nextLoading, setNextLoading] = useState(false);
     const [generalError, setGeneralError] = useState(null);
 
     const { couriers = [] } = references;
@@ -50,16 +52,33 @@ const RouteListWizardDialog = ({
         handleSave,
     } = form$;
 
-    // ── Step validation ───────────────────────────────────────────────────────
     const handleNext = async (nextStep) => {
         setStepErrors({});
         setGeneralError(null);
 
         if (activeStep === 0) {
-            const errs = {};
-            if (!form.courierId)            errs.courierId            = 'Оберіть кур\'єра';
-            if (!form.plannedDepartureTime) errs.plannedDepartureTime = 'Вкажіть час виїзду';
-            if (Object.keys(errs).length) { setStepErrors(errs); return; }
+            setNextLoading(true);
+            try {
+                await DictionaryApi.create('route-lists', {
+                    courierId:            form.courierId ?? null,
+                    plannedDepartureTime: form.plannedDepartureTime ?? null,
+                    shipmentIds:          [],
+                });
+            } catch (error) {
+                const serverErrors = error.response?.data?.validationErrors;
+                if (serverErrors) {
+                    const step0Errors = Object.fromEntries(
+                        Object.entries(serverErrors).filter(([k]) => STEP0_KEYS.includes(k))
+                    );
+                    if (Object.keys(step0Errors).length > 0) {
+                        setStepErrors(step0Errors);
+                        setNextLoading(false);
+                        return;
+                    }
+                }
+            } finally {
+                setNextLoading(false);
+            }
         }
 
         go(nextStep);
@@ -69,13 +88,6 @@ const RouteListWizardDialog = ({
         setStepErrors({});
         setGeneralError(null);
         setSaveLoading(true);
-
-        // Final client-side check
-        if (totalCount === 0) {
-            setStepErrors({ shipmentIds: 'Додайте хоча б одне відправлення' });
-            setSaveLoading(false);
-            return;
-        }
 
         try {
             await handleSave();
@@ -87,7 +99,7 @@ const RouteListWizardDialog = ({
                     STEP1_KEYS.some(sk => k === sk || k.startsWith(sk + '['))
                 );
                 if (hasStep0) { setStepErrors(serverErrors); go(0); }
-                else if (hasStep1) { setStepErrors(serverErrors); go(1); }
+                else if (hasStep1) { setStepErrors(serverErrors); }
                 else setGeneralError('Помилка валідації. Перевірте всі поля та спробуйте ще раз.');
             } else {
                 setGeneralError('Не вдалося зберегти маршрутний лист. Спробуйте ще раз.');
@@ -152,7 +164,7 @@ const RouteListWizardDialog = ({
                 ) : (
                     <>
                         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-                            {STEPS.map((s, idx) => (
+                            {STEPS.map((s) => (
                                 <Step key={s.label}>
                                     <StepLabel
                                         StepIconComponent={(p) =>
@@ -222,6 +234,11 @@ const RouteListWizardDialog = ({
                     <Button
                         variant="contained"
                         onClick={() => handleNext(activeStep + 1)}
+                        disabled={nextLoading}
+                        startIcon={nextLoading
+                            ? <CircularProgress size={16} color="inherit" />
+                            : null
+                        }
                         sx={{ bgcolor: mainColor, px: 3 }}
                     >
                         Далі
