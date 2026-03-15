@@ -19,7 +19,8 @@ const RouteListCard = ({ routeList }) => {
 
     return (
         <Box sx={{
-            borderRadius: 3, overflow: 'hidden',
+            borderRadius: 3,
+            overflow: 'hidden',
             border: `1.5px solid ${alpha(statusColor, isActive ? 0.4 : 0.2)}`,
             bgcolor: 'background.paper',
             boxShadow: isActive
@@ -27,7 +28,7 @@ const RouteListCard = ({ routeList }) => {
                 : `0 2px 8px ${alpha('#000', 0.06)}`,
             display: 'flex',
             flexDirection: 'column',
-            height: '100%',
+            width: '100%',
         }}>
             <Box
                 onClick={() => setOpen(o => !o)}
@@ -37,7 +38,6 @@ const RouteListCard = ({ routeList }) => {
                         ? `linear-gradient(135deg, ${alpha(statusColor, 0.08)}, ${alpha(statusColor, 0.03)})`
                         : alpha('#000', 0.01),
                     userSelect: 'none',
-                    flexShrink: 0,
                 }}
             >
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>

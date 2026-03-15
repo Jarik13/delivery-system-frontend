@@ -10,14 +10,14 @@ import RouteListCard from '../components/courier/RouteListCard';
 const mainColor = '#e91e63';
 
 const TAB_STATUSES = {
-    active:  ['Сформовано', 'Видано кур\'єру', 'У процесі доставки'],
+    active: ['Сформовано', 'Видано кур\'єру', 'У процесі доставки'],
     archive: ['Завершено', 'Скасовано'],
 };
 
 const CourierPage = () => {
-    const [items, setItems]     = useState([]);
+    const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [tab, setTab]         = useState('active');
+    const [tab, setTab] = useState('active');
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
     const load = useCallback(async () => {
@@ -64,7 +64,7 @@ const CourierPage = () => {
 
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         {[
-                            { key: 'active',  label: 'Активні' },
+                            { key: 'active', label: 'Активні' },
                             { key: 'archive', label: 'Архів' },
                         ].map(t => (
                             <Box
@@ -105,13 +105,21 @@ const CourierPage = () => {
                         </Typography>
                     </Box>
                 ) : (
-                    <Grid container spacing={2}>
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: {
+                            xs: '1fr',
+                            sm: '1fr 1fr',
+                            md: '1fr 1fr 1fr',
+                        },
+                        gap: 2,
+                        width: '100%',
+                        alignItems: 'start',
+                    }}>
                         {items.map(r => (
-                            <Grid item key={r.id} xs={12} sm={6} md={4} lg={3}>
-                                <RouteListCard routeList={r} />
-                            </Grid>
+                            <RouteListCard key={r.id} routeList={r} />
                         ))}
-                    </Grid>
+                    </Box>
                 )}
             </Box>
 
