@@ -71,14 +71,33 @@ export default function StepShipments({
     };
 
     const grouped = useMemo(() => {
-        const map = new Map();
+        const byStreet = new Map();
         availableShipments.forEach(s => {
             const key = s.streetGroup || 'Інше';
-            if (!map.has(key)) map.set(key, []);
-            map.get(key).push(s);
+            if (!byStreet.has(key)) byStreet.set(key, []);
+            byStreet.get(key).push(s);
         });
 
-        const sorted = new Map(
+        const map = new Map();
+        byStreet.forEach((shipments, streetKey) => {
+            if (shipments.length === 1) {
+                const cityKey = streetKey.includes(' — ')
+                    ? streetKey.split(' — ')[0].trim()
+                    : streetKey.split(',')[0].trim();
+
+                const groupKey = streetKey.includes('Самовивіз')
+                    ? cityKey + ' — Самовивіз'
+                    : cityKey;
+
+                if (!map.has(groupKey)) map.set(groupKey, []);
+                map.get(groupKey).push(...shipments);
+            } else {
+                if (!map.has(streetKey)) map.set(streetKey, []);
+                map.get(streetKey).push(...shipments);
+            }
+        });
+
+        return new Map(
             [...map.entries()]
                 .sort(([a], [b]) => {
                     const aPickup = a.includes('Самовивіз');
@@ -96,8 +115,6 @@ export default function StepShipments({
                     }),
                 ])
         );
-
-        return sorted;
     }, [availableShipments]);
 
     const toggleGroupIds = (groupIds) => {
