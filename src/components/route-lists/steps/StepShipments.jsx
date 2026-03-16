@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 import {
     Box, Typography, TextField, InputAdornment, Chip, CircularProgress,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Checkbox, alpha, LinearProgress,
+    Checkbox, alpha, LinearProgress, Button,
 } from '@mui/material';
-import { Search, FilterList, FlashOn, Inventory2 } from '@mui/icons-material';
+import { Search, FilterList, FlashOn, Inventory2, LocationOn } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { MAX_WEIGHT, MAX_SHIPMENTS } from '../utils';
 
@@ -62,7 +62,6 @@ export default function StepShipments({
     const weightFull = totalWeight >= MAX_WEIGHT;
 
     const headerBg = `color-mix(in srgb, ${mainColor} 8%, white)`;
-
     const headCellSx = {
         fontWeight: 700,
         bgcolor: headerBg,
@@ -70,6 +69,46 @@ export default function StepShipments({
         top: 0,
         zIndex: 2,
         borderBottom: `2px solid ${alpha(mainColor, 0.2)}`,
+    };
+
+    const grouped = useMemo(() => {
+        const map = new Map();
+        availableShipments.forEach(s => {
+            const key = s.streetGroup || s.deliveryAddress?.split(',').slice(0, 2).join(',').trim() || 'Самовивіз з відділення';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(s);
+        });
+
+        map.forEach((arr, key) => {
+            map.set(key, [...arr].sort((a, b) => {
+                if (a.isExpress && !b.isExpress) return -1;
+                if (!a.isExpress && b.isExpress) return 1;
+                return 0;
+            }));
+        });
+        return map;
+    }, [availableShipments]);
+
+    const toggleGroup = (groupShipments) => {
+        const groupIds = groupShipments.map(s => s.id);
+        const allGroupSelected = groupIds.every(id => selectedShipmentIds.has(id));
+        toggleAll(allGroupSelected ? [] : groupIds);
+    };
+
+    const toggleGroupIds = (groupIds) => {
+        const allSelected = groupIds.every(id => selectedShipmentIds.has(id));
+        const next = new Set(selectedShipmentIds);
+        if (allSelected) {
+            groupIds.forEach(id => next.delete(id));
+        } else {
+            groupIds.forEach(id => {
+                const s = availableShipments.find(s => s.id === id);
+                const wouldOverWeight = !next.has(id) && (totalWeight + (s?.weight ?? 0)) > MAX_WEIGHT;
+                const wouldOverCount = !next.has(id) && next.size >= MAX_SHIPMENTS;
+                if (!wouldOverWeight && !wouldOverCount) next.add(id);
+            });
+        }
+        toggleAll([...next]);
     };
 
     return (
@@ -150,7 +189,7 @@ export default function StepShipments({
                     </Box>
                 ) : (
                     <TableContainer sx={{
-                        maxHeight: 320,
+                        maxHeight: 380,
                         borderRadius: 2.5,
                         border: `1px solid ${alpha(mainColor, 0.15)}`,
                         overflow: 'auto',
@@ -176,72 +215,107 @@ export default function StepShipments({
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {availableShipments.map(s => {
-                                    const checked = selectedShipmentIds.has(s.id);
-                                    const wouldOverWeight = !checked && (totalWeight + (s.weight ?? 0)) > MAX_WEIGHT;
-                                    const wouldOverCount = !checked && totalCount >= MAX_SHIPMENTS;
-                                    const disabled = (wouldOverWeight || wouldOverCount) && !checked;
+                                {[...grouped.entries()].map(([groupName, groupShipments]) => {
+                                    const groupIds = groupShipments.map(s => s.id);
+                                    const allGroupChecked = groupIds.every(id => selectedShipmentIds.has(id));
+                                    const someGroupChecked = groupIds.some(id => selectedShipmentIds.has(id)) && !allGroupChecked;
 
                                     return (
-                                        <TableRow
-                                            key={s.id}
-                                            hover={!disabled}
-                                            selected={checked}
-                                            onClick={() => !disabled && toggleShipment(s.id)}
-                                            sx={{
-                                                cursor: disabled ? 'not-allowed' : 'pointer',
-                                                opacity: disabled ? 0.45 : 1,
-                                                '&.Mui-selected': { bgcolor: alpha(mainColor, 0.07) },
-                                                '&.Mui-selected:hover': { bgcolor: alpha(mainColor, 0.11) },
-                                            }}
-                                        >
-                                            <TableCell padding="checkbox">
-                                                <Checkbox
-                                                    size="small"
-                                                    checked={checked}
-                                                    disabled={disabled}
-                                                    sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }}
-                                                />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontFamily="monospace" fontSize={12}>
-                                                    {s.trackingNumber}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" noWrap sx={{ maxWidth: 140 }}>
-                                                    {s.recipientName ?? '—'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 160 }}>
-                                                    {s.deliveryAddress ?? '—'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <Typography variant="body2" fontWeight={600}>
-                                                    {s.weight?.toFixed(2) ?? '—'}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                {s.isExpress ? (
-                                                    <Chip
-                                                        icon={<FlashOn sx={{ fontSize: '14px !important' }} />}
-                                                        label="Експрес"
+                                        <React.Fragment key={groupName}>
+                                            <TableRow sx={{ bgcolor: alpha(mainColor, 0.04) }}>
+                                                <TableCell padding="checkbox">
+                                                    <Checkbox
                                                         size="small"
-                                                        sx={{
-                                                            bgcolor: alpha('#ff9800', 0.1),
-                                                            color: '#e65100',
-                                                            border: `1px solid ${alpha('#ff9800', 0.3)}`,
-                                                            fontWeight: 600,
-                                                            height: 22,
-                                                        }}
+                                                        checked={allGroupChecked}
+                                                        indeterminate={someGroupChecked}
+                                                        onChange={() => toggleGroupIds(groupIds)}
+                                                        sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }}
                                                     />
-                                                ) : (
-                                                    <Typography variant="caption" color="text.disabled">Стандарт</Typography>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
+                                                </TableCell>
+                                                <TableCell colSpan={5}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                        <LocationOn sx={{ fontSize: 14, color: mainColor }} />
+                                                        <Typography variant="caption" fontWeight={700} color={mainColor}>
+                                                            {groupName}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>
+                                                            ({groupShipments.length} відправлень
+                                                            {' · '}
+                                                            {groupShipments.reduce((acc, s) => acc + (s.weight ?? 0), 0).toFixed(2)} кг)
+                                                        </Typography>
+                                                    </Box>
+                                                </TableCell>
+                                            </TableRow>
+
+                                            {groupShipments.map(s => {
+                                                const checked = selectedShipmentIds.has(s.id);
+                                                const wouldOverWeight = !checked && (totalWeight + (s.weight ?? 0)) > MAX_WEIGHT;
+                                                const wouldOverCount = !checked && totalCount >= MAX_SHIPMENTS;
+                                                const disabled = (wouldOverWeight || wouldOverCount) && !checked;
+
+                                                return (
+                                                    <TableRow
+                                                        key={s.id}
+                                                        hover={!disabled}
+                                                        selected={checked}
+                                                        onClick={() => !disabled && toggleShipment(s.id)}
+                                                        sx={{
+                                                            cursor: disabled ? 'not-allowed' : 'pointer',
+                                                            opacity: disabled ? 0.45 : 1,
+                                                            '&.Mui-selected': { bgcolor: alpha(mainColor, 0.07) },
+                                                            '&.Mui-selected:hover': { bgcolor: alpha(mainColor, 0.11) },
+                                                        }}
+                                                    >
+                                                        <TableCell padding="checkbox">
+                                                            <Checkbox
+                                                                size="small"
+                                                                checked={checked}
+                                                                disabled={disabled}
+                                                                sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" fontFamily="monospace" fontSize={12}>
+                                                                {s.trackingNumber}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" noWrap sx={{ maxWidth: 140 }}>
+                                                                {s.recipientName ?? '—'}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 160 }}>
+                                                                {s.deliveryAddress ?? '—'}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell align="right">
+                                                            <Typography variant="body2" fontWeight={600}>
+                                                                {s.weight?.toFixed(2) ?? '—'}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {s.isExpress ? (
+                                                                <Chip
+                                                                    icon={<FlashOn sx={{ fontSize: '14px !important' }} />}
+                                                                    label="Експрес"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        bgcolor: alpha('#ff9800', 0.1),
+                                                                        color: '#e65100',
+                                                                        border: `1px solid ${alpha('#ff9800', 0.3)}`,
+                                                                        fontWeight: 600,
+                                                                        height: 22,
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <Typography variant="caption" color="text.disabled">Стандарт</Typography>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </React.Fragment>
                                     );
                                 })}
                             </TableBody>
