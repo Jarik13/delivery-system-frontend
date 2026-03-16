@@ -106,27 +106,19 @@ export default function useRouteListForm({ open, routeListToEdit, onSuccess, onC
     const totalCount = selectedShipments.length;
 
     const handleSave = useCallback(async () => {
-        setErrors({});
-        try {
-            const payload = {
-                courierId: form.courierId,
-                plannedDepartureTime: form.plannedDepartureTime,
-                shipmentIds: [...selectedShipmentIds],
-            };
+        const payload = {
+            courierId: form.courierId,
+            plannedDepartureTime: form.plannedDepartureTime,
+            shipmentIds: [...selectedShipmentIds],
+        };
 
-            if (isEditMode) {
-                await DictionaryApi.update('route-lists', routeListToEdit.id, payload);
-            } else {
-                await DictionaryApi.create('route-lists', payload);
-            }
-            onSuccess?.();
-            onClose?.();
-        } catch (err) {
-            const validationErrors = err?.response?.data?.validationErrors;
-            if (validationErrors) {
-                setErrors(validationErrors);
-            }
+        if (isEditMode) {
+            await DictionaryApi.update('route-lists', routeListToEdit.id, payload);
+        } else {
+            await DictionaryApi.create('route-lists', payload);
         }
+        onSuccess?.();
+        onClose?.();
     }, [form, selectedShipmentIds, isEditMode, routeListToEdit, onSuccess, onClose]);
 
     return {

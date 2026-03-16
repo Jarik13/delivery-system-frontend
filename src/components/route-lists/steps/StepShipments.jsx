@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import {
     Box, Typography, TextField, InputAdornment, Chip, CircularProgress,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Checkbox, alpha, LinearProgress, Button,
+    Checkbox, alpha, LinearProgress,
 } from '@mui/material';
 import { Search, FilterList, FlashOn, Inventory2, LocationOn } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -58,7 +58,6 @@ export default function StepShipments({
     const visibleIds = availableShipments.map(s => s.id);
     const allChecked = visibleIds.length > 0 && visibleIds.every(id => selectedShipmentIds.has(id));
     const someChecked = visibleIds.some(id => selectedShipmentIds.has(id)) && !allChecked;
-
     const weightFull = totalWeight >= MAX_WEIGHT;
 
     const headerBg = `color-mix(in srgb, ${mainColor} 8%, white)`;
@@ -74,26 +73,32 @@ export default function StepShipments({
     const grouped = useMemo(() => {
         const map = new Map();
         availableShipments.forEach(s => {
-            const key = s.streetGroup || s.deliveryAddress?.split(',').slice(0, 2).join(',').trim() || 'Самовивіз з відділення';
+            const key = s.streetGroup || 'Інше';
             if (!map.has(key)) map.set(key, []);
             map.get(key).push(s);
         });
 
-        map.forEach((arr, key) => {
-            map.set(key, [...arr].sort((a, b) => {
-                if (a.isExpress && !b.isExpress) return -1;
-                if (!a.isExpress && b.isExpress) return 1;
-                return 0;
-            }));
-        });
-        return map;
-    }, [availableShipments]);
+        const sorted = new Map(
+            [...map.entries()]
+                .sort(([a], [b]) => {
+                    const aPickup = a.includes('Самовивіз');
+                    const bPickup = b.includes('Самовивіз');
+                    if (aPickup && !bPickup) return 1;
+                    if (!aPickup && bPickup) return -1;
+                    return a.localeCompare(b, 'uk');
+                })
+                .map(([key, arr]) => [
+                    key,
+                    [...arr].sort((a, b) => {
+                        if (a.isExpress && !b.isExpress) return -1;
+                        if (!a.isExpress && b.isExpress) return 1;
+                        return 0;
+                    }),
+                ])
+        );
 
-    const toggleGroup = (groupShipments) => {
-        const groupIds = groupShipments.map(s => s.id);
-        const allGroupSelected = groupIds.every(id => selectedShipmentIds.has(id));
-        toggleAll(allGroupSelected ? [] : groupIds);
-    };
+        return sorted;
+    }, [availableShipments]);
 
     const toggleGroupIds = (groupIds) => {
         const allSelected = groupIds.every(id => selectedShipmentIds.has(id));
@@ -219,10 +224,15 @@ export default function StepShipments({
                                     const groupIds = groupShipments.map(s => s.id);
                                     const allGroupChecked = groupIds.every(id => selectedShipmentIds.has(id));
                                     const someGroupChecked = groupIds.some(id => selectedShipmentIds.has(id)) && !allGroupChecked;
+                                    const isPickup = groupName.includes('Самовивіз');
 
                                     return (
                                         <React.Fragment key={groupName}>
-                                            <TableRow sx={{ bgcolor: alpha(mainColor, 0.04) }}>
+                                            <TableRow sx={{
+                                                bgcolor: isPickup
+                                                    ? alpha('#607d8b', 0.06)
+                                                    : alpha(mainColor, 0.04),
+                                            }}>
                                                 <TableCell padding="checkbox">
                                                     <Checkbox
                                                         size="small"
@@ -234,14 +244,23 @@ export default function StepShipments({
                                                 </TableCell>
                                                 <TableCell colSpan={5}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                        <LocationOn sx={{ fontSize: 14, color: mainColor }} />
-                                                        <Typography variant="caption" fontWeight={700} color={mainColor}>
+                                                        <LocationOn sx={{
+                                                            fontSize: 14,
+                                                            color: isPickup ? '#607d8b' : mainColor,
+                                                        }} />
+                                                        <Typography
+                                                            variant="caption"
+                                                            fontWeight={700}
+                                                            color={isPickup ? '#546e7a' : mainColor}
+                                                        >
                                                             {groupName}
                                                         </Typography>
                                                         <Typography variant="caption" color="text.disabled" sx={{ ml: 0.5 }}>
                                                             ({groupShipments.length} відправлень
                                                             {' · '}
-                                                            {groupShipments.reduce((acc, s) => acc + (s.weight ?? 0), 0).toFixed(2)} кг)
+                                                            {groupShipments
+                                                                .reduce((acc, s) => acc + (s.weight ?? 0), 0)
+                                                                .toFixed(2)} кг)
                                                         </Typography>
                                                     </Box>
                                                 </TableCell>
