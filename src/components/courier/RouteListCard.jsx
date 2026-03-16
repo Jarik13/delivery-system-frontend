@@ -7,7 +7,7 @@ import { ExpandMore, ExpandLess, Inventory2, Scale, Schedule } from '@mui/icons-
 import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 import ShipmentCard from './ShipmentCard';
 
-const RouteListCard = ({ routeList }) => {
+const RouteListCard = ({ routeList, onStatusChange }) => {
     const [open, setOpen] = useState(false);
 
     const statusColor = getStatusColor(ROUTE_LIST_STATUS_COLORS, routeList.statusName);
@@ -118,7 +118,14 @@ const RouteListCard = ({ routeList }) => {
                             Відправлень немає
                         </Typography>
                     ) : (
-                        items.map(item => <ShipmentCard key={item.id} item={item} />)
+                        items.map(item => (
+                            <ShipmentCard
+                                key={item.id}
+                                item={item}
+                                routeListId={routeList.id}
+                                onStatusChange={onStatusChange}
+                            />
+                        ))
                     )}
                 </Box>
             </Collapse>

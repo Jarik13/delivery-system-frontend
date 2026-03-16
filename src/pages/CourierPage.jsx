@@ -117,7 +117,7 @@ const CourierPage = () => {
                         alignItems: 'start',
                     }}>
                         {items.map(r => (
-                            <RouteListCard key={r.id} routeList={r} />
+                            <RouteListCard key={r.id} routeList={r} onStatusChange={load} />
                         ))}
                     </Box>
                 )}

@@ -1,7 +1,11 @@
-import React from 'react';
-import { Box, Typography, Chip, alpha } from '@mui/material';
-import { CheckCircle, LocalShipping, PendingActions, Cancel, RadioButtonUnchecked } from '@mui/icons-material';
+import React, { useState } from 'react';
+import { Box, Typography, Chip, alpha, IconButton, Tooltip, CircularProgress } from '@mui/material';
+import {
+    CheckCircle, LocalShipping, PendingActions, Cancel,
+    RadioButtonUnchecked, TaskAlt, ErrorOutline,
+} from '@mui/icons-material';
 import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
+import { DictionaryApi } from '../../api/dictionaries';
 
 const STATUS_ICONS = {
     'Доставлено': CheckCircle,
@@ -11,10 +15,31 @@ const STATUS_ICONS = {
     'У процесі доставки': RadioButtonUnchecked,
 };
 
-const ShipmentCard = ({ item }) => {
+const ACTIONABLE_STATUSES = ['Видано кур\'єру', 'Спроба вручення провалена', 'У процесі доставки'];
+
+const ShipmentCard = ({ item, routeListId, onStatusChange }) => {
+    const [loading, setLoading] = useState(false);
+
     const statusName = item.shipmentStatusName || (item.isDelivered ? 'Доставлено' : 'У процесі доставки');
     const color = getStatusColor(SHIPMENT_STATUS_COLORS, statusName);
     const Icon = STATUS_ICONS[statusName] || RadioButtonUnchecked;
+    const canAct = ACTIONABLE_STATUSES.includes(statusName);
+
+    const handleAction = async (action) => {
+        if (!routeListId || !item.id) return;
+        setLoading(true);
+        try {
+            await DictionaryApi.patch(
+                `route-lists/items/${item.id}/status`,
+                { action }
+            );
+            onStatusChange?.();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <Box sx={{
@@ -69,7 +94,7 @@ const ShipmentCard = ({ item }) => {
                         </Typography>
                     )}
                     {item.deliveredAt && (
-                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10 }}>
+                        <Typography variant="caption" color="text.disabled" sx={{ fontSize: 10, whiteSpace: 'nowrap' }}>
                             {new Date(item.deliveredAt).toLocaleString('uk-UA', {
                                 day: '2-digit', month: '2-digit',
                                 hour: '2-digit', minute: '2-digit',
@@ -77,6 +102,67 @@ const ShipmentCard = ({ item }) => {
                         </Typography>
                     )}
                 </Box>
+
+                {canAct && (
+                    <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                        {loading ? (
+                            <CircularProgress size={18} sx={{ color: '#4caf50' }} />
+                        ) : (
+                            <>
+                                <Tooltip title="Доставлено">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => handleAction('DELIVERED')}
+                                        sx={{
+                                            bgcolor: alpha('#4caf50', 0.1),
+                                            color: '#4caf50',
+                                            border: `1px solid ${alpha('#4caf50', 0.3)}`,
+                                            borderRadius: 1.5,
+                                            p: 0.5,
+                                            '&:hover': { bgcolor: alpha('#4caf50', 0.2) },
+                                        }}
+                                    >
+                                        <TaskAlt sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+
+                                <Tooltip title="Спроба вручення провалена">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => handleAction('FAILED')}
+                                        sx={{
+                                            bgcolor: alpha('#ff9800', 0.1),
+                                            color: '#ff9800',
+                                            border: `1px solid ${alpha('#ff9800', 0.3)}`,
+                                            borderRadius: 1.5,
+                                            p: 0.5,
+                                            '&:hover': { bgcolor: alpha('#ff9800', 0.2) },
+                                        }}
+                                    >
+                                        <ErrorOutline sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+
+                                <Tooltip title="Відмова">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => handleAction('REFUSED')}
+                                        sx={{
+                                            bgcolor: alpha('#f44336', 0.1),
+                                            color: '#f44336',
+                                            border: `1px solid ${alpha('#f44336', 0.3)}`,
+                                            borderRadius: 1.5,
+                                            p: 0.5,
+                                            '&:hover': { bgcolor: alpha('#f44336', 0.2) },
+                                        }}
+                                    >
+                                        <Cancel sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
+                        )}
+                    </Box>
+                )}
             </Box>
         </Box>
     );
