@@ -30,8 +30,8 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             return (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Scale sx={secondary} />
-                    <Typography variant="body2">
-                        {waybill.totalWeight != null ? `${waybill.totalWeight} кг` : '—'}
+                    <Typography variant="body2" noWrap>
+                        {waybill.totalWeight != null ? `${parseFloat(waybill.totalWeight).toFixed(2)} кг` : '—'}
                     </Typography>
                 </Box>
             );
@@ -39,8 +39,8 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             return (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                     <ViewInAr sx={secondary} />
-                    <Typography variant="body2">
-                        {waybill.volume != null ? `${waybill.volume} м³` : '—'}
+                    <Typography variant="body2" noWrap>
+                        {waybill.volume != null ? `${parseFloat(waybill.volume).toFixed(2)} м³` : '—'}
                     </Typography>
                 </Box>
             );
