@@ -8,6 +8,7 @@ import {
     AccessTime, EventAvailable, ErrorOutline, CheckCircle, PendingActions,
     ExpandLess, ExpandMore, Inventory2, LocalShipping,
     ArticleOutlined, RouteOutlined, OpenInNew,
+    Edit,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getTypeColor, SHIPMENT_TYPE_COLORS } from '../../constants/typeColors';
@@ -48,15 +49,10 @@ const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
 };
 
 const ShipmentCard = ({
-    s,
-    mainColor,
-    statusColors,
-    isHistoryExpanded,
-    isFinanceExpanded,
-    history,
-    onDelete,
-    onToggleHistory,
-    onToggleFinance,
+    s, mainColor, statusColors,
+    isHistoryExpanded, isFinanceExpanded, history,
+    onDelete, onToggleHistory, onToggleFinance,
+    onEdit, editable = true,
 }) => {
     const theme = useTheme();
     const navigate = useNavigate();
@@ -94,9 +90,37 @@ const ShipmentCard = ({
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                     <Chip label={s.trackingNumber} size="small"
                         sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
-                    <IconButton size="small" color="error" onClick={() => onDelete(s.id)}>
-                        <Delete fontSize="small" />
-                    </IconButton>
+
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Tooltip title={editable ? 'Редагувати' : `Редагування недоступне для статусу "${s.shipmentStatusName}"`}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => editable && onEdit?.(s)}
+                                    disabled={!editable}
+                                    sx={{
+                                        color: editable ? mainColor : '#ccc',
+                                        '&.Mui-disabled': { color: '#ccc' }
+                                    }}
+                                >
+                                    <Edit fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+
+                        <Tooltip title={editable ? 'Видалити' : 'Видалення недоступне'}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => editable && onDelete(s.id)}
+                                    disabled={!editable}
+                                >
+                                    <Delete fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                    </Box>
                 </Box>
 
                 <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, lineHeight: 1.2 }}>
