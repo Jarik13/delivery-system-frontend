@@ -5,7 +5,8 @@ import {
 } from '@mui/material';
 import {
     ListAlt, ExpandMore, ExpandLess,
-    Person, Scale, CalendarToday,
+    Person, Scale, CalendarToday, Schedule,
+    Inventory2, CheckCircle,
 } from '@mui/icons-material';
 import RouteSheetPanel from './RouteSheetPanel';
 import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
@@ -14,6 +15,7 @@ const RouteListRow = ({
     item, mainColor, selected, onToggle,
     isHighlighted = false,
     highlightRowRef = null,
+    visibleCols = new Set(),
 }) => {
     const [expanded, setExpanded] = useState(false);
 
@@ -23,6 +25,8 @@ const RouteListRow = ({
     const progress = total > 0 ? Math.round((delivered / total) * 100) : 0;
 
     const statusColor = getStatusColor(ROUTE_LIST_STATUS_COLORS, item.statusName);
+
+    const show = (key) => visibleCols.has(key);
 
     const handleExpandClick = (e) => {
         e.stopPropagation();
@@ -70,85 +74,135 @@ const RouteListRow = ({
                     </IconButton>
                 </TableCell>
 
-                <TableCell>
-                    <Tooltip title={isHighlighted ? 'Перейдено з відправлення' : ''} placement="top">
-                        <Chip
-                            icon={<ListAlt sx={{ fontSize: '14px !important' }} />}
-                            label={`ML-${item.number}`}
-                            size="small"
-                            sx={{
-                                bgcolor: alpha(mainColor, isHighlighted ? 0.18 : 0.1),
-                                color: mainColor, fontWeight: 700,
-                                ...(isHighlighted && { border: `1px solid ${alpha(mainColor, 0.4)}` }),
-                            }}
-                        />
-                    </Tooltip>
-                </TableCell>
-
-                <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Person sx={{ fontSize: 14, color: '#999' }} />
-                        <Typography variant="body2" fontWeight={500}>
-                            {item.courierFullName || 'Не призначено'}
-                        </Typography>
-                    </Box>
-                </TableCell>
-
-                <TableCell>
-                    <Chip
-                        label={item.statusName || 'Сформовано'}
-                        size="small"
-                        sx={{
-                            fontWeight: 700,
-                            fontSize: 11,
-                            bgcolor: alpha(statusColor, 0.12),
-                            color: statusColor,
-                            border: `1px solid ${alpha(statusColor, 0.35)}`,
-                        }}
-                    />
-                </TableCell>
-
-                <TableCell sx={{ width: 140 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ flex: 1 }}>
-                            <LinearProgress
-                                variant="determinate"
-                                value={progress}
+                {show('number') && (
+                    <TableCell>
+                        <Tooltip title={isHighlighted ? 'Перейдено з відправлення' : ''} placement="top">
+                            <Chip
+                                icon={<ListAlt sx={{ fontSize: '14px !important' }} />}
+                                label={`ML-${item.number}`}
+                                size="small"
                                 sx={{
-                                    height: 6, borderRadius: 3,
-                                    bgcolor: alpha(mainColor, 0.1),
-                                    '& .MuiLinearProgress-bar': { bgcolor: mainColor },
+                                    bgcolor: alpha(mainColor, isHighlighted ? 0.18 : 0.1),
+                                    color: mainColor, fontWeight: 700,
+                                    ...(isHighlighted && { border: `1px solid ${alpha(mainColor, 0.4)}` }),
                                 }}
                             />
+                        </Tooltip>
+                    </TableCell>
+                )}
+
+                {show('courier') && (
+                    <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+                            <Person sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography variant="body2" fontWeight={500}>
+                                {item.courierFullName || '—'}
+                            </Typography>
                         </Box>
-                        <Typography variant="caption" fontWeight={700} sx={{ minWidth: 28 }}>
-                            {delivered}/{total}
-                        </Typography>
-                    </Box>
-                </TableCell>
+                    </TableCell>
+                )}
 
-                <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Scale sx={{ fontSize: 14, color: '#999' }} />
-                        <Typography variant="body2">
-                            {item.totalWeight != null ? `${item.totalWeight} кг` : '—'}
-                        </Typography>
-                    </Box>
-                </TableCell>
+                {show('status') && (
+                    <TableCell>
+                        <Chip
+                            label={item.statusName || 'Сформовано'}
+                            size="small"
+                            sx={{
+                                fontWeight: 700, fontSize: 11,
+                                bgcolor: alpha(statusColor, 0.12),
+                                color: statusColor,
+                                border: `1px solid ${alpha(statusColor, 0.35)}`,
+                            }}
+                        />
+                    </TableCell>
+                )}
 
-                <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <CalendarToday sx={{ fontSize: 14, color: '#999' }} />
-                        <Typography variant="body2" color="text.secondary">
-                            {item.createdAt
-                                ? new Date(item.createdAt).toLocaleString('uk-UA', {
-                                    day: '2-digit', month: '2-digit', year: 'numeric',
-                                    hour: '2-digit', minute: '2-digit',
-                                })
-                                : '—'}
-                        </Typography>
-                    </Box>
-                </TableCell>
+                {show('progress') && (
+                    <TableCell sx={{ minWidth: 130 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ flex: 1 }}>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={progress}
+                                    sx={{
+                                        height: 6, borderRadius: 3,
+                                        bgcolor: alpha(mainColor, 0.1),
+                                        '& .MuiLinearProgress-bar': { bgcolor: mainColor },
+                                    }}
+                                />
+                            </Box>
+                            <Typography variant="caption" fontWeight={700} sx={{ minWidth: 36 }}>
+                                {progress}%
+                            </Typography>
+                        </Box>
+                    </TableCell>
+                )}
+
+                {show('totalWeight') && (
+                    <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+                            <Scale sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography variant="body2">
+                                {item.totalWeight != null ? `${item.totalWeight} кг` : '—'}
+                            </Typography>
+                        </Box>
+                    </TableCell>
+                )}
+
+                {show('shipmentsCount') && (
+                    <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Inventory2 sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography variant="body2" fontWeight={600}>
+                                {total}
+                            </Typography>
+                        </Box>
+                    </TableCell>
+                )}
+
+                {show('delivered') && (
+                    <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <CheckCircle sx={{ fontSize: 14, color: delivered === total && total > 0 ? '#4caf50' : '#ccc' }} />
+                            <Typography variant="body2" fontWeight={600}
+                                sx={{ color: delivered === total && total > 0 ? '#4caf50' : 'text.primary' }}>
+                                {delivered}/{total}
+                            </Typography>
+                        </Box>
+                    </TableCell>
+                )}
+
+                {show('createdAt') && (
+                    <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+                            <CalendarToday sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography variant="body2" color="text.secondary">
+                                {item.createdAt
+                                    ? new Date(item.createdAt).toLocaleString('uk-UA', {
+                                        day: '2-digit', month: '2-digit', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit',
+                                    })
+                                    : '—'}
+                            </Typography>
+                        </Box>
+                    </TableCell>
+                )}
+
+                {show('plannedDepart') && (
+                    <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+                            <Schedule sx={{ fontSize: 14, color: '#999' }} />
+                            <Typography variant="body2" color="text.secondary">
+                                {item.plannedDepartureTime
+                                    ? new Date(item.plannedDepartureTime).toLocaleString('uk-UA', {
+                                        day: '2-digit', month: '2-digit', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit',
+                                    })
+                                    : '—'}
+                            </Typography>
+                        </Box>
+                    </TableCell>
+                )}
             </TableRow>
 
             <RouteSheetPanel

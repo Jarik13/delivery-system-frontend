@@ -56,6 +56,15 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         handleMarkerDragStart,
         handleMarkerDragEnd,
         handleSave,
+        routeSearchQuery,
+        setRouteSearchQuery,
+        availableRoutes,
+        routesLoading,
+        routeChain,
+        selectedRouteIds,
+        addRouteToChain,
+        removeRouteFromChain,
+        clearRouteChain,
     } = form$;
 
     const handleNext = async (nextStep) => {
@@ -86,11 +95,26 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
         }
 
         if (activeStep === 1) {
-            const citiesCount = segments.filter(s => s.cityName).length;
+            const chainCitiesCount = routeChain.length > 0 ? routeChain.length + 1 : 0;
+            const customCitiesCount = segments.filter(s => s.cityName).length;
+            const citiesCount = Math.max(chainCitiesCount, customCitiesCount);
+
             if (citiesCount < 2) {
                 setStepErrors({ waypoints: 'Маршрут повинен містити хоча б два міста' });
                 return;
             }
+
+            const waypoints = routeChain.length > 0
+                ? [
+                    { cityId: routeChain[0].originCityId, sequenceNumber: 1 },
+                    ...routeChain.map((r, idx) => ({
+                        cityId: r.destinationCityId,
+                        sequenceNumber: idx + 2,
+                    })),
+                ]
+                : segments
+                    .filter(s => s.cityId)
+                    .map((s, idx) => ({ cityId: s.cityId, sequenceNumber: idx + 1 }));
 
             try {
                 await DictionaryApi.create('trips', {
@@ -98,9 +122,7 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                     vehicleId: form.vehicleId ?? null,
                     scheduledDepartureTime: null,
                     scheduledArrivalTime: null,
-                    waypoints: segments
-                        .filter(s => s.cityId)
-                        .map((s, idx) => ({ cityId: s.cityId, sequenceNumber: idx }))
+                    waypoints: waypoints,
                 });
             } catch (error) {
                 const serverErrors = error.response?.data?.validationErrors;
@@ -116,6 +138,8 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                     }
                 }
             }
+
+            go(nextStep);
         }
 
         go(nextStep);
@@ -249,6 +273,15 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
                                         handleMarkerDragStart={handleMarkerDragStart}
                                         handleMarkerDragEnd={handleMarkerDragEnd}
                                         errors={stepErrors}
+                                        routeSearchQuery={routeSearchQuery}
+                                        setRouteSearchQuery={setRouteSearchQuery}
+                                        availableRoutes={availableRoutes}
+                                        routesLoading={routesLoading}
+                                        routeChain={routeChain}
+                                        selectedRouteIds={selectedRouteIds}
+                                        addRouteToChain={addRouteToChain}
+                                        removeRouteFromChain={removeRouteFromChain}
+                                        clearRouteChain={clearRouteChain}
                                     />
                                 )}
                                 {activeStep === 2 && (

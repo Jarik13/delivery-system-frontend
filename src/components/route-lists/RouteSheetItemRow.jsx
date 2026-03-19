@@ -1,18 +1,32 @@
 import React from 'react';
 import { TableRow, TableCell, Chip, Typography, Box, alpha } from '@mui/material';
-import { CheckCircle, PendingActions, LocationOn } from '@mui/icons-material';
+import { CheckCircle, LocalShipping, PendingActions, Cancel, HelpOutline } from '@mui/icons-material';
+import { LocationOn } from '@mui/icons-material';
+import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 
-const RouteSheetItemRow = ({ item, idx, mainColor }) => {
-    const isDone = item.isDelivered;
-    const borderColor = isDone ? '#4caf50' : '#ff9800';
+const STATUS_ICONS = {
+    'Доставлено': <CheckCircle sx={{ fontSize: '16px !important' }} />,
+    'Видано кур\'єру': <LocalShipping sx={{ fontSize: '16px !important' }} />,
+    'Спроба вручення провалена': <PendingActions sx={{ fontSize: '16px !important' }} />,
+    'Відмова': <Cancel sx={{ fontSize: '16px !important' }} />,
+    'Втрачено': <Cancel sx={{ fontSize: '16px !important' }} />,
+    'Утилізовано': <Cancel sx={{ fontSize: '16px !important' }} />,
+    'У процесі доставки': <PendingActions sx={{ fontSize: '16px !important' }} />,
+};
+
+const DEFAULT_ICON = <HelpOutline sx={{ fontSize: '16px !important' }} />;
+
+const RouteSheetItemRow = ({ item, idx }) => {
+    const statusName = item.shipmentStatusName || (item.isDelivered ? 'Доставлено' : 'У процесі доставки');
+    const color = getStatusColor(SHIPMENT_STATUS_COLORS, statusName);
+    const icon = STATUS_ICONS[statusName] ?? DEFAULT_ICON;
 
     return (
         <TableRow sx={{
             bgcolor: 'white',
             '&:hover': { bgcolor: '#fafafa' },
-            borderLeft: `3px solid ${alpha(borderColor, 0.5)}`,
+            borderLeft: `3px solid ${alpha(color, 0.5)}`,
         }}>
-            {/* # */}
             <TableCell sx={{ pl: 4, py: 1.5, width: 48 }}>
                 <Box sx={{
                     width: 24, height: 24, borderRadius: '50%',
@@ -24,7 +38,6 @@ const RouteSheetItemRow = ({ item, idx, mainColor }) => {
                 </Box>
             </TableCell>
 
-            {/* Трек-номер */}
             <TableCell sx={{ py: 1.5 }}>
                 <Typography variant="caption" sx={{
                     fontFamily: 'monospace', fontWeight: 700,
@@ -35,60 +48,50 @@ const RouteSheetItemRow = ({ item, idx, mainColor }) => {
                 </Typography>
             </TableCell>
 
-            {/* Отримувач та адреса */}
             <TableCell sx={{ py: 1.5 }}>
                 <Typography variant="caption" fontWeight={600} sx={{ lineHeight: 1.3 }}>
                     {item.recipientFullName || '—'}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.3 }}>
                     <LocationOn sx={{ fontSize: 13, color: '#999' }} />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', display: 'block' }}>
                         {item.deliveryAddress || '—'}
                     </Typography>
                 </Box>
             </TableCell>
 
-            {/* Вага */}
             <TableCell sx={{ py: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">
                     {item.weight != null ? `${item.weight} кг` : '—'}
                 </Typography>
             </TableCell>
 
-            {/* Оплата */}
             <TableCell sx={{ py: 1.5 }}>
                 <Typography variant="caption" fontWeight={700} color="text.primary">
                     {item.codAmount > 0 ? `${item.codAmount} грн` : 'Оплачено'}
                 </Typography>
             </TableCell>
 
-            {/* Статус доставки */}
             <TableCell sx={{ py: 1.5 }}>
                 <Chip
-                    icon={isDone
-                        ? <CheckCircle sx={{ fontSize: '16px !important' }} />
-                        : <PendingActions sx={{ fontSize: '16px !important' }} />
-                    }
-                    label={isDone ? 'Доставлено' : 'В черзі'}
+                    icon={icon}
+                    label={statusName}
                     size="small"
                     sx={{
                         height: 24, fontSize: 11, fontWeight: 700,
-                        bgcolor: alpha(borderColor, 0.1),
-                        color: isDone ? '#2e7d32' : '#ed6c02',
-                        border: `1px solid ${alpha(borderColor, 0.3)}`,
+                        bgcolor: alpha(color, 0.1),
+                        color: color,
+                        border: `1px solid ${alpha(color, 0.3)}`,
                     }}
                 />
             </TableCell>
 
             <TableCell sx={{ py: 1.5 }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ whiteSpace: 'nowrap' }}>
                     {item.deliveredAt
                         ? new Date(item.deliveredAt).toLocaleString('uk-UA', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
                         })
                         : '—'}
                 </Typography>

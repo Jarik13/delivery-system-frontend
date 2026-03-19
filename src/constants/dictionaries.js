@@ -1,31 +1,19 @@
+import { A, E, SA, ED, DA, EDC, ROLES } from "./roles";
+
 const DEFAULT_COLS = [{ id: 'name', label: 'Назва' }];
-
-export const ROLES = {
-    SUPER_ADMIN: 'ROLE_SUPER_ADMIN',
-    ADMIN: 'ROLE_ADMIN',
-    EMPLOYEE: 'ROLE_EMPLOYEE',
-    DRIVER: 'ROLE_DRIVER',
-    COURIER: 'ROLE_COURIER',
-};
-
-const A = [ROLES.ADMIN];
-const DA = [ROLES.DRIVER, ROLES.ADMIN];
-const ED = [ROLES.EMPLOYEE, ROLES.DRIVER];       // без ADMIN
-const EDA = [ROLES.EMPLOYEE, ROLES.DRIVER, ROLES.ADMIN]; // тільки для читання класифікаторів
-const CDA = [ROLES.COURIER, ROLES.DRIVER, ROLES.ADMIN];
 
 export const MENU_GROUPS = [
     {
         title: "Керування логістикою",
-        roles: [ROLES.EMPLOYEE, ROLES.DRIVER, ROLES.COURIER],  // ADMIN прибрано
+        roles: EDC,
         items: [
-            { label: 'Посилки', path: 'parcels', isCustomPage: true, endpoint: 'parcels', roles: ED },
-            { label: 'Відправлення', path: 'shipments', isCustomPage: true, endpoint: 'shipments', roles: ED },
-            { label: 'Платежі', path: 'payments', isCustomPage: true, endpoint: 'payments', roles: ED },
-            { label: 'Повернення', path: 'returns', isCustomPage: true, endpoint: 'returns', roles: ED },
-            { label: 'Рейси', path: 'trips', isCustomPage: true, endpoint: 'trips', roles: [ROLES.DRIVER] },
-            { label: 'Накладні', path: 'waybills', isCustomPage: true, endpoint: 'waybills', roles: [ROLES.DRIVER] },
-            { label: 'Маршрутні листи', path: 'route-lists', isCustomPage: true, endpoint: 'route-lists', roles: [ROLES.COURIER, ROLES.DRIVER] },
+            { label: 'Відправлення', path: 'shipments', isCustomPage: true, endpoint: 'shipments', roles: E },
+            { label: 'Посилки', path: 'parcels', isCustomPage: true, endpoint: 'parcels', roles: E },
+            { label: 'Платежі', path: 'payments', isCustomPage: true, endpoint: 'payments', roles: E },
+            { label: 'Повернення', path: 'returns', isCustomPage: true, endpoint: 'returns', roles: E },
+            { label: 'Рейси', path: 'trips', isCustomPage: true, endpoint: 'trips', roles: ED },
+            { label: 'Накладні', path: 'waybills', isCustomPage: true, endpoint: 'waybills', roles: ED },
+            { label: 'Маршрутні листи', path: 'route-lists', isCustomPage: true, endpoint: 'route-lists', roles: EDC },
         ]
     },
     {
@@ -76,9 +64,9 @@ export const MENU_GROUPS = [
     },
     {
         title: "Адміністрування",
-        roles: [ROLES.SUPER_ADMIN],
+        roles: SA,
         items: [
-            { label: 'Управління користувачами', path: 'admin', isCustomPage: true, endpoint: 'admin', roles: [ROLES.SUPER_ADMIN] },
+            { label: 'Управління користувачами', path: 'admin', isCustomPage: true, endpoint: 'admin', roles: SA },
         ]
     },
 ];

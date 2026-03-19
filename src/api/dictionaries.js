@@ -32,6 +32,7 @@ export const DictionaryApi = {
     calculatePrices: (data) => api.post('/shipments/calculate', data),
     create: (endpoint, data) => api.post(`/${endpoint}`, data),
     update: (endpoint, id, data) => api.put(`/${endpoint}/${id}`, data),
+    patch: (endpoint, data) => api.patch(`/${endpoint}`, data),
     delete: (endpoint, id) => api.delete(`/${endpoint}/${id}`),
 
     exportFile: (endpoint, params = {}, config = {}) => {
