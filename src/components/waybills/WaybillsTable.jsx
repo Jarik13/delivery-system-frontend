@@ -118,7 +118,6 @@ const WaybillsTable = ({
 
     return (
         <Paper variant="outlined" sx={{ borderRadius: 2 }}>
-
             <Box sx={{
                 px: 1.5, py: 0.75,
                 display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
