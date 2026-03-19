@@ -37,7 +37,7 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             );
         case 'volume':
             return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                     <ViewInAr sx={secondary} />
                     <Typography variant="body2">
                         {waybill.volume != null ? `${waybill.volume} м³` : '—'}
@@ -55,10 +55,10 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             );
         case 'totalDistanceKm':
             return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                     <AltRoute sx={secondary} />
-                    <Typography variant="body2">
-                        {waybill.totalDistanceKm != null ? `${waybill.totalDistanceKm} км` : '—'}
+                    <Typography variant="body2" noWrap>
+                        {waybill.totalDistanceKm != null ? `${parseFloat(waybill.totalDistanceKm).toFixed(2)} км` : '—'}
                     </Typography>
                 </Box>
             );
@@ -100,9 +100,9 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             ) : <Typography variant="body2" color="text.disabled">—</Typography>;
         case 'scheduledDeparture':
             return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                     <LocalShipping sx={secondary} />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" noWrap>
                         {waybill.scheduledDeparture
                             ? new Date(waybill.scheduledDeparture).toLocaleString('uk-UA', {
                                 day: '2-digit', month: '2-digit', year: 'numeric',
@@ -111,9 +111,22 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
                     </Typography>
                 </Box>
             );
+        case 'scheduledArrival':
+            return (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
+                    <LocalShipping sx={secondary} />
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                        {waybill.scheduledArrival
+                            ? new Date(waybill.scheduledArrival).toLocaleString('uk-UA', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                            }) : '—'}
+                    </Typography>
+                </Box>
+            );
         case 'createdByName':
             return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                     <Person sx={secondary} />
                     <Typography variant="body2" color="text.secondary">
                         {waybill.createdByName || `ID: ${waybill.createdById}`}
@@ -122,9 +135,9 @@ const CellContent = ({ colKey, waybill, mainColor }) => {
             );
         case 'createdAt':
             return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, whiteSpace: 'nowrap' }}>
                     <CalendarToday sx={secondary} />
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" noWrap>
                         {waybill.createdAt
                             ? new Date(waybill.createdAt).toLocaleString('uk-UA', {
                                 day: '2-digit', month: '2-digit', year: 'numeric',
