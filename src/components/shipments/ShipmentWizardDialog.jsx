@@ -3,19 +3,24 @@ import {
     Dialog, DialogContent, DialogActions, TextField, Box,
     Typography, Button, Stepper, Step, StepLabel, Grid, Autocomplete,
     Divider, FormControlLabel, Checkbox, Chip, Card, CardContent,
-    RadioGroup, Radio, InputAdornment, alpha
+    RadioGroup, Radio, InputAdornment, alpha, IconButton, Tooltip
 } from '@mui/material';
 import {
     Inventory, Person, Calculate, CheckCircle, Edit,
-    LocalShipping, Payments, AccountBalanceWallet
+    LocalShipping, Payments, AccountBalanceWallet, PersonAdd
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import DeliveryPointSelector from './DeliveryPointSelector';
+import CreateClientDialog from './CreateClientDialog';
 import { DictionaryApi } from '../../api/dictionaries';
 
 const ColorlibStepIcon = (props) => {
     const { active, completed, icon, mainColor } = props;
-    const icons = { 1: <Inventory fontSize="small" />, 2: <LocalShipping fontSize="small" />, 3: <Payments fontSize="small" /> };
+    const icons = {
+        1: <Inventory fontSize="small" />,
+        2: <LocalShipping fontSize="small" />,
+        3: <Payments fontSize="small" />
+    };
     return (
         <Box sx={{
             bgcolor: active || completed ? mainColor : '#eee',
@@ -46,7 +51,27 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
     const [direction, setDirection] = useState(0);
     const [fieldErrors, setFieldErrors] = useState({});
     const [formData, setFormData] = useState(initialFormData);
+    const [localClients, setLocalClients] = useState([]);
     const listboxRef = useRef(null);
+
+    const [createClientOpen, setCreateClientOpen] = useState(false);
+    const [createClientFor, setCreateClientFor] = useState(null);
+
+    useEffect(() => {
+        setLocalClients(clients);
+    }, [clients]);
+
+    const handleClientCreated = (newClient) => {
+        setLocalClients(prev => [...prev, newClient]);
+        if (createClientFor === 'sender') {
+            setFormData(prev => ({ ...prev, senderId: newClient.id }));
+            setFieldErrors(prev => ({ ...prev, senderId: null }));
+        } else if (createClientFor === 'recipient') {
+            setFormData(prev => ({ ...prev, recipientId: newClient.id }));
+            setFieldErrors(prev => ({ ...prev, recipientId: null }));
+        }
+        setCreateClientFor(null);
+    };
 
     useEffect(() => {
         if (open && shipmentToEdit && parcelTypes.length > 0 && storageConditions.length > 0) {
@@ -263,348 +288,407 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
         }, 100);
     }, [formData.parcel.actualWeight, boxVariants]);
 
+    const addClientButton = (forRole) => (
+        <Tooltip title="Створити нового клієнта">
+            <IconButton
+                size="small"
+                onClick={() => { setCreateClientFor(forRole); setCreateClientOpen(true); }}
+                sx={{
+                    mt: 0.5, flexShrink: 0,
+                    color: mainColor,
+                    bgcolor: alpha(mainColor, 0.08),
+                    border: `1px solid ${alpha(mainColor, 0.2)}`,
+                    borderRadius: 1.5,
+                    '&:hover': { bgcolor: alpha(mainColor, 0.15) }
+                }}
+            >
+                <PersonAdd fontSize="small" />
+            </IconButton>
+        </Tooltip>
+    );
+
     const steps = [{ label: 'Посилка', icon: 1 }, { label: 'Маршрут', icon: 2 }, { label: 'Вартість', icon: 3 }];
-    const variants = { enter: (d) => ({ x: d > 0 ? 100 : -100, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d < 0 ? 100 : -100, opacity: 0 }) };
+    const variants = {
+        enter: (d) => ({ x: d > 0 ? 100 : -100, opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (d) => ({ x: d < 0 ? 100 : -100, opacity: 0 })
+    };
 
     const selectedParcelType = parcelTypes.find(p => p.id === formData.parcel.parcelTypeId) ?? null;
     const selectedStorageConditions = storageConditions.filter(sc => formData.parcel.storageConditionIds.includes(sc.id));
     const selectedBoxVariant = boxVariants.find(b => b.id === formData.box.boxVariantId) ?? null;
-    const selectedSender = clients.find(c => c.id === formData.senderId) ?? null;
-    const selectedRecipient = clients.find(c => c.id === formData.recipientId) ?? null;
+    const selectedSender = localClients.find(c => c.id === formData.senderId) ?? null;
+    const selectedRecipient = localClients.find(c => c.id === formData.recipientId) ?? null;
     const selectedShipmentType = shipmentTypes.find(t => t.id === formData.shipmentTypeId) ?? null;
 
+    const clientOptionLabel = (o) => {
+        const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
+        return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
+    };
+
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4 } }}>
-            <Box sx={{
-                p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5,
-                background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
-                borderRadius: '16px 16px 0 0'
-            }}>
-                <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1, borderRadius: '12px', display: 'flex' }}>
-                    {isEditMode
-                        ? <Edit sx={{ color: 'white', fontSize: 28 }} />
-                        : <LocalShipping sx={{ color: 'white', fontSize: 28 }} />}
+        <>
+            <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4 } }}>
+                <Box sx={{
+                    p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5,
+                    background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
+                    borderRadius: '16px 16px 0 0'
+                }}>
+                    <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1, borderRadius: '12px', display: 'flex' }}>
+                        {isEditMode
+                            ? <Edit sx={{ color: 'white', fontSize: 28 }} />
+                            : <LocalShipping sx={{ color: 'white', fontSize: 28 }} />}
+                    </Box>
+                    <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                            {isEditMode ? `Редагування ТТН ${shipmentToEdit?.trackingNumber ?? ''}` : 'Нове відправлення'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                            {isEditMode ? 'Внесіть зміни та збережіть' : 'Заповніть всі кроки для оформлення ТТН'}
+                        </Typography>
+                    </Box>
                 </Box>
-                <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
-                        {isEditMode ? `Редагування ТТН ${shipmentToEdit?.trackingNumber ?? ''}` : 'Нове відправлення'}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                        {isEditMode ? 'Внесіть зміни та збережіть' : 'Заповніть всі кроки для оформлення ТТН'}
-                    </Typography>
-                </Box>
-            </Box>
 
-            <DialogContent sx={{ minHeight: 480, pt: 3 }}>
-                <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 5 }}>
-                    {steps.map((s) => (
-                        <Step key={s.label}>
-                            <StepLabel StepIconComponent={(p) => <ColorlibStepIcon {...p} mainColor={mainColor} />}>{s.label}</StepLabel>
-                        </Step>
-                    ))}
-                </Stepper>
+                <DialogContent sx={{ minHeight: 480, pt: 3 }}>
+                    <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 5 }}>
+                        {steps.map((s) => (
+                            <Step key={s.label}>
+                                <StepLabel StepIconComponent={(p) => <ColorlibStepIcon {...p} mainColor={mainColor} />}>
+                                    {s.label}
+                                </StepLabel>
+                            </Step>
+                        ))}
+                    </Stepper>
 
-                <AnimatePresence mode="wait" custom={direction}>
-                    {activeStep === 0 && (
-                        <motion.div key="s0" custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                                <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
-                                    <Inventory sx={{ color: mainColor, fontSize: 18 }} /> Параметри посилки
-                                </Typography>
+                    <AnimatePresence mode="wait" custom={direction}>
+                        {activeStep === 0 && (
+                            <motion.div key="s0" custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                                    <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
+                                        <Inventory sx={{ color: mainColor, fontSize: 18 }} /> Параметри посилки
+                                    </Typography>
 
-                                <TextField
-                                    label="Опис вмісту" fullWidth multiline rows={2}
-                                    value={formData.parcel.contentDescription}
-                                    onChange={(e) => {
-                                        setFormData({ ...formData, parcel: { ...formData.parcel, contentDescription: e.target.value } });
-                                        setFieldErrors(prev => ({ ...prev, 'parcel.contentDescription': null }));
-                                    }}
-                                    error={!!fieldErrors['parcel.contentDescription']}
-                                    helperText={fieldErrors['parcel.contentDescription']}
-                                />
+                                    <TextField
+                                        label="Опис вмісту" fullWidth multiline rows={2}
+                                        value={formData.parcel.contentDescription}
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, parcel: { ...formData.parcel, contentDescription: e.target.value } });
+                                            setFieldErrors(prev => ({ ...prev, 'parcel.contentDescription': null }));
+                                        }}
+                                        error={!!fieldErrors['parcel.contentDescription']}
+                                        helperText={fieldErrors['parcel.contentDescription']}
+                                    />
 
-                                <Grid container spacing={2}>
-                                    <Grid item xs={6}>
-                                        <TextField
-                                            label="Вага (кг)" fullWidth type="number"
-                                            value={formData.parcel.actualWeight}
-                                            onChange={(e) => {
-                                                setFormData({ ...formData, parcel: { ...formData.parcel, actualWeight: e.target.value } });
-                                                setFieldErrors(prev => ({ ...prev, 'parcel.actualWeight': null }));
-                                            }}
-                                            error={!!fieldErrors['parcel.actualWeight']}
-                                            helperText={fieldErrors['parcel.actualWeight']}
-                                        />
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={6}>
+                                            <TextField
+                                                label="Вага (кг)" fullWidth type="number"
+                                                value={formData.parcel.actualWeight}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, parcel: { ...formData.parcel, actualWeight: e.target.value } });
+                                                    setFieldErrors(prev => ({ ...prev, 'parcel.actualWeight': null }));
+                                                }}
+                                                error={!!fieldErrors['parcel.actualWeight']}
+                                                helperText={fieldErrors['parcel.actualWeight']}
+                                            />
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <TextField
+                                                label="Оголошена вартість" fullWidth type="number"
+                                                value={formData.parcel.declaredValue}
+                                                onChange={(e) => {
+                                                    setFormData({ ...formData, parcel: { ...formData.parcel, declaredValue: e.target.value } });
+                                                    setFieldErrors(prev => ({ ...prev, 'parcel.declaredValue': null }));
+                                                }}
+                                                error={!!fieldErrors['parcel.declaredValue']}
+                                                helperText={fieldErrors['parcel.declaredValue']}
+                                            />
+                                        </Grid>
                                     </Grid>
-                                    <Grid item xs={6}>
-                                        <TextField
-                                            label="Оголошена вартість" fullWidth type="number"
-                                            value={formData.parcel.declaredValue}
-                                            onChange={(e) => {
-                                                setFormData({ ...formData, parcel: { ...formData.parcel, declaredValue: e.target.value } });
-                                                setFieldErrors(prev => ({ ...prev, 'parcel.declaredValue': null }));
-                                            }}
-                                            error={!!fieldErrors['parcel.declaredValue']}
-                                            helperText={fieldErrors['parcel.declaredValue']}
-                                        />
-                                    </Grid>
-                                </Grid>
 
-                                <Autocomplete
-                                    options={parcelTypes}
-                                    value={selectedParcelType}
-                                    getOptionLabel={(o) => o.name || ''}
-                                    onChange={(_, v) => {
-                                        setFormData({ ...formData, parcel: { ...formData.parcel, parcelTypeId: v?.id ?? null } });
-                                        setFieldErrors(prev => ({ ...prev, 'parcel.parcelTypeId': null }));
-                                    }}
-                                    renderInput={(p) => (
-                                        <TextField {...p} label="Тип посилки"
-                                            error={!!fieldErrors['parcel.parcelTypeId']}
-                                            helperText={fieldErrors['parcel.parcelTypeId']}
-                                        />
-                                    )}
-                                />
+                                    <Autocomplete
+                                        options={parcelTypes}
+                                        value={selectedParcelType}
+                                        getOptionLabel={(o) => o.name || ''}
+                                        onChange={(_, v) => {
+                                            setFormData({ ...formData, parcel: { ...formData.parcel, parcelTypeId: v?.id ?? null } });
+                                            setFieldErrors(prev => ({ ...prev, 'parcel.parcelTypeId': null }));
+                                        }}
+                                        renderInput={(p) => (
+                                            <TextField {...p} label="Тип посилки"
+                                                error={!!fieldErrors['parcel.parcelTypeId']}
+                                                helperText={fieldErrors['parcel.parcelTypeId']}
+                                            />
+                                        )}
+                                    />
 
-                                <Autocomplete
-                                    multiple
-                                    options={storageConditions}
-                                    value={selectedStorageConditions}
-                                    getOptionLabel={(o) => o.name || ''}
-                                    onChange={(_, v) => {
-                                        setFormData({ ...formData, parcel: { ...formData.parcel, storageConditionIds: v.map(i => i.id) } });
-                                        setFieldErrors(prev => ({ ...prev, 'parcel.storageConditionIds': null }));
-                                    }}
-                                    renderInput={(p) => (
-                                        <TextField {...p} label="Умови зберігання"
-                                            error={!!fieldErrors['parcel.storageConditionIds']}
-                                            helperText={fieldErrors['parcel.storageConditionIds']}
-                                        />
-                                    )}
-                                    renderTags={(val, getTagProps) => val.map((opt, idx) => (
-                                        <Chip label={opt.name} {...getTagProps({ idx })} size="small"
-                                            sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} key={opt.id} />
-                                    ))}
-                                />
+                                    <Autocomplete
+                                        multiple
+                                        options={storageConditions}
+                                        value={selectedStorageConditions}
+                                        getOptionLabel={(o) => o.name || ''}
+                                        onChange={(_, v) => {
+                                            setFormData({ ...formData, parcel: { ...formData.parcel, storageConditionIds: v.map(i => i.id) } });
+                                            setFieldErrors(prev => ({ ...prev, 'parcel.storageConditionIds': null }));
+                                        }}
+                                        renderInput={(p) => (
+                                            <TextField {...p} label="Умови зберігання"
+                                                error={!!fieldErrors['parcel.storageConditionIds']}
+                                                helperText={fieldErrors['parcel.storageConditionIds']}
+                                            />
+                                        )}
+                                        renderTags={(val, getTagProps) => val.map((opt, idx) => (
+                                            <Chip label={opt.name} {...getTagProps({ idx })} size="small"
+                                                sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} key={opt.id} />
+                                        ))}
+                                    />
 
-                                <Box sx={{
-                                    mt: 1, p: 2, borderRadius: 2,
-                                    bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent',
-                                    border: formData.box.useBox ? `1px dashed ${mainColor}` : '1px solid #eee'
-                                }}>
+                                    <Box sx={{
+                                        mt: 1, p: 2, borderRadius: 2,
+                                        bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent',
+                                        border: formData.box.useBox ? `1px dashed ${mainColor}` : '1px solid #eee'
+                                    }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox sx={{ '&.Mui-checked': { color: mainColor } }}
+                                                    checked={formData.box.useBox}
+                                                    onChange={(e) => setFormData({ ...formData, box: { ...formData.box, useBox: e.target.checked, boxVariantId: null } })}
+                                                />
+                                            }
+                                            label="Потрібна коробка"
+                                        />
+                                        {formData.box.useBox && (
+                                            <Autocomplete
+                                                sx={{ mt: 2 }}
+                                                options={boxVariants}
+                                                value={selectedBoxVariant}
+                                                getOptionLabel={(o) => `${o.boxTypeName} ${o.name} - ${o.price} ₴`}
+                                                getOptionKey={(o) => o.id}
+                                                getOptionDisabled={(o) => !isBoxSuitable(o, formData.parcel.actualWeight)}
+                                                onOpen={handleBoxListboxOpen}
+                                                ListboxProps={{ ref: listboxRef }}
+                                                onChange={(_, v) => {
+                                                    setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id ?? null } });
+                                                    setFieldErrors(prev => ({ ...prev, 'box.boxVariantId': null }));
+                                                }}
+                                                renderOption={({ key, ...props }, o) => {
+                                                    const suitable = isBoxSuitable(o, formData.parcel.actualWeight);
+                                                    const optimalId = getOptimalBoxId(formData.parcel.actualWeight);
+                                                    const isOptimal = suitable && o.id === optimalId;
+                                                    return (
+                                                        <li key={key} {...props}
+                                                            data-optimal-box={isOptimal ? "true" : undefined}
+                                                            style={{
+                                                                borderLeft: isOptimal ? '3px solid #4caf50' : '3px solid transparent',
+                                                                backgroundColor: isOptimal ? 'rgba(76, 175, 80, 0.1)' : undefined,
+                                                            }}
+                                                        >
+                                                            <Box sx={{ width: '100%' }}>
+                                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <Typography variant="body2" fontWeight={600}
+                                                                        color={suitable ? (isOptimal ? '#2e7d32' : 'text.primary') : 'text.disabled'}>
+                                                                        {o.boxTypeName} {o.name} — {o.price} ₴
+                                                                        {isOptimal && (
+                                                                            <Chip label="Оптимально" size="small"
+                                                                                sx={{ ml: 1, height: 18, fontSize: 10, fontWeight: 800, bgcolor: '#4caf50', color: 'white', '& .MuiChip-label': { px: 0.75 } }}
+                                                                            />
+                                                                        )}
+                                                                    </Typography>
+                                                                    {!suitable && (
+                                                                        <Typography variant="caption" color="error" sx={{ ml: 1, fontSize: 10 }}>
+                                                                            {o.weightCategoryName ?? `макс. ${o.maxWeight} кг`}
+                                                                        </Typography>
+                                                                    )}
+                                                                </Box>
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {o.width} × {o.length} × {o.height} см
+                                                                    {o.weightCategoryName ? ` · ${o.weightCategoryName}` : o.maxWeight != null ? ` · до ${o.maxWeight} кг` : ''}
+                                                                </Typography>
+                                                            </Box>
+                                                        </li>
+                                                    );
+                                                }}
+                                                renderInput={(p) => (
+                                                    <TextField {...p} label="Розмір коробки" size="small"
+                                                        error={!!fieldErrors['box.boxVariantId']}
+                                                        helperText={fieldErrors['box.boxVariantId'] || (parseFloat(formData.parcel.actualWeight) > 0 ? 'Недоступні коробки перевищені за допустимою вагою' : 'Введіть вагу для фільтрації підходящих коробок')}
+                                                    />
+                                                )}
+                                            />
+                                        )}
+                                    </Box>
+                                </Box>
+                            </motion.div>
+                        )}
+
+                        {activeStep === 1 && (
+                            <motion.div key="s1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                    <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
+                                        <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та тип доставки
+                                    </Typography>
+
+                                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'flex-start', flex: '1 1 260px', minWidth: 0 }}>
+                                            <Autocomplete
+                                                fullWidth
+                                                options={localClients}
+                                                value={selectedSender}
+                                                getOptionLabel={clientOptionLabel}
+                                                onChange={(_, v) => {
+                                                    setFormData({ ...formData, senderId: v?.id ?? null });
+                                                    setFieldErrors(prev => ({ ...prev, senderId: null }));
+                                                }}
+                                                renderInput={(p) => (
+                                                    <TextField {...p} label="Відправник" size="small"
+                                                        error={!!fieldErrors.senderId}
+                                                        helperText={fieldErrors.senderId}
+                                                    />
+                                                )}
+                                            />
+                                            {addClientButton('sender')}
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'flex-start', flex: '1 1 260px', minWidth: 0 }}>
+                                            <Autocomplete
+                                                fullWidth
+                                                options={localClients}
+                                                value={selectedRecipient}
+                                                getOptionLabel={clientOptionLabel}
+                                                onChange={(_, v) => {
+                                                    setFormData({ ...formData, recipientId: v?.id ?? null });
+                                                    setFieldErrors(prev => ({ ...prev, recipientId: null }));
+                                                }}
+                                                renderInput={(p) => (
+                                                    <TextField {...p} label="Отримувач" size="small"
+                                                        error={!!fieldErrors.recipientId}
+                                                        helperText={fieldErrors.recipientId}
+                                                    />
+                                                )}
+                                            />
+                                            {addClientButton('recipient')}
+                                        </Box>
+
+                                        <Box sx={{ flex: '1 1 160px', minWidth: 0 }}>
+                                            <Autocomplete
+                                                fullWidth
+                                                options={shipmentTypes}
+                                                value={selectedShipmentType}
+                                                getOptionLabel={(o) => o.name || ''}
+                                                onChange={(_, v) => {
+                                                    setFormData({ ...formData, shipmentTypeId: v?.id ?? null });
+                                                    setFieldErrors(prev => ({ ...prev, shipmentTypeId: null }));
+                                                }}
+                                                renderInput={(p) => (
+                                                    <TextField {...p} label="Тип доставки" size="small"
+                                                        error={!!fieldErrors.shipmentTypeId}
+                                                        helperText={fieldErrors.shipmentTypeId}
+                                                    />
+                                                )}
+                                            />
+                                        </Box>
+                                    </Box>
+
+                                    <Divider />
+
+                                    <DeliveryPointSelector
+                                        point={formData.origin} label="Звідки"
+                                        onChange={(v) => setFormData({ ...formData, origin: v })}
+                                        errors={{ cityId: fieldErrors['origin.cityId'], deliveryPointId: fieldErrors['origin.deliveryPointId'] }}
+                                        onClearError={() => setFieldErrors(prev => ({ ...prev, 'origin.cityId': null, 'origin.deliveryPointId': null }))}
+                                    />
+                                    <DeliveryPointSelector
+                                        point={formData.destination} label="Куди"
+                                        onChange={(v) => setFormData({ ...formData, destination: v })}
+                                        errors={{ cityId: fieldErrors['destination.cityId'], deliveryPointId: fieldErrors['destination.deliveryPointId'] }}
+                                        onClearError={() => setFieldErrors(prev => ({ ...prev, 'destination.cityId': null, 'destination.deliveryPointId': null }))}
+                                    />
+                                </Box>
+                            </motion.div>
+                        )}
+
+                        {activeStep === 2 && (
+                            <motion.div key="s2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                    <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
+                                        <Calculate sx={{ color: mainColor, fontSize: 18 }} /> Розрахунок вартості
+                                    </Typography>
+                                    <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: '#fafafa' }}>
+                                        <CardContent>
+                                            <Grid container spacing={2}>
+                                                <Grid item xs={6}><Typography variant="caption" color="text.secondary">Доставка:</Typography><Typography fontWeight="700">{formData.price.deliveryPrice.toFixed(2)} ₴</Typography></Grid>
+                                                <Grid item xs={6}><Typography variant="caption" color="text.secondary">За вагу:</Typography><Typography fontWeight="700">{formData.price.weightPrice.toFixed(2)} ₴</Typography></Grid>
+                                                <Grid item xs={6}><Typography variant="caption" color="text.secondary">Коробка:</Typography><Typography fontWeight="700">{formData.price.boxVariantPrice.toFixed(2)} ₴</Typography></Grid>
+                                                <Grid item xs={6}><Typography variant="caption" color="text.secondary">Страховка:</Typography><Typography fontWeight="700">{formData.price.insuranceFee.toFixed(2)} ₴</Typography></Grid>
+                                            </Grid>
+                                            <Divider sx={{ my: 2 }} />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="h6" fontWeight="700">РАЗОМ:</Typography>
+                                                <Typography variant="h5" sx={{ color: mainColor, fontWeight: 900 }}>{formData.price.totalPrice.toFixed(2)} ₴</Typography>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+
+                                    <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'}
+                                        onChange={(e) => setFormData({ ...formData, senderPay: e.target.value === 'sender' })}>
+                                        <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor }} />} label="Оплачує відправник" />
+                                        <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor }} />} label="Оплачує отримувач" />
+                                    </RadioGroup>
+
                                     <FormControlLabel
                                         control={
-                                            <Checkbox sx={{ '&.Mui-checked': { color: mainColor } }}
-                                                checked={formData.box.useBox}
-                                                onChange={(e) => setFormData({ ...formData, box: { ...formData.box, useBox: e.target.checked, boxVariantId: null } })}
+                                            <Checkbox sx={{ color: mainColor }}
+                                                checked={formData.partiallyPaid}
+                                                onChange={(e) => setFormData({ ...formData, partiallyPaid: e.target.checked })}
                                             />
                                         }
-                                        label="Потрібна коробка"
+                                        label="Часткова оплата"
                                     />
-                                    {formData.box.useBox && (
-                                        <Autocomplete
-                                            sx={{ mt: 2 }}
-                                            options={boxVariants}
-                                            value={selectedBoxVariant}
-                                            getOptionLabel={(o) => `${o.boxTypeName} ${o.name} - ${o.price} ₴`}
-                                            getOptionKey={(o) => o.id}
-                                            getOptionDisabled={(o) => !isBoxSuitable(o, formData.parcel.actualWeight)}
-                                            onOpen={handleBoxListboxOpen}
-                                            ListboxProps={{ ref: listboxRef }}
-                                            onChange={(_, v) => {
-                                                setFormData({ ...formData, box: { ...formData.box, boxVariantId: v?.id ?? null } });
-                                                setFieldErrors(prev => ({ ...prev, 'box.boxVariantId': null }));
-                                            }}
-                                            renderOption={({ key, ...props }, o) => {
-                                                const suitable = isBoxSuitable(o, formData.parcel.actualWeight);
-                                                const optimalId = getOptimalBoxId(formData.parcel.actualWeight);
-                                                const isOptimal = suitable && o.id === optimalId;
-                                                return (
-                                                    <li key={key} {...props}
-                                                        data-optimal-box={isOptimal ? "true" : undefined}
-                                                        style={{
-                                                            borderLeft: isOptimal ? '3px solid #4caf50' : '3px solid transparent',
-                                                            backgroundColor: isOptimal ? 'rgba(76, 175, 80, 0.1)' : undefined,
-                                                        }}
-                                                    >
-                                                        <Box sx={{ width: '100%' }}>
-                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <Typography variant="body2" fontWeight={600}
-                                                                    color={suitable ? (isOptimal ? '#2e7d32' : 'text.primary') : 'text.disabled'}>
-                                                                    {o.boxTypeName} {o.name} — {o.price} ₴
-                                                                    {isOptimal && (
-                                                                        <Chip label="Оптимально" size="small"
-                                                                            sx={{ ml: 1, height: 18, fontSize: 10, fontWeight: 800, bgcolor: '#4caf50', color: 'white', '& .MuiChip-label': { px: 0.75 } }}
-                                                                        />
-                                                                    )}
-                                                                </Typography>
-                                                                {!suitable && (
-                                                                    <Typography variant="caption" color="error" sx={{ ml: 1, fontSize: 10 }}>
-                                                                        {o.weightCategoryName ?? `макс. ${o.maxWeight} кг`}
-                                                                    </Typography>
-                                                                )}
-                                                            </Box>
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                {o.width} × {o.length} × {o.height} см
-                                                                {o.weightCategoryName ? ` · ${o.weightCategoryName}` : o.maxWeight != null ? ` · до ${o.maxWeight} кг` : ''}
-                                                            </Typography>
-                                                        </Box>
-                                                    </li>
-                                                );
-                                            }}
-                                            renderInput={(p) => (
-                                                <TextField {...p} label="Розмір коробки" size="small"
-                                                    error={!!fieldErrors['box.boxVariantId']}
-                                                    helperText={fieldErrors['box.boxVariantId'] || (parseFloat(formData.parcel.actualWeight) > 0 ? 'Недоступні коробки перевищені за допустимою вагою' : 'Введіть вагу для фільтрації підходящих коробок')}
-                                                />
-                                            )}
-                                        />
-                                    )}
+
+                                    <AnimatePresence>
+                                        {formData.partiallyPaid && (
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                                                <Box sx={{ p: 2, mt: 1, border: `1px dashed ${mainColor}`, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
+                                                    <Typography variant="subtitle2" sx={{ color: mainColor, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <AccountBalanceWallet fontSize="small" /> Сума авансу
+                                                    </Typography>
+                                                    <TextField fullWidth size="small" type="number"
+                                                        value={formData.partialAmount}
+                                                        onChange={(e) => setFormData({ ...formData, partialAmount: e.target.value })}
+                                                        InputProps={{ startAdornment: <InputAdornment position="start">₴</InputAdornment> }}
+                                                    />
+                                                </Box>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </Box>
-                            </Box>
-                        </motion.div>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </DialogContent>
 
-                    {activeStep === 1 && (
-                        <motion.div key="s1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
-                                    <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та тип доставки
-                                </Typography>
-                                <Grid container spacing={2}>
-                                    <Grid size={4}>
-                                        <Autocomplete
-                                            fullWidth options={clients}
-                                            value={selectedSender}
-                                            getOptionLabel={(o) => {
-                                                const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
-                                                return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
-                                            }}
-                                            onChange={(_, v) => {
-                                                setFormData({ ...formData, senderId: v?.id });
-                                                setFieldErrors(prev => ({ ...prev, senderId: null }));
-                                            }}
-                                            renderInput={(p) => (
-                                                <TextField {...p} label="Відправник" size="small"
-                                                    error={!!fieldErrors.senderId}
-                                                    helperText={fieldErrors.senderId}
-                                                />
-                                            )}
-                                        />
-                                    </Grid>
-                                    <Grid size={4}>
-                                        <Autocomplete
-                                            fullWidth options={clients}
-                                            value={selectedRecipient}
-                                            getOptionLabel={(o) => {
-                                                const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
-                                                return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
-                                            }}
-                                            onChange={(_, v) => {
-                                                setFormData({ ...formData, recipientId: v?.id });
-                                                setFieldErrors(prev => ({ ...prev, recipientId: null }));
-                                            }}
-                                            renderInput={(p) => (
-                                                <TextField {...p} label="Отримувач" size="small"
-                                                    error={!!fieldErrors.recipientId}
-                                                    helperText={fieldErrors.recipientId}
-                                                />
-                                            )}
-                                        />
-                                    </Grid>
-                                    <Grid size={4}>
-                                        <Autocomplete
-                                            fullWidth options={shipmentTypes}
-                                            value={selectedShipmentType}
-                                            getOptionLabel={(o) => o.name || ''}
-                                            onChange={(_, v) => {
-                                                setFormData({ ...formData, shipmentTypeId: v?.id });
-                                                setFieldErrors(prev => ({ ...prev, shipmentTypeId: null }));
-                                            }}
-                                            renderInput={(p) => (
-                                                <TextField {...p} label="Тип доставки" size="small"
-                                                    error={!!fieldErrors.shipmentTypeId}
-                                                    helperText={fieldErrors.shipmentTypeId}
-                                                />
-                                            )}
-                                        />
-                                    </Grid>
-                                </Grid>
-                                <Divider />
-                                <DeliveryPointSelector
-                                    point={formData.origin} label="Звідки"
-                                    onChange={(v) => setFormData({ ...formData, origin: v })}
-                                    errors={{ cityId: fieldErrors['origin.cityId'], deliveryPointId: fieldErrors['origin.deliveryPointId'] }}
-                                    onClearError={() => setFieldErrors(prev => ({ ...prev, 'origin.cityId': null, 'origin.deliveryPointId': null }))}
-                                />
-                                <DeliveryPointSelector
-                                    point={formData.destination} label="Куди"
-                                    onChange={(v) => setFormData({ ...formData, destination: v })}
-                                    errors={{ cityId: fieldErrors['destination.cityId'], deliveryPointId: fieldErrors['destination.deliveryPointId'] }}
-                                    onClearError={() => setFieldErrors(prev => ({ ...prev, 'destination.cityId': null, 'destination.deliveryPointId': null }))}
-                                />
-                            </Box>
-                        </motion.div>
+                <DialogActions sx={{ p: 3, borderTop: '1px solid #f0f0f0' }}>
+                    <Button onClick={onClose}>Скасувати</Button>
+                    <Box sx={{ flexGrow: 1 }} />
+                    {activeStep > 0 && <Button onClick={handleBack}>Назад</Button>}
+                    {activeStep < 2 ? (
+                        <Button variant="contained" onClick={handleNext} sx={{ bgcolor: mainColor }}>Далі</Button>
+                    ) : (
+                        <Button variant="contained" color="success" onClick={handleSave}
+                            startIcon={isEditMode ? <Edit /> : <CheckCircle />}>
+                            {isEditMode ? 'Зберегти зміни' : 'Оформити ТТН'}
+                        </Button>
                     )}
+                </DialogActions>
+            </Dialog>
 
-                    {activeStep === 2 && (
-                        <motion.div key="s2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit">
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                <Typography variant="subtitle2" sx={{ color: '#666', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase' }}>
-                                    <Calculate sx={{ color: mainColor, fontSize: 18 }} /> Розрахунок вартості
-                                </Typography>
-                                <Card variant="outlined" sx={{ borderRadius: 3, bgcolor: '#fafafa' }}>
-                                    <CardContent>
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Доставка:</Typography><Typography fontWeight="700">{formData.price.deliveryPrice.toFixed(2)} ₴</Typography></Grid>
-                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">За вагу:</Typography><Typography fontWeight="700">{formData.price.weightPrice.toFixed(2)} ₴</Typography></Grid>
-                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Коробка:</Typography><Typography fontWeight="700">{formData.price.boxVariantPrice.toFixed(2)} ₴</Typography></Grid>
-                                            <Grid item xs={6}><Typography variant="caption" color="text.secondary">Страховка:</Typography><Typography fontWeight="700">{formData.price.insuranceFee.toFixed(2)} ₴</Typography></Grid>
-                                        </Grid>
-                                        <Divider sx={{ my: 2 }} />
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography variant="h6" fontWeight="700">РАЗОМ:</Typography>
-                                            <Typography variant="h5" sx={{ color: mainColor, fontWeight: 900 }}>{formData.price.totalPrice.toFixed(2)} ₴</Typography>
-                                        </Box>
-                                    </CardContent>
-                                </Card>
-                                <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'} onChange={(e) => setFormData({ ...formData, senderPay: e.target.value === 'sender' })}>
-                                    <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor }} />} label="Оплачує відправник" />
-                                    <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor }} />} label="Оплачує отримувач" />
-                                </RadioGroup>
-                                <FormControlLabel control={<Checkbox sx={{ color: mainColor }} checked={formData.partiallyPaid} onChange={(e) => setFormData({ ...formData, partiallyPaid: e.target.checked })} />} label="Часткова оплата" />
-                                <AnimatePresence>{formData.partiallyPaid && (
-                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                                        <Box sx={{ p: 2, mt: 1, border: `1px dashed ${mainColor}`, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
-                                            <Typography variant="subtitle2" sx={{ color: mainColor, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <AccountBalanceWallet fontSize="small" /> Сума авансу
-                                            </Typography>
-                                            <TextField fullWidth size="small" type="number" value={formData.partialAmount}
-                                                onChange={(e) => setFormData({ ...formData, partialAmount: e.target.value })}
-                                                InputProps={{ startAdornment: <InputAdornment position="start">₴</InputAdornment> }}
-                                            />
-                                        </Box>
-                                    </motion.div>
-                                )}</AnimatePresence>
-                            </Box>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </DialogContent>
-
-            <DialogActions sx={{ p: 3, borderTop: '1px solid #f0f0f0' }}>
-                <Button onClick={onClose}>Скасувати</Button>
-                <Box sx={{ flexGrow: 1 }} />
-                {activeStep > 0 && <Button onClick={handleBack}>Назад</Button>}
-                {activeStep < 2 ? (
-                    <Button variant="contained" onClick={handleNext} sx={{ bgcolor: mainColor }}>Далі</Button>
-                ) : (
-                    <Button variant="contained" color="success" onClick={handleSave} startIcon={isEditMode ? <Edit /> : <CheckCircle />}>
-                        {isEditMode ? 'Зберегти зміни' : 'Оформити ТТН'}
-                    </Button>
-                )}
-            </DialogActions>
-        </Dialog>
+            <CreateClientDialog
+                open={createClientOpen}
+                onClose={() => setCreateClientOpen(false)}
+                onCreated={handleClientCreated}
+                mainColor={mainColor}
+            />
+        </>
     );
 };
 
