@@ -6,7 +6,7 @@ import {
     RadioGroup, Radio, InputAdornment, alpha
 } from '@mui/material';
 import {
-    Inventory, Person, Calculate, CheckCircle,
+    Inventory, Person, Calculate, CheckCircle, Edit,
     LocalShipping, Payments, AccountBalanceWallet
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,8 +38,10 @@ const initialFormData = {
     senderPay: true, partiallyPaid: false, partialAmount: ''
 };
 
-const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references }) => {
+const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references, shipmentToEdit = null }) => {
     const { clients, shipmentTypes, parcelTypes, storageConditions, boxVariants } = references;
+    const isEditMode = !!shipmentToEdit;
+
     const [activeStep, setActiveStep] = useState(0);
     const [direction, setDirection] = useState(0);
     const [fieldErrors, setFieldErrors] = useState({});
@@ -47,16 +49,62 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
     const listboxRef = useRef(null);
 
     useEffect(() => {
-        if (!open) {
+        if (open && shipmentToEdit && parcelTypes.length > 0 && storageConditions.length > 0) {
+            setFormData({
+                parcel: {
+                    declaredValue: shipmentToEdit.declaredValue ?? '',
+                    actualWeight: shipmentToEdit.actualWeight ?? '',
+                    contentDescription: shipmentToEdit.parcelDescription ?? '',
+                    parcelTypeId: shipmentToEdit.parcelTypeId ?? null,
+                    storageConditionIds: shipmentToEdit.storageConditionIds ?? [],
+                },
+                box: {
+                    useBox: !!shipmentToEdit.boxVariantId,
+                    boxVariantId: shipmentToEdit.boxVariantId ?? null,
+                },
+                origin: {
+                    type: shipmentToEdit.originType?.toLowerCase() ?? 'branch',
+                    deliveryPointId: shipmentToEdit.originDeliveryPointId ?? null,
+                    cityId: shipmentToEdit.originCityId ?? null,
+                    streetId: shipmentToEdit.originStreetId ?? null,
+                    houseNumber: shipmentToEdit.originHouseNumber ?? '',
+                    apartmentNumber: shipmentToEdit.originApartmentNumber ?? '',
+                },
+                destination: {
+                    type: shipmentToEdit.destinationType?.toLowerCase() ?? 'branch',
+                    deliveryPointId: shipmentToEdit.destinationDeliveryPointId ?? null,
+                    cityId: shipmentToEdit.destinationCityId ?? null,
+                    streetId: shipmentToEdit.destinationStreetId ?? null,
+                    houseNumber: shipmentToEdit.destinationHouseNumber ?? '',
+                    apartmentNumber: shipmentToEdit.destinationApartmentNumber ?? '',
+                },
+                senderId: shipmentToEdit.senderId ?? null,
+                recipientId: shipmentToEdit.recipientId ?? null,
+                shipmentTypeId: shipmentToEdit.shipmentTypeId ?? null,
+                price: {
+                    deliveryPrice: shipmentToEdit.deliveryPrice ?? 0,
+                    weightPrice: shipmentToEdit.weightPrice ?? 0,
+                    distancePrice: shipmentToEdit.distancePrice ?? 0,
+                    boxVariantPrice: shipmentToEdit.boxVariantPrice ?? 0,
+                    specialPackagingPrice: shipmentToEdit.specialPackagingPrice ?? 0,
+                    insuranceFee: shipmentToEdit.insuranceFee ?? 0,
+                    totalPrice: shipmentToEdit.totalPrice ?? 0,
+                },
+                senderPay: shipmentToEdit.isSenderPay ?? true,
+                partiallyPaid: shipmentToEdit.isPartiallyPaid ?? false,
+                partialAmount: shipmentToEdit.partialAmount ?? '',
+            });
+            setActiveStep(0);
+            setFieldErrors({});
+        } else if (open && !shipmentToEdit) {
             setActiveStep(0);
             setFormData(initialFormData);
             setFieldErrors({});
         }
-    }, [open]);
+    }, [open, shipmentToEdit, parcelTypes, storageConditions]);
 
     const fetchCalculatedPrice = useCallback(async () => {
         if (!formData.parcel.actualWeight || !formData.parcel.parcelTypeId || !formData.shipmentTypeId) return;
-
         try {
             const calculationRequest = {
                 contentDescription: formData.parcel.contentDescription,
@@ -69,7 +117,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                 originCityId: formData.origin.cityId,
                 destinationCityId: formData.destination.cityId
             };
-
             const response = await DictionaryApi.calculatePrices(calculationRequest);
             setFormData(prev => ({ ...prev, price: response.data }));
         } catch (error) {
@@ -78,9 +125,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
     }, [formData.parcel, formData.box, formData.shipmentTypeId, formData.origin.cityId, formData.destination.cityId]);
 
     useEffect(() => {
-        if (activeStep === 2) {
-            fetchCalculatedPrice();
-        }
+        if (activeStep === 2) fetchCalculatedPrice();
     }, [activeStep, fetchCalculatedPrice]);
 
     const STEP1_FIELDS = ['shipmentTypeId', 'originCityId', 'destinationCityId', 'senderId', 'recipientId'];
@@ -105,10 +150,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
             } catch (error) {
                 const serverErrors = error.response?.data?.validationErrors;
                 if (serverErrors) {
-                    const step0Errors = Object.entries(serverErrors).filter(
-                        ([key]) => !STEP1_FIELDS.includes(key)
-                    );
-
+                    const step0Errors = Object.entries(serverErrors).filter(([key]) => !STEP1_FIELDS.includes(key));
                     if (step0Errors.length > 0) {
                         const mapped = {};
                         for (const [key, val] of step0Errors) {
@@ -136,11 +178,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
             if (!formData.origin.deliveryPointId && formData.origin.type !== 'address') errors['origin.deliveryPointId'] = 'Оберіть пункт відправлення';
             if (!formData.destination.cityId) errors['destination.cityId'] = 'Оберіть місто призначення';
             if (!formData.destination.deliveryPointId && formData.destination.type !== 'address') errors['destination.deliveryPointId'] = 'Оберіть пункт призначення';
-
-            if (Object.keys(errors).length > 0) {
-                setFieldErrors(errors);
-                return;
-            }
+            if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
         }
 
         setDirection(1);
@@ -184,8 +222,13 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                 calculatedPrice: formData.price
             };
 
-            await DictionaryApi.create('shipments', complexData);
-            onSuccess("ТТН створено успішно!");
+            if (isEditMode) {
+                await DictionaryApi.update('shipments', shipmentToEdit.id, complexData);
+                onSuccess("ТТН оновлено успішно!");
+            } else {
+                await DictionaryApi.create('shipments', complexData);
+                onSuccess("ТТН створено успішно!");
+            }
             onClose();
         } catch (error) {
             if (error.response?.data?.validationErrors) {
@@ -214,17 +257,21 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
     const handleBoxListboxOpen = useCallback(() => {
         const optimalId = getOptimalBoxId(formData.parcel.actualWeight);
         if (!optimalId) return;
-
         setTimeout(() => {
             const optimalEl = document.querySelector(`[data-optimal-box="true"]`);
-            if (optimalEl) {
-                optimalEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            }
+            if (optimalEl) optimalEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }, 100);
     }, [formData.parcel.actualWeight, boxVariants]);
 
     const steps = [{ label: 'Посилка', icon: 1 }, { label: 'Маршрут', icon: 2 }, { label: 'Вартість', icon: 3 }];
     const variants = { enter: (d) => ({ x: d > 0 ? 100 : -100, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d < 0 ? 100 : -100, opacity: 0 }) };
+
+    const selectedParcelType = parcelTypes.find(p => p.id === formData.parcel.parcelTypeId) ?? null;
+    const selectedStorageConditions = storageConditions.filter(sc => formData.parcel.storageConditionIds.includes(sc.id));
+    const selectedBoxVariant = boxVariants.find(b => b.id === formData.box.boxVariantId) ?? null;
+    const selectedSender = clients.find(c => c.id === formData.senderId) ?? null;
+    const selectedRecipient = clients.find(c => c.id === formData.recipientId) ?? null;
+    const selectedShipmentType = shipmentTypes.find(t => t.id === formData.shipmentTypeId) ?? null;
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4 } }}>
@@ -234,11 +281,17 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                 borderRadius: '16px 16px 0 0'
             }}>
                 <Box sx={{ bgcolor: 'rgba(255,255,255,0.2)', p: 1, borderRadius: '12px', display: 'flex' }}>
-                    <LocalShipping sx={{ color: 'white', fontSize: 28 }} />
+                    {isEditMode
+                        ? <Edit sx={{ color: 'white', fontSize: 28 }} />
+                        : <LocalShipping sx={{ color: 'white', fontSize: 28 }} />}
                 </Box>
                 <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>Нове відправлення</Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>Заповніть всі кроки для оформлення ТТН</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                        {isEditMode ? `Редагування ТТН ${shipmentToEdit?.trackingNumber ?? ''}` : 'Нове відправлення'}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                        {isEditMode ? 'Внесіть зміни та збережіть' : 'Заповніть всі кроки для оформлення ТТН'}
+                    </Typography>
                 </Box>
             </Box>
 
@@ -299,6 +352,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
 
                                 <Autocomplete
                                     options={parcelTypes}
+                                    value={selectedParcelType}
                                     getOptionLabel={(o) => o.name || ''}
                                     onChange={(_, v) => {
                                         setFormData({ ...formData, parcel: { ...formData.parcel, parcelTypeId: v?.id ?? null } });
@@ -315,6 +369,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <Autocomplete
                                     multiple
                                     options={storageConditions}
+                                    value={selectedStorageConditions}
                                     getOptionLabel={(o) => o.name || ''}
                                     onChange={(_, v) => {
                                         setFormData({ ...formData, parcel: { ...formData.parcel, storageConditionIds: v.map(i => i.id) } });
@@ -331,6 +386,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                             sx={{ bgcolor: alpha(mainColor, 0.1), color: mainColor, fontWeight: 700 }} key={opt.id} />
                                     ))}
                                 />
+
                                 <Box sx={{
                                     mt: 1, p: 2, borderRadius: 2,
                                     bgcolor: formData.box.useBox ? alpha(mainColor, 0.03) : 'transparent',
@@ -349,6 +405,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                         <Autocomplete
                                             sx={{ mt: 2 }}
                                             options={boxVariants}
+                                            value={selectedBoxVariant}
                                             getOptionLabel={(o) => `${o.boxTypeName} ${o.name} - ${o.price} ₴`}
                                             getOptionKey={(o) => o.id}
                                             getOptionDisabled={(o) => !isBoxSuitable(o, formData.parcel.actualWeight)}
@@ -363,9 +420,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                 const optimalId = getOptimalBoxId(formData.parcel.actualWeight);
                                                 const isOptimal = suitable && o.id === optimalId;
                                                 return (
-                                                    <li
-                                                        key={key}
-                                                        {...props}
+                                                    <li key={key} {...props}
                                                         data-optimal-box={isOptimal ? "true" : undefined}
                                                         style={{
                                                             borderLeft: isOptimal ? '3px solid #4caf50' : '3px solid transparent',
@@ -379,11 +434,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                                     {o.boxTypeName} {o.name} — {o.price} ₴
                                                                     {isOptimal && (
                                                                         <Chip label="Оптимально" size="small"
-                                                                            sx={{
-                                                                                ml: 1, height: 18, fontSize: 10, fontWeight: 800,
-                                                                                bgcolor: '#4caf50', color: 'white',
-                                                                                '& .MuiChip-label': { px: 0.75 }
-                                                                            }}
+                                                                            sx={{ ml: 1, height: 18, fontSize: 10, fontWeight: 800, bgcolor: '#4caf50', color: 'white', '& .MuiChip-label': { px: 0.75 } }}
                                                                         />
                                                                     )}
                                                                 </Typography>
@@ -395,11 +446,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                                             </Box>
                                                             <Typography variant="caption" color="text.secondary">
                                                                 {o.width} × {o.length} × {o.height} см
-                                                                {o.weightCategoryName
-                                                                    ? ` · ${o.weightCategoryName}`
-                                                                    : o.maxWeight != null
-                                                                        ? ` · до ${o.maxWeight} кг`
-                                                                        : ''}
+                                                                {o.weightCategoryName ? ` · ${o.weightCategoryName}` : o.maxWeight != null ? ` · до ${o.maxWeight} кг` : ''}
                                                             </Typography>
                                                         </Box>
                                                     </li>
@@ -408,12 +455,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                             renderInput={(p) => (
                                                 <TextField {...p} label="Розмір коробки" size="small"
                                                     error={!!fieldErrors['box.boxVariantId']}
-                                                    helperText={
-                                                        fieldErrors['box.boxVariantId'] ||
-                                                        (parseFloat(formData.parcel.actualWeight) > 0
-                                                            ? 'Недоступні коробки перевищені за допустимою вагою'
-                                                            : 'Введіть вагу для фільтрації підходящих коробок')
-                                                    }
+                                                    helperText={fieldErrors['box.boxVariantId'] || (parseFloat(formData.parcel.actualWeight) > 0 ? 'Недоступні коробки перевищені за допустимою вагою' : 'Введіть вагу для фільтрації підходящих коробок')}
                                                 />
                                             )}
                                         />
@@ -433,6 +475,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                     <Grid size={4}>
                                         <Autocomplete
                                             fullWidth options={clients}
+                                            value={selectedSender}
                                             getOptionLabel={(o) => {
                                                 const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
                                                 return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
@@ -449,10 +492,10 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                             )}
                                         />
                                     </Grid>
-
                                     <Grid size={4}>
                                         <Autocomplete
                                             fullWidth options={clients}
+                                            value={selectedRecipient}
                                             getOptionLabel={(o) => {
                                                 const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
                                                 return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
@@ -469,10 +512,10 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                             )}
                                         />
                                     </Grid>
-
                                     <Grid size={4}>
                                         <Autocomplete
                                             fullWidth options={shipmentTypes}
+                                            value={selectedShipmentType}
                                             getOptionLabel={(o) => o.name || ''}
                                             onChange={(_, v) => {
                                                 setFormData({ ...formData, shipmentTypeId: v?.id });
@@ -491,19 +534,13 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <DeliveryPointSelector
                                     point={formData.origin} label="Звідки"
                                     onChange={(v) => setFormData({ ...formData, origin: v })}
-                                    errors={{
-                                        cityId: fieldErrors['origin.cityId'],
-                                        deliveryPointId: fieldErrors['origin.deliveryPointId']
-                                    }}
+                                    errors={{ cityId: fieldErrors['origin.cityId'], deliveryPointId: fieldErrors['origin.deliveryPointId'] }}
                                     onClearError={() => setFieldErrors(prev => ({ ...prev, 'origin.cityId': null, 'origin.deliveryPointId': null }))}
                                 />
                                 <DeliveryPointSelector
                                     point={formData.destination} label="Куди"
                                     onChange={(v) => setFormData({ ...formData, destination: v })}
-                                    errors={{
-                                        cityId: fieldErrors['destination.cityId'],
-                                        deliveryPointId: fieldErrors['destination.deliveryPointId']
-                                    }}
+                                    errors={{ cityId: fieldErrors['destination.cityId'], deliveryPointId: fieldErrors['destination.deliveryPointId'] }}
                                     onClearError={() => setFieldErrors(prev => ({ ...prev, 'destination.cityId': null, 'destination.deliveryPointId': null }))}
                                 />
                             </Box>
@@ -539,8 +576,13 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                                 <AnimatePresence>{formData.partiallyPaid && (
                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
                                         <Box sx={{ p: 2, mt: 1, border: `1px dashed ${mainColor}`, borderRadius: 2, bgcolor: alpha(mainColor, 0.03) }}>
-                                            <Typography variant="subtitle2" sx={{ color: mainColor, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}><AccountBalanceWallet fontSize="small" /> Сума авансу</Typography>
-                                            <TextField fullWidth size="small" type="number" value={formData.partialAmount} onChange={(e) => setFormData({ ...formData, partialAmount: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start">₴</InputAdornment> }} />
+                                            <Typography variant="subtitle2" sx={{ color: mainColor, mb: 1, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <AccountBalanceWallet fontSize="small" /> Сума авансу
+                                            </Typography>
+                                            <TextField fullWidth size="small" type="number" value={formData.partialAmount}
+                                                onChange={(e) => setFormData({ ...formData, partialAmount: e.target.value })}
+                                                InputProps={{ startAdornment: <InputAdornment position="start">₴</InputAdornment> }}
+                                            />
                                         </Box>
                                     </motion.div>
                                 )}</AnimatePresence>
@@ -557,8 +599,8 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references 
                 {activeStep < 2 ? (
                     <Button variant="contained" onClick={handleNext} sx={{ bgcolor: mainColor }}>Далі</Button>
                 ) : (
-                    <Button variant="contained" color="success" onClick={handleSave} startIcon={<CheckCircle />}>
-                        Оформити ТТН
+                    <Button variant="contained" color="success" onClick={handleSave} startIcon={isEditMode ? <Edit /> : <CheckCircle />}>
+                        {isEditMode ? 'Зберегти зміни' : 'Оформити ТТН'}
                     </Button>
                 )}
             </DialogActions>

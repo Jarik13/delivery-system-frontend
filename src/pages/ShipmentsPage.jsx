@@ -27,6 +27,7 @@ const ShipmentsPage = () => {
     const [expandedFinance, setExpandedFinance] = useState({});
     const [movements, setMovements] = useState({});
     const [openWizard, setOpenWizard] = useState(false);
+    const [editingShipment, setEditingShipment] = useState(null);
 
     const [references, setReferences] = useState({
         statuses: [], clients: [], shipmentTypes: [],
@@ -182,6 +183,16 @@ const ShipmentsPage = () => {
         }
     };
 
+    const handleEdit = (shipment) => {
+        setEditingShipment(shipment);
+        setOpenWizard(true);
+    };
+
+    const handleCloseWizard = () => {
+        setOpenWizard(false);
+        setEditingShipment(null);
+    };
+
     const tabStatuses = references.statuses.filter(s =>
         activeTab === 0 ? !ARCHIVE_STATUSES.includes(s.name) : ARCHIVE_STATUSES.includes(s.name)
     );
@@ -261,7 +272,7 @@ const ShipmentsPage = () => {
                     </Box>
                     <Button variant="contained" size="small"
                         sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                        startIcon={<Add />} onClick={() => setOpenWizard(true)}>
+                        startIcon={<Add />} onClick={() => { setEditingShipment(null); setOpenWizard(true); }}>
                         Створити ТТН
                     </Button>
                 </Box>
@@ -317,6 +328,7 @@ const ShipmentsPage = () => {
                 expandedHistory={expandedHistory} expandedFinance={expandedFinance} movements={movements}
                 onDelete={handleDelete} onToggleHistory={toggleHistory}
                 onToggleFinance={(id) => setExpandedFinance(prev => ({ ...prev, [id]: !prev[id] }))}
+                onEdit={handleEdit}
             />
 
             <DataPagination
@@ -330,9 +342,10 @@ const ShipmentsPage = () => {
 
             <ShipmentWizardDialog
                 open={openWizard}
-                onClose={() => setOpenWizard(false)}
+                onClose={handleCloseWizard}
                 mainColor={mainColor}
                 references={references}
+                shipmentToEdit={editingShipment}
                 onSuccess={(msg) => {
                     loadTableData();
                     setNotification({ open: true, message: msg, severity: 'success' });
