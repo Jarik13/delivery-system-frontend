@@ -56,14 +56,15 @@ const ShipmentsPage = () => {
     useEffect(() => {
         const loadAllReferences = async () => {
             try {
-                const [s, c, t, pt, sc, bv, statsRes] = await Promise.all([
+                const [s, c, t, pt, sc, bv, statsRes, payTypes] = await Promise.all([
                     DictionaryApi.getAll('shipment-statuses', 0, 100),
                     DictionaryApi.getAll('clients', 0, 1000),
                     DictionaryApi.getAll('shipment-types', 0, 100),
                     DictionaryApi.getAll('parcel-types', 0, 100),
                     DictionaryApi.getAll('storage-conditions', 0, 100),
                     DictionaryApi.getAll('box-variants', 0, 100),
-                    DictionaryApi.getStatistics('shipments')
+                    DictionaryApi.getStatistics('shipments'),
+                    DictionaryApi.getAll('payment-types', 0, 100)
                 ]);
 
                 setReferences({
@@ -75,7 +76,8 @@ const ShipmentsPage = () => {
                     shipmentTypes: t.data.content || [],
                     parcelTypes: pt.data.content || [],
                     storageConditions: sc.data.content || [],
-                    boxVariants: bv.data.content || []
+                    boxVariants: bv.data.content || [],
+                    paymentTypes: payTypes.data.content || [],
                 });
 
                 if (statsRes.data) {
