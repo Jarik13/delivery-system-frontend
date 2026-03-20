@@ -74,7 +74,7 @@ const TripsPage = () => {
                     DictionaryApi.getAll('vehicles', 0, 1000),
                 ]);
                 setStatuses(statusRes.data.content || []);
-                setDrivers((driverRes.data.content || []).map(d => ({
+                setDrivers((driverRes.data.content || driverRes.data || []).map(d => ({
                     ...d,
                     name: `${d.lastName || ''} ${d.firstName || ''} ${d.middleName || ''}`.trim() || `Водій №${d.id}`
                 })));
