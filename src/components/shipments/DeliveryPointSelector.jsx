@@ -82,7 +82,6 @@ const DeliveryPointSelector = ({
             else if (type === 'postomat') res = await DictionaryApi.getByParam('postomats', 'cityId', cityId);
             else if (type === 'address') res = await DictionaryApi.getByParam('streets', 'cityId', cityId);
             const data = res?.data?.content || res?.data || [];
-            console.log('leafItems loaded:', data.length, 'branchId to find:', point.branchId);
             setLeafItems(data);
         } catch (e) {
             console.error(e);

@@ -262,6 +262,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                 origin: {
                     type: formData.origin.type.toUpperCase(),
                     deliveryPointId: formData.origin.deliveryPointId,
+                    cityId: formData.origin.cityId,
                     streetId: formData.origin.streetId,
                     houseNumber: formData.origin.houseNumber,
                     apartmentNumber: parseInt(formData.origin.apartmentNumber) || null
@@ -269,15 +270,14 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                 destination: {
                     type: formData.destination.type.toUpperCase(),
                     deliveryPointId: formData.destination.deliveryPointId,
+                    cityId: formData.destination.cityId,
                     streetId: formData.destination.streetId,
                     houseNumber: formData.destination.houseNumber,
                     apartmentNumber: parseInt(formData.destination.apartmentNumber) || null
                 },
                 isSenderPay: formData.senderPay,
                 isPartiallyPaid: formData.partiallyPaid && !formData.fullyPaid,
-                partialAmount: formData.partiallyPaid && !formData.fullyPaid
-                    ? parseFloat(formData.partialAmount)
-                    : null,
+                partialAmount: formData.partiallyPaid && !formData.fullyPaid ? parseFloat(formData.partialAmount) : null,
                 isFullyPaid: formData.fullyPaid,
                 paymentTypeId: formData.paymentTypeId,
                 boxVariantId: formData.box.useBox ? formData.box.boxVariantId : null,
