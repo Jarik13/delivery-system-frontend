@@ -3,7 +3,8 @@ import {
     Dialog, DialogContent, DialogActions, TextField, Box,
     Typography, Button, Stepper, Step, StepLabel, Grid, Autocomplete,
     Divider, FormControlLabel, Checkbox, Chip, Card, CardContent,
-    RadioGroup, Radio, InputAdornment, alpha, IconButton, Tooltip
+    RadioGroup, Radio, InputAdornment, alpha, IconButton, Tooltip,
+    Collapse
 } from '@mui/material';
 import {
     Inventory, Person, Calculate, CheckCircle, Edit,
@@ -674,73 +675,111 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                                         </CardContent>
                                     </Card>
 
-                                    {/* Хто платить */}
+                                    <Box sx={{
+                                        p: 1.5, borderRadius: 2,
+                                        bgcolor: alpha('#607d8b', 0.05),
+                                        border: `1px solid ${alpha('#607d8b', 0.15)}`,
+                                    }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={700}
+                                            sx={{ textTransform: 'uppercase', display: 'block', mb: 1 }}>
+                                            Як розраховується вартість
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            {[
+                                                { label: 'Базовий тариф', value: `${formData.price.deliveryPrice.toFixed(2)} ₴`, hint: 'Стандарт — 60 ₴, Експрес — 85 ₴' },
+                                                { label: 'За вагу', value: `${formData.price.weightPrice.toFixed(2)} ₴`, hint: `${formData.parcel.actualWeight} кг × 3.5 ₴` },
+                                                { label: 'За відстань', value: `${formData.price.distancePrice.toFixed(2)} ₴`, hint: 'Відстань × 0.8 ₴/км (макс. 500 ₴)' },
+                                                { label: 'Коробка', value: `${formData.price.boxVariantPrice.toFixed(2)} ₴`, hint: 'Вартість обраної коробки' },
+                                                { label: 'Спец. пакування', value: `${formData.price.specialPackagingPrice.toFixed(2)} ₴`, hint: 'Надбавка за умови зберігання — 45 ₴' },
+                                                { label: 'Страховий збір', value: `${formData.price.insuranceFee.toFixed(2)} ₴`, hint: `${formData.parcel.declaredValue} × 0.5% (мін. 5 ₴)` },
+                                            ].map(({ label, value, hint }) => (
+                                                <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Box>
+                                                        <Typography variant="caption" fontWeight={600} color="text.primary">{label}</Typography>
+                                                        <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>{hint}</Typography>
+                                                    </Box>
+                                                    <Typography variant="caption" fontWeight={700}>{value}</Typography>
+                                                </Box>
+                                            ))}
+                                        </Box>
+                                    </Box>
+
                                     <RadioGroup row value={formData.senderPay ? 'sender' : 'recipient'}
-                                        onChange={(e) => setFormData({ ...formData, senderPay: e.target.value === 'sender' })}>
+                                        onChange={(e) => setFormData(prev => ({
+                                            ...prev,
+                                            senderPay: e.target.value === 'sender',
+                                            fullyPaid: false,
+                                            partiallyPaid: false,
+                                            partialAmount: '',
+                                            paymentTypeId: e.target.value === 'recipient' ? null : prev.paymentTypeId,
+                                        }))}>
                                         <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor }} />} label="Оплачує відправник" />
                                         <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor }} />} label="Оплачує отримувач" />
                                     </RadioGroup>
 
-                                    {/* Тип оплати */}
-                                    <Autocomplete
-                                        options={paymentTypes}
-                                        value={selectedPaymentType}
-                                        getOptionLabel={(o) => o.name || ''}
-                                        onChange={(_, v) => {
-                                            setFormData(prev => ({ ...prev, paymentTypeId: v?.id ?? null }));
-                                            setFieldErrors(prev => ({ ...prev, paymentTypeId: null }));
-                                        }}
-                                        renderInput={(p) => (
-                                            <TextField {...p} label="Спосіб оплати"
-                                                error={!!fieldErrors.paymentTypeId}
-                                                helperText={fieldErrors.paymentTypeId}
-                                                InputProps={{
-                                                    ...p.InputProps,
-                                                    startAdornment: <CreditCard sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
-                                                }}
-                                            />
-                                        )}
-                                    />
+                                    {(formData.senderPay || formData.partiallyPaid) && (
+                                        <Autocomplete
+                                            options={paymentTypes}
+                                            value={selectedPaymentType}
+                                            getOptionLabel={(o) => o.name || ''}
+                                            onChange={(_, v) => {
+                                                setFormData(prev => ({ ...prev, paymentTypeId: v?.id ?? null }));
+                                                setFieldErrors(prev => ({ ...prev, paymentTypeId: null }));
+                                            }}
+                                            renderInput={(p) => (
+                                                <TextField {...p} label="Спосіб оплати"
+                                                    error={!!fieldErrors.paymentTypeId}
+                                                    helperText={fieldErrors.paymentTypeId}
+                                                    InputProps={{
+                                                        ...p.InputProps,
+                                                        startAdornment: <CreditCard sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
+                                                    }}
+                                                />
+                                            )}
+                                        />
+                                    )}
 
-                                    {/* Статус оплати */}
                                     <Box sx={{
                                         p: 2, borderRadius: 2,
                                         border: `1px solid ${alpha(mainColor, 0.2)}`,
                                         bgcolor: alpha(mainColor, 0.02),
                                     }}>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
+                                        <Typography variant="caption" color="text.secondary" fontWeight={700}
+                                            sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
                                             Статус оплати
                                         </Typography>
 
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    sx={{ color: '#4caf50', '&.Mui-checked': { color: '#4caf50' } }}
-                                                    checked={formData.fullyPaid}
-                                                    onChange={(e) => setFormData(prev => ({
-                                                        ...prev,
-                                                        fullyPaid: e.target.checked,
-                                                        partiallyPaid: e.target.checked ? false : prev.partiallyPaid,
-                                                        partialAmount: e.target.checked ? '' : prev.partialAmount,
-                                                    }))}
-                                                />
-                                            }
-                                            label={
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                                    <Typography variant="body2" fontWeight={600} color={formData.fullyPaid ? '#2e7d32' : 'text.primary'}>
-                                                        Повністю оплачено
-                                                    </Typography>
-                                                    {formData.fullyPaid && (
-                                                        <Chip label={`${formData.price.totalPrice.toFixed(2)} ₴`} size="small"
-                                                            sx={{ height: 20, fontSize: 10, fontWeight: 700, bgcolor: alpha('#4caf50', 0.1), color: '#2e7d32' }} />
-                                                    )}
-                                                </Box>
-                                            }
-                                        />
+                                        {formData.senderPay && (
+                                            <FormControlLabel
+                                                control={
+                                                    <Checkbox
+                                                        sx={{ color: '#4caf50', '&.Mui-checked': { color: '#4caf50' } }}
+                                                        checked={formData.fullyPaid}
+                                                        onChange={(e) => setFormData(prev => ({
+                                                            ...prev,
+                                                            fullyPaid: e.target.checked,
+                                                            partiallyPaid: e.target.checked ? false : prev.partiallyPaid,
+                                                            partialAmount: e.target.checked ? '' : prev.partialAmount,
+                                                        }))}
+                                                    />
+                                                }
+                                                label={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                                        <Typography variant="body2" fontWeight={600} color={formData.fullyPaid ? '#2e7d32' : 'text.primary'}>
+                                                            Повністю оплачено
+                                                        </Typography>
+                                                        {formData.fullyPaid && (
+                                                            <Chip label={`${formData.price.totalPrice.toFixed(2)} ₴`} size="small"
+                                                                sx={{ height: 20, fontSize: 10, fontWeight: 700, bgcolor: alpha('#4caf50', 0.1), color: '#2e7d32' }} />
+                                                        )}
+                                                    </Box>
+                                                }
+                                            />
+                                        )}
 
                                         {!formData.fullyPaid && (
                                             <FormControlLabel
-                                                sx={{ mt: 0.5 }}
+                                                sx={{ mt: formData.senderPay ? 0.5 : 0 }}
                                                 control={
                                                     <Checkbox
                                                         sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }}
@@ -756,32 +795,28 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                                             />
                                         )}
 
-                                        <AnimatePresence>
-                                            {formData.partiallyPaid && !formData.fullyPaid && (
-                                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
-                                                    <Box sx={{ mt: 1.5, pl: 1 }}>
-                                                        <TextField fullWidth size="small" type="number"
-                                                            label="Сума авансу"
-                                                            value={formData.partialAmount}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, partialAmount: e.target.value }))}
-                                                            InputProps={{
-                                                                startAdornment: (
-                                                                    <InputAdornment position="start">
-                                                                        <AccountBalanceWallet sx={{ fontSize: 18, color: mainColor }} />
-                                                                        <Typography sx={{ ml: 0.5 }}>₴</Typography>
-                                                                    </InputAdornment>
-                                                                )
-                                                            }}
-                                                        />
-                                                        {formData.partialAmount && formData.price.totalPrice > 0 && (
-                                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                                                Залишок: {(formData.price.totalPrice - parseFloat(formData.partialAmount || 0)).toFixed(2)} ₴
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                        <Collapse in={formData.partiallyPaid && !formData.fullyPaid}>
+                                            <Box sx={{ mt: 1.5, pl: 1 }}>
+                                                <TextField fullWidth size="small" type="number"
+                                                    label="Сума авансу"
+                                                    value={formData.partialAmount}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, partialAmount: e.target.value }))}
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <InputAdornment position="start">
+                                                                <AccountBalanceWallet sx={{ fontSize: 18, color: mainColor }} />
+                                                                <Typography sx={{ ml: 0.5 }}>₴</Typography>
+                                                            </InputAdornment>
+                                                        )
+                                                    }}
+                                                />
+                                                {formData.partialAmount && formData.price.totalPrice > 0 && (
+                                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                                        Залишок: {(formData.price.totalPrice - parseFloat(formData.partialAmount || 0)).toFixed(2)} ₴
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        </Collapse>
                                     </Box>
                                 </Box>
                             </motion.div>
