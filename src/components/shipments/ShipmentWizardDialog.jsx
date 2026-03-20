@@ -52,10 +52,40 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
     const [fieldErrors, setFieldErrors] = useState({});
     const [formData, setFormData] = useState(initialFormData);
     const [localClients, setLocalClients] = useState([]);
+    const [employeeProfile, setEmployeeProfile] = useState(null);
     const listboxRef = useRef(null);
 
     const [createClientOpen, setCreateClientOpen] = useState(false);
     const [createClientFor, setCreateClientFor] = useState(null);
+
+    const [profileLoading, setProfileLoading] = useState(false);
+
+    useEffect(() => {
+        if (!open || isEditMode) return;
+        setProfileLoading(true);
+        setEmployeeProfile(null);
+        DictionaryApi.getProfile()
+            .then(res => {
+                const profile = res.data;
+                setEmployeeProfile(profile);
+                if (profile?.branch?.deliveryPointId) {
+                    setFormData(prev => ({
+                        ...prev,
+                        origin: {
+                            type: 'branch',
+                            deliveryPointId: profile.branch.deliveryPointId,
+                            branchId: profile.branch.id,
+                            cityId: null,
+                            streetId: null,
+                            houseNumber: '',
+                            apartmentNumber: '',
+                        }
+                    }));
+                }
+            })
+            .catch(console.error)
+            .finally(() => setProfileLoading(false));
+    }, [open, isEditMode]);
 
     useEffect(() => {
         setLocalClients(clients);
@@ -199,8 +229,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
             if (!formData.senderId) errors['senderId'] = 'Оберіть відправника';
             if (!formData.recipientId) errors['recipientId'] = 'Оберіть отримувача';
             if (!formData.shipmentTypeId) errors['shipmentTypeId'] = 'Оберіть тип доставки';
-            if (!formData.origin.cityId) errors['origin.cityId'] = 'Оберіть місто відправлення';
-            if (!formData.origin.deliveryPointId && formData.origin.type !== 'address') errors['origin.deliveryPointId'] = 'Оберіть пункт відправлення';
+            if (!isEditMode && !formData.origin.deliveryPointId) errors['origin.deliveryPointId'] = 'Оберіть пункт відправлення';
             if (!formData.destination.cityId) errors['destination.cityId'] = 'Оберіть місто призначення';
             if (!formData.destination.deliveryPointId && formData.destination.type !== 'address') errors['destination.deliveryPointId'] = 'Оберіть пункт призначення';
             if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
@@ -325,6 +354,8 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
         const name = o.fullName || `${o.lastName || ''} ${o.firstName || ''} ${o.middleName || ''}`.trim();
         return name + (o.phoneNumber ? ` (${o.phoneNumber})` : '');
     };
+
+    const originLocked = !isEditMode && !profileLoading && employeeProfile !== null;
 
     return (
         <>
@@ -592,13 +623,18 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                                     <Divider />
 
                                     <DeliveryPointSelector
-                                        point={formData.origin} label="Звідки"
+                                        point={formData.origin}
+                                        label="Звідки"
+                                        locked={originLocked}
+                                        lockedLabel={employeeProfile?.branch?.name}
                                         onChange={(v) => setFormData({ ...formData, origin: v })}
                                         errors={{ cityId: fieldErrors['origin.cityId'], deliveryPointId: fieldErrors['origin.deliveryPointId'] }}
                                         onClearError={() => setFieldErrors(prev => ({ ...prev, 'origin.cityId': null, 'origin.deliveryPointId': null }))}
                                     />
+
                                     <DeliveryPointSelector
-                                        point={formData.destination} label="Куди"
+                                        point={formData.destination}
+                                        label="Куди"
                                         onChange={(v) => setFormData({ ...formData, destination: v })}
                                         errors={{ cityId: fieldErrors['destination.cityId'], deliveryPointId: fieldErrors['destination.deliveryPointId'] }}
                                         onClearError={() => setFieldErrors(prev => ({ ...prev, 'destination.cityId': null, 'destination.deliveryPointId': null }))}

@@ -2,17 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     FormControl, InputLabel, Select, MenuItem, Box, Collapse,
     TextField, Autocomplete, ToggleButton, ToggleButtonGroup,
-    Typography, Stack
+    Typography, Stack, Paper, alpha,
 } from '@mui/material';
 import {
     ArrowDownward, LocationOn, Map, Public,
     Business, MailOutline, Home,
-    Explore,
-    LocationCity
+    Explore, LocationCity, Lock,
 } from '@mui/icons-material';
 import { DictionaryApi } from '../../api/dictionaries';
 
-const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearError }) => {
+const DeliveryPointSelector = ({
+    point, onChange, label, errors = {}, onClearError,
+    locked = false,
+    lockedLabel = '',
+}) => {
     const [regions, setRegions] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [cities, setCities] = useState([]);
@@ -78,7 +81,6 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
             if (type === 'branch') res = await DictionaryApi.getByParam('branches', 'cityId', cityId);
             else if (type === 'postomat') res = await DictionaryApi.getByParam('postomats', 'cityId', cityId);
             else if (type === 'address') res = await DictionaryApi.getByParam('streets', 'cityId', cityId);
-
             const data = res?.data?.content || res?.data || [];
             setLeafItems(data);
         } catch (e) {
@@ -94,10 +96,8 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
         setDistricts([]);
         setCities([]);
         setLeafItems([]);
-
         isInternalChange.current = true;
         onChange({ ...point, cityId: null, branchId: null, postomatId: null, streetId: null });
-
         if (id) {
             const res = await DictionaryApi.getByParam('districts', 'regionId', id);
             setDistricts(res.data.content || res.data || []);
@@ -110,10 +110,8 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
         setSelectedCity('');
         setCities([]);
         setLeafItems([]);
-
         isInternalChange.current = true;
         onChange({ ...point, cityId: null, branchId: null, postomatId: null, streetId: null });
-
         if (id) {
             const res = await DictionaryApi.getAll('cities', 0, 5000, { districtId: id });
             setCities(res.data.content || res.data || []);
@@ -164,11 +162,7 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
                 deliveryPointId: v?.deliveryPointId || v?.deliveryPoint?.id || null
             });
         } else if (point.type === 'address') {
-            onChange({
-                ...point,
-                streetId: v?.id ?? null,
-                deliveryPointId: null
-            });
+            onChange({ ...point, streetId: v?.id ?? null, deliveryPointId: null });
         }
     };
 
@@ -178,6 +172,27 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
         if (point.type === 'address') return leafItems.find(i => i.id === point.streetId) || null;
         return null;
     };
+
+    if (locked) {
+        return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <Typography variant="subtitle2" color="primary" fontWeight="700" sx={{ mb: 1 }}>
+                    {label}
+                </Typography>
+                <Paper variant="outlined" sx={{
+                    p: 1.5, borderRadius: 2,
+                    bgcolor: alpha('#9e9e9e', 0.05),
+                    border: '1px solid #e0e0e0',
+                    display: 'flex', alignItems: 'center', gap: 1.5,
+                }}>
+                    <Lock sx={{ fontSize: 18, color: 'text.disabled', flexShrink: 0 }} />
+                    <Typography variant="body2" fontWeight={600}>
+                        {lockedLabel || 'Ваше відділення'}
+                    </Typography>
+                </Paper>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
@@ -189,19 +204,11 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
                 value={point.type}
                 exclusive
                 onChange={(_, val) => handleTypeChange(val)}
-                fullWidth
-                size="small"
-                sx={{ mb: 2 }}
+                fullWidth size="small" sx={{ mb: 2 }}
             >
-                <ToggleButton value="branch">
-                    <Business sx={{ mr: 1, fontSize: 18 }} />Відділення
-                </ToggleButton>
-                <ToggleButton value="postomat">
-                    <MailOutline sx={{ mr: 1, fontSize: 18 }} />Поштомат
-                </ToggleButton>
-                <ToggleButton value="address">
-                    <Home sx={{ mr: 1, fontSize: 18 }} />Адреса
-                </ToggleButton>
+                <ToggleButton value="branch"><Business sx={{ mr: 1, fontSize: 18 }} />Відділення</ToggleButton>
+                <ToggleButton value="postomat"><MailOutline sx={{ mr: 1, fontSize: 18 }} />Поштомат</ToggleButton>
+                <ToggleButton value="address"><Home sx={{ mr: 1, fontSize: 18 }} />Адреса</ToggleButton>
             </ToggleButtonGroup>
 
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
@@ -209,14 +216,8 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
                 <Box sx={{ flex: 1 }}>
                     <FormControl fullWidth size="small" error={!!errors.cityId && !selectedRegion}>
                         <InputLabel>1. Оберіть область</InputLabel>
-                        <Select
-                            value={selectedRegion}
-                            label="1. Оберіть область"
-                            onChange={handleRegionChange}
-                        >
-                            {regions.map(r => (
-                                <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
-                            ))}
+                        <Select value={selectedRegion} label="1. Оберіть область" onChange={handleRegionChange}>
+                            {regions.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
                         </Select>
                     </FormControl>
                     {!!errors.cityId && !selectedRegion && (
@@ -240,21 +241,13 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                         <Map color="primary" />
                         <Autocomplete
-                            fullWidth
-                            size="small"
-                            options={districts}
+                            fullWidth size="small" options={districts}
                             getOptionLabel={(o) => o.name || ''}
                             isOptionEqualToValue={(option, value) => option.id === value.id}
                             value={districts.find(d => d.id === selectedDistrict) || null}
                             onChange={handleDistrictChange}
-                            renderOption={(props, option) => (
-                                <li {...props} key={option.id}>
-                                    {option.name}
-                                </li>
-                            )}
-                            renderInput={(params) => (
-                                <TextField {...params} label="2. Оберіть район" />
-                            )}
+                            renderOption={(props, option) => <li {...props} key={option.id}>{option.name}</li>}
+                            renderInput={(params) => <TextField {...params} label="2. Оберіть район" />}
                         />
                     </Box>
                 </Box>
@@ -303,10 +296,7 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
                                 getOptionLabel={(o) => o.name || o.number || ''}
                                 isOptionEqualToValue={(option, value) => option.id === value.id}
                                 value={getLeafValue()}
-                                onChange={(e, v) => {
-                                    handleLeafChange(e, v);
-                                    onClearError?.();
-                                }}
+                                onChange={(e, v) => { handleLeafChange(e, v); onClearError?.(); }}
                                 renderOption={(props, option) => <li {...props} key={option.id}>{option.name || option.number || ''}</li>}
                                 renderInput={(params) => (
                                     <TextField {...params} label={`4. Оберіть ${getLeafLabel()}`}
@@ -319,17 +309,11 @@ const DeliveryPointSelector = ({ point, onChange, label, errors = {}, onClearErr
 
                         {point.type === 'address' && point.streetId && (
                             <Box sx={{ display: 'flex', gap: 2, pl: 5, mb: 1 }}>
-                                <TextField
-                                    label="Будинок"
-                                    size="small"
-                                    fullWidth
+                                <TextField label="Будинок" size="small" fullWidth
                                     value={point.houseNumber || ''}
                                     onChange={(e) => onChange({ ...point, houseNumber: e.target.value })}
                                 />
-                                <TextField
-                                    label="Кв."
-                                    size="small"
-                                    fullWidth
+                                <TextField label="Кв." size="small" fullWidth
                                     value={point.apartmentNumber || ''}
                                     onChange={(e) => onChange({ ...point, apartmentNumber: e.target.value })}
                                 />

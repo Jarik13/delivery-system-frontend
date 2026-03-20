@@ -28,6 +28,7 @@ export const DictionaryApi = {
         });
     },
     getById: (endpoint, id) => api.get(`/${endpoint}/${id}`),
+    getProfile: () => api.get('/employees/me'),
 
     calculatePrices: (data) => api.post('/shipments/calculate', data),
     create: (endpoint, data) => api.post(`/${endpoint}`, data),
