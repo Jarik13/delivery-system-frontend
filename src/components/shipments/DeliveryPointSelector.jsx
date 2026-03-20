@@ -82,9 +82,10 @@ const DeliveryPointSelector = ({
             else if (type === 'postomat') res = await DictionaryApi.getByParam('postomats', 'cityId', cityId);
             else if (type === 'address') res = await DictionaryApi.getByParam('streets', 'cityId', cityId);
             const data = res?.data?.content || res?.data || [];
+            console.log('leafItems loaded:', data.length, 'branchId to find:', point.branchId);
             setLeafItems(data);
         } catch (e) {
-            console.error("Помилка завантаження кінцевих пунктів", e);
+            console.error(e);
         }
     };
 
@@ -167,9 +168,18 @@ const DeliveryPointSelector = ({
     };
 
     const getLeafValue = () => {
-        if (point.type === 'branch') return leafItems.find(i => i.id === point.branchId) || null;
-        if (point.type === 'postomat') return leafItems.find(i => i.id === point.postomatId) || null;
-        if (point.type === 'address') return leafItems.find(i => i.id === point.streetId) || null;
+        if (point.type === 'branch')
+            return leafItems.find(i =>
+                (point.branchId && i.id === point.branchId) ||
+                (point.deliveryPointId && (i.deliveryPointId === point.deliveryPointId || i.deliveryPoint?.id === point.deliveryPointId))
+            ) || null;
+        if (point.type === 'postomat')
+            return leafItems.find(i =>
+                (point.postomatId && i.id === point.postomatId) ||
+                (point.deliveryPointId && (i.deliveryPointId === point.deliveryPointId || i.deliveryPoint?.id === point.deliveryPointId))
+            ) || null;
+        if (point.type === 'address')
+            return leafItems.find(i => i.id === point.streetId) || null;
         return null;
     };
 
