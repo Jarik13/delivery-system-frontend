@@ -154,7 +154,10 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                 setSuggestedShipments(data);
                 setSelectedShipmentIds(new Set(data.map(s => s.id)));
             })
-            .catch(() => setError('Помилка завантаження рекомендованих відправлень'))
+            .catch((e) => {
+                console.error('❌ Помилка:', e);
+                setError('Помилка завантаження рекомендованих відправлень');
+            })
             .finally(() => setSuggestedLoading(false));
     }, [step, selectedSegment]);
 
@@ -186,12 +189,13 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
         setError('');
         setFieldErrors({});
         try {
-            await DictionaryApi.create('waybills', {
+            const payload = {
                 tripId: selectedTrip.id,
                 routeId: selectedSegment.routeId,
                 tripSequenceNumber: selectedSegment.sequenceNumber,
                 shipmentIds: [...selectedShipmentIds],
-            });
+            };
+            await DictionaryApi.create('waybills', payload);
             onSuccess?.(`Накладну для рейсу #${selectedTrip.tripNumber} успішно створено`);
             handleClose();
         } catch (e) {

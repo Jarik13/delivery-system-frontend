@@ -52,4 +52,6 @@ export const UserApi = {
     resendEmail: (keycloakId) => api.post(`/users/${keycloakId}/resend-email`),
     updateRole: (keycloakId, role) => api.patch(`/users/${keycloakId}/role`, { role }),
     updateBranch: (keycloakId, branchId) => api.patch(`/users/${keycloakId}/branch`, { branchId }),
+    getProfile: () => api.get('/profile'),
+    updateProfile: (data) => api.put('/profile', data),
 };

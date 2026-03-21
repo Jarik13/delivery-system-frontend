@@ -16,6 +16,7 @@ import ReturnsPage from '../pages/ReturnsPage';
 import LoginPage from '../pages/LoginPage';
 import SuperAdminPage from '../pages/SuperAdminPage';
 import CourierPage from '../pages/CourierPage';
+import ProfilePage from '../pages/ProfilePage';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -56,6 +57,12 @@ const AppRoutes = () => {
             <Route path="/courier" element={
                 <ProtectedRoute allowedRoles={[ROLES.COURIER]}>
                     <CourierPage />
+                </ProtectedRoute>
+            } />
+
+            <Route path="/profile" element={
+                <ProtectedRoute allowedRoles={EDCA}>
+                    <ProfilePage />
                 </ProtectedRoute>
             } />
 

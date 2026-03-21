@@ -5,7 +5,7 @@ import {
     Collapse, TextField, InputAdornment, Box, IconButton, Divider,
     Typography, Button,
 } from '@mui/material';
-import { ExpandLess, ExpandMore, Search, Clear, Category, Logout } from '@mui/icons-material';
+import { ExpandLess, ExpandMore, Search, Clear, Category, Logout, ManageAccounts } from '@mui/icons-material';
 import { MENU_GROUPS } from '../constants/dictionaries';
 import { GROUP_COLORS, groupIcons, itemIcons } from '../constants/menuConfig';
 import { useAuth } from '../context/AuthContext';
@@ -184,6 +184,20 @@ const Sidebar = () => {
                     <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mb: 1, px: 0.5 }}>
                         {auth?.email}
                     </Typography>
+                    <Button
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        startIcon={<ManageAccounts fontSize="small" />}
+                        onClick={() => navigate('/profile')}
+                        sx={{
+                            borderRadius: 2, textTransform: 'none', fontWeight: 600, mb: 1,
+                            borderColor: '#5c6bc0', color: '#5c6bc0',
+                            '&:hover': { borderColor: '#3949ab', color: '#3949ab', bgcolor: 'rgba(92,107,192,0.06)' }
+                        }}
+                    >
+                        Мій профіль
+                    </Button>
                     <Button
                         fullWidth
                         variant="outlined"
