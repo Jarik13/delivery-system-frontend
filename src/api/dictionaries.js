@@ -54,4 +54,7 @@ export const UserApi = {
     updateBranch: (keycloakId, branchId) => api.patch(`/users/${keycloakId}/branch`, { branchId }),
     getProfile: () => api.get('/profile'),
     updateProfile: (data) => api.put('/profile', data),
+    getRolePermissions: (roleName) => api.get(`/roles/${roleName}/permissions`),
+    updateRolePermissions: (roleName, permissions) => api.put(`/roles/${roleName}/permissions`, permissions),
+    getRoles: () => api.get('/roles'),
 };

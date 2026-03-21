@@ -7,6 +7,7 @@ import { Client } from '@stomp/stompjs';
 import UserForm from '../components/super-admin/UserForm';
 import UsersTable from '../components/super-admin/UsersTable';
 import AuditLogsTable from '../components/super-admin/AuditLogsTable';
+import RolePermissionsTab from '../components/super-admin/RolePermissionsTab';
 
 const EMPTY_FORM = {
     email: '', firstName: '', lastName: '',
@@ -94,7 +95,13 @@ const SuperAdminPage = () => {
     };
 
     useEffect(() => { loadUsers(); loadBranches(); }, []);
-    useEffect(() => { if (tab === 1) { loadAuditLogs(); setNewLogsCount(0); } }, [tab]);
+
+    useEffect(() => {
+        if (tab === 2) {
+            loadAuditLogs();
+            setNewLogsCount(0);
+        }
+    }, [tab]);
 
     const notify = (message, severity = 'success') =>
         setNotification({ open: true, message, severity });
@@ -193,6 +200,7 @@ const SuperAdminPage = () => {
             <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', mb: 3, overflow: 'hidden' }}>
                 <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: '1px solid #e2e8f0', px: 2 }}>
                     <Tab label="Користувачі" sx={{ textTransform: 'none', fontWeight: 600 }} />
+                    <Tab label="Керування ролями" sx={{ textTransform: 'none', fontWeight: 600 }} />
                     <Tab label={
                         <Badge badgeContent={newLogsCount} color="error" max={99}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -227,7 +235,9 @@ const SuperAdminPage = () => {
                 </>
             )}
 
-            {tab === 1 && (
+            {tab === 1 && <RolePermissionsTab />}
+
+            {tab === 2 && (
                 <AuditLogsTable
                     logs={auditLogs}
                     loading={auditLoading}
