@@ -61,7 +61,7 @@ const RouteListsPage = () => {
                 ]);
                 setReferences({
                     statuses: s.data.content || [],
-                    couriers: c.data.content || [],
+                    couriers: c.data.content || c.data || [],
                 });
                 if (statsRes.data) {
                     const d = statsRes.data;

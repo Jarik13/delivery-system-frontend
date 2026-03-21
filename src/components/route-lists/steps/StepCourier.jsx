@@ -1,21 +1,21 @@
 import React from 'react';
 import {
-    Box, Typography, FormControl, InputLabel, Select, MenuItem,
-    TextField, FormHelperText, alpha, Chip, Avatar,
+    Box, Typography, Autocomplete, TextField,
+    alpha, Chip, Avatar
 } from '@mui/material';
-import { Person, Schedule, FlashOn } from '@mui/icons-material';
+import { Person, Schedule, FlashOn, Warning } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatCourierName } from '../utils';
 
 const variants = {
-    enter:  (d) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
+    enter: (d) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit:   (d) => ({ x: d > 0 ? -60 : 60, opacity: 0 }),
+    exit: (d) => ({ x: d > 0 ? -60 : 60, opacity: 0 }),
 };
 
 export default function StepCourier({ direction, form, setForm, couriers, mainColor, errors, onClearError }) {
     const activeCouriers = couriers.filter(c => !c.hasActiveRouteList);
-
+console.log('couriers prop:', couriers);
     return (
         <motion.div
             key="step-courier"
@@ -43,39 +43,74 @@ export default function StepCourier({ direction, form, setForm, couriers, mainCo
                         <Typography fontWeight={600} color="text.primary">Призначення кур'єра</Typography>
                     </Box>
 
-                    <FormControl fullWidth error={Boolean(errors?.courierId)}>
-                        <InputLabel>Кур'єр *</InputLabel>
-                        <Select
-                            value={form.courierId ?? ''}
-                            label="Кур'єр *"
-                            onChange={e => {
-                                setForm(p => ({ ...p, courierId: e.target.value || null }));
-                                onClearError?.('courierId');
-                            }}
-                            sx={{ borderRadius: 2 }}
-                        >
-                            <MenuItem value=""><em>— Оберіть кур'єра —</em></MenuItem>
-                            {couriers.map(c => (
-                                <MenuItem key={c.id} value={c.id} disabled={c.hasActiveRouteList}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                    <Autocomplete
+                        options={couriers}
+                        value={couriers.find(c => c.id === form.courierId) || null}
+                        getOptionDisabled={(o) => !!o.hasActiveRouteList}
+                        getOptionLabel={(o) => formatCourierName(o)}
+                        filterOptions={(options, state) => {
+                            const input = state.inputValue.toLowerCase();
+                            return options.filter(o =>
+                                formatCourierName(o).toLowerCase().includes(input) ||
+                                (o.phoneNumber && o.phoneNumber.includes(input))
+                            );
+                        }}
+                        onChange={(_, v) => {
+                            setForm(p => ({ ...p, courierId: v?.id ?? null }));
+                            onClearError?.('courierId');
+                        }}
+                        renderOption={(props, option) => (
+                            <Box component="li" {...props}
+                                sx={{
+                                    ...props.sx,
+                                    opacity: option.hasActiveRouteList ? 0.6 : 1,
+                                    cursor: option.hasActiveRouteList ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                         <Avatar sx={{ width: 28, height: 28, bgcolor: alpha(mainColor, 0.15), color: mainColor, fontSize: 12 }}>
-                                            {(c.firstName?.[0] ?? '') + (c.lastName?.[0] ?? '')}
+                                            {(option.firstName?.[0] ?? '') + (option.lastName?.[0] ?? '')}
                                         </Avatar>
-                                        <Box sx={{ flexGrow: 1 }}>
-                                            <Typography variant="body2" fontWeight={500}>{formatCourierName(c)}</Typography>
-                                            {c.phone && (
-                                                <Typography variant="caption" color="text.secondary">{c.phone}</Typography>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={500}>
+                                                {formatCourierName(option)}
+                                            </Typography>
+                                            {option.phoneNumber && (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {option.phoneNumber}
+                                                </Typography>
                                             )}
                                         </Box>
-                                        {c.hasActiveRouteList && (
-                                            <Chip label="Зайнятий" size="small" color="warning" variant="outlined" />
-                                        )}
                                     </Box>
-                                </MenuItem>
-                            ))}
-                        </Select>
-                        {errors?.courierId && <FormHelperText>{errors.courierId}</FormHelperText>}
-                    </FormControl>
+                                    {option.hasActiveRouteList && (
+                                        <Chip
+                                            icon={<Warning sx={{ fontSize: '12px !important' }} />}
+                                            label="Має активний маршрутний лист"
+                                            size="small"
+                                            sx={{
+                                                height: 20, fontSize: 10, fontWeight: 700,
+                                                bgcolor: alpha('#f44336', 0.1),
+                                                color: '#f44336',
+                                                border: `1px solid ${alpha('#f44336', 0.3)}`,
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </Box>
+                        )}
+                        renderInput={(p) => (
+                            <TextField
+                                {...p}
+                                label="Кур'єр *"
+                                fullWidth
+                                error={Boolean(errors?.courierId)}
+                                helperText={errors?.courierId}
+                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                            />
+                        )}
+                    />
 
                     {activeCouriers.length === 0 && (
                         <Box sx={{
