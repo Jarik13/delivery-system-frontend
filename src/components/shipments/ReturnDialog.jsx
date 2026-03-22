@@ -136,12 +136,8 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
                     label="Сума повернення (₴)"
                     type="number"
                     value={form.refundAmount}
-                    onChange={e => {
-                        setForm(p => ({ ...p, refundAmount: e.target.value }));
-                        setFieldErrors(p => ({ ...p, refundAmount: null }));
-                    }}
-                    error={!!fieldErrors.refundAmount}
-                    helperText={fieldErrors.refundAmount || 'За замовчуванням — повна вартість відправлення'}
+                    disabled
+                    helperText="Сума повернення відповідає вартості відправлення"
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
             </DialogContent>
