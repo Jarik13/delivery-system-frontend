@@ -7,7 +7,7 @@ import { ExpandMore, ExpandLess, Inventory2, Scale, Schedule } from '@mui/icons-
 import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 import ShipmentCard from './ShipmentCard';
 
-const RouteListCard = ({ routeList, onStatusChange }) => {
+const RouteListCard = ({ routeList, paymentTypes, onStatusChange, onNotify }) => {
     const [open, setOpen] = useState(false);
 
     const statusColor = getStatusColor(ROUTE_LIST_STATUS_COLORS, routeList.statusName);
@@ -19,16 +19,13 @@ const RouteListCard = ({ routeList, onStatusChange }) => {
 
     return (
         <Box sx={{
-            borderRadius: 3,
-            overflow: 'hidden',
+            borderRadius: 3, overflow: 'hidden',
             border: `1.5px solid ${alpha(statusColor, isActive ? 0.4 : 0.2)}`,
             bgcolor: 'background.paper',
             boxShadow: isActive
                 ? `0 4px 16px ${alpha(statusColor, 0.15)}`
                 : `0 2px 8px ${alpha('#000', 0.06)}`,
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
+            display: 'flex', flexDirection: 'column', width: '100%',
         }}>
             <Box
                 onClick={() => setOpen(o => !o)}
@@ -123,7 +120,9 @@ const RouteListCard = ({ routeList, onStatusChange }) => {
                                 key={item.id}
                                 item={item}
                                 routeListId={routeList.id}
+                                paymentTypes={paymentTypes}
                                 onStatusChange={onStatusChange}
+                                onNotify={onNotify}
                             />
                         ))
                     )}
