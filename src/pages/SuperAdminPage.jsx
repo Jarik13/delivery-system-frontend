@@ -33,6 +33,8 @@ const SuperAdminPage = () => {
     const [wsConnected, setWsConnected] = useState(false);
     const [auditFilters, setAuditFilters] = useState({ performedBy: '', actions: [], statuses: [] });
 
+    const [fieldErrors, setFieldErrors] = useState({});
+
     useEffect(() => {
         const client = new Client({
             brokerURL: `ws://localhost:4000/ws`,
@@ -108,6 +110,7 @@ const SuperAdminPage = () => {
 
     const handleCreate = async () => {
         setFormError('');
+        setFieldErrors({});
         setCreating(true);
         try {
             const payload = {
@@ -121,10 +124,15 @@ const SuperAdminPage = () => {
             await UserApi.create(payload);
             notify(`Користувача створено. Посилання надіслано на ${form.email}`);
             setForm(EMPTY_FORM);
+            setFieldErrors({});
             loadUsers();
         } catch (e) {
             const errors = e?.response?.data?.validationErrors;
-            setFormError(errors ? Object.values(errors).join(', ') : e?.response?.data?.message || 'Помилка створення');
+            if (errors) {
+                setFieldErrors(errors);
+            } else {
+                setFormError(e?.response?.data?.message || 'Помилка створення');
+            }
         } finally {
             setCreating(false);
         }
@@ -220,7 +228,7 @@ const SuperAdminPage = () => {
                         onSubmit={handleCreate}
                         creating={creating}
                         formError={formError}
-                        branches={branches}
+                        fieldErrors={fieldErrors}
                     />
                     <UsersTable
                         users={users}
