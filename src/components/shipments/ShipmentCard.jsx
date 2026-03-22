@@ -8,11 +8,13 @@ import {
     AccessTime, EventAvailable, ErrorOutline, CheckCircle, PendingActions,
     ExpandLess, ExpandMore, Inventory2, LocalShipping,
     ArticleOutlined, RouteOutlined, OpenInNew,
-    Edit, AssignmentReturn
+    Edit, AssignmentReturn,
+    Payment
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getTypeColor, SHIPMENT_TYPE_COLORS } from '../../constants/typeColors';
 import ReturnDialog from './ReturnDialog';
+import PaymentDialog from './PaymentDialog';
 
 const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
     const theme = useTheme();
@@ -53,14 +55,16 @@ const ShipmentCard = ({
     s, mainColor, statusColors,
     isHistoryExpanded, isFinanceExpanded, history,
     onDelete, onToggleHistory, onToggleFinance,
-    onEdit, editable = true, onSuccess,
+    onEdit, editable = true, onSuccess, paymentTypes,
 }) => {
     const theme = useTheme();
     const navigate = useNavigate();
     const statusColor = statusColors[s.shipmentStatusName] || statusColors.default;
     const [returnOpen, setReturnOpen] = useState(false);
+    const [paymentOpen, setPaymentOpen] = useState(false);
 
     const canReturn = ['Доставлено'].includes(s.shipmentStatusName);
+    const canPay = !s.isFullyPaid && s.remainingAmount > 0;
 
     const handleWaybillClick = () => {
         if (s.waybillId) {
@@ -481,6 +485,22 @@ const ShipmentCard = ({
                             Оформити повернення
                         </Button>
                     )}
+
+                    {canPay && (
+                        <Button
+                            fullWidth size="small" variant="outlined"
+                            startIcon={<Payment fontSize="small" />}
+                            onClick={() => setPaymentOpen(true)}
+                            sx={{
+                                mt: 1, borderRadius: 2,
+                                borderColor: '#2e7d32', color: '#2e7d32',
+                                fontSize: '0.75rem', fontWeight: 700, textTransform: 'none',
+                                '&:hover': { bgcolor: alpha('#2e7d32', 0.06), borderColor: '#1b5e20' },
+                            }}
+                        >
+                            {s.remainingAmount > 0 ? `Доплатити ${s.remainingAmount} ₴` : 'Оформити оплату'}
+                        </Button>
+                    )}
                 </Box>
             </CardContent>
 
@@ -492,6 +512,16 @@ const ShipmentCard = ({
                     setReturnOpen(false);
                     onSuccess?.(msg);
                 }}
+            />
+
+            <PaymentDialog
+                open={paymentOpen}
+                onClose={() => setPaymentOpen(false)}
+                shipment={s}
+                paymentTypes={paymentTypes}
+                onSuccess={(msg) => { 
+                    setPaymentOpen(false); 
+                    onSuccess?.(msg); }}
             />
         </Card>
     );

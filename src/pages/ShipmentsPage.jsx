@@ -335,6 +335,7 @@ const ShipmentsPage = () => {
                     loadTableData();
                     setNotification({ open: true, message: msg, severity: 'success' });
                 }}
+                paymentTypes={references.paymentTypes}
             />
 
             <DataPagination
