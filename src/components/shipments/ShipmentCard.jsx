@@ -53,7 +53,7 @@ const ShipmentCard = ({
     s, mainColor, statusColors,
     isHistoryExpanded, isFinanceExpanded, history,
     onDelete, onToggleHistory, onToggleFinance,
-    onEdit, editable = true,
+    onEdit, editable = true, onSuccess,
 }) => {
     const theme = useTheme();
     const navigate = useNavigate();

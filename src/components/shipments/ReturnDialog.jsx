@@ -35,12 +35,12 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
         setLoading(true);
         setError(null);
         try {
-            await DictionaryApi.create('returns', {
+            const res = await DictionaryApi.create('returns', {
                 shipmentId: shipment.id,
                 returnReasonId: form.returnReasonId,
                 refundAmount: parseFloat(form.refundAmount) || null,
             });
-            onSuccess('Повернення оформлено успішно');
+            onSuccess(`Повернення оформлено. Зворотне ТТН: ${res.data.returnShipmentTrackingNumber}`);
             onClose();
         } catch (e) {
             setError(e?.response?.data?.message || 'Помилка оформлення повернення');
@@ -83,7 +83,6 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
                     <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
                 )}
 
-                {/* Інфо про відправлення */}
                 <Box sx={{
                     p: 2, borderRadius: 2,
                     bgcolor: alpha(mainColor, 0.04),
