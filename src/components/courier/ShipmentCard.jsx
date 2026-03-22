@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box, Typography, Chip, alpha, IconButton, Tooltip, CircularProgress,
-    Dialog, DialogContent, DialogActions, Button, FormControl, InputLabel,
-    Select, MenuItem, FormHelperText, Alert,
 } from '@mui/material';
 import {
     CheckCircle, LocalShipping, PendingActions, Cancel,
     RadioButtonUnchecked, TaskAlt, ErrorOutline,
-    AssignmentReturn, Payment, Close,
 } from '@mui/icons-material';
 import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 import { DictionaryApi } from '../../api/dictionaries';
+import ReturnDialog from './ReturnDialog';
+import PaymentDialog from './PaymentDialog';
 
 const STATUS_ICONS = {
     'Доставлено': CheckCircle,
@@ -22,223 +21,6 @@ const STATUS_ICONS = {
 
 const ACTIONABLE_STATUSES = ['Видано кур\'єру', 'Спроба вручення провалена', 'У процесі доставки'];
 
-const ReturnDialog = ({ open, onClose, item, onSuccess }) => {
-    const [reasons, setReasons] = useState([]);
-    const [reasonId, setReasonId] = useState('');
-    const [error, setError] = useState(null);
-    const [fieldError, setFieldError] = useState(null);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (open) {
-            setReasonId('');
-            setError(null);
-            setFieldError(null);
-            DictionaryApi.getAll('return-reasons', 0, 100)
-                .then(r => setReasons(r.data.content || []))
-                .catch(console.error);
-        }
-    }, [open]);
-
-    const handleSubmit = async () => {
-        if (!reasonId) { setFieldError('Оберіть причину повернення'); return; }
-        setLoading(true);
-        setError(null);
-        try {
-            await DictionaryApi.create('returns', {
-                shipmentId: item.shipmentId,
-                returnReasonId: reasonId,
-                refundAmount: item.totalPrice || null,
-            });
-            onSuccess('Повернення оформлено успішно');
-            onClose();
-        } catch (e) {
-            setError(e?.response?.data?.message || 'Помилка оформлення повернення');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
-            PaperProps={{ sx: { borderRadius: 3 } }}>
-            <Box sx={{
-                p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'linear-gradient(135deg, #f44336, #e53935)',
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AssignmentReturn sx={{ color: 'white', fontSize: 20 }} />
-                    <Box>
-                        <Typography variant="subtitle2" fontWeight={700} color="white">
-                            Оформлення повернення
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                            ТТН: {item?.trackingNumber}
-                        </Typography>
-                    </Box>
-                </Box>
-                <IconButton onClick={onClose} size="small" sx={{ color: 'white' }}>
-                    <Close fontSize="small" />
-                </IconButton>
-            </Box>
-
-            <DialogContent sx={{ pt: 2.5, pb: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
-
-                <Box sx={{
-                    p: 1.5, borderRadius: 2,
-                    bgcolor: alpha('#f44336', 0.04),
-                    border: `1px solid ${alpha('#f44336', 0.15)}`,
-                }}>
-                    <Typography variant="body2" fontWeight={700}>{item?.recipientFullName}</Typography>
-                    <Typography variant="caption" color="text.secondary">{item?.deliveryAddress}</Typography>
-                    {item?.totalPrice && (
-                        <Typography variant="body2" fontWeight={800} color="#f44336" sx={{ mt: 0.5 }}>
-                            Вартість: {item.totalPrice} ₴
-                        </Typography>
-                    )}
-                </Box>
-
-                <FormControl fullWidth size="small" error={!!fieldError}>
-                    <InputLabel>Причина повернення *</InputLabel>
-                    <Select
-                        value={reasonId}
-                        label="Причина повернення *"
-                        onChange={e => { setReasonId(e.target.value); setFieldError(null); }}
-                        sx={{ borderRadius: 2 }}
-                    >
-                        {reasons.map(r => (
-                            <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
-                        ))}
-                    </Select>
-                    {fieldError && <FormHelperText>{fieldError}</FormHelperText>}
-                </FormControl>
-            </DialogContent>
-
-            <DialogActions sx={{ p: 2, pt: 1, gap: 1 }}>
-                <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
-                <Button
-                    variant="contained"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <AssignmentReturn />}
-                    sx={{ bgcolor: '#f44336', borderRadius: 2, fontWeight: 700, '&:hover': { bgcolor: '#c62828' } }}
-                >
-                    Оформити
-                </Button>
-            </DialogActions>
-        </Dialog>
-    );
-};
-
-const PaymentDialog = ({ open, onClose, item, paymentTypes, onSuccess }) => {
-    const [paymentTypeId, setPaymentTypeId] = useState('');
-    const [error, setError] = useState(null);
-    const [fieldError, setFieldError] = useState(null);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        if (open) {
-            setPaymentTypeId('');
-            setError(null);
-            setFieldError(null);
-        }
-    }, [open]);
-
-    const handleSubmit = async () => {
-        if (!paymentTypeId) { setFieldError('Оберіть тип оплати'); return; }
-        setLoading(true);
-        setError(null);
-        try {
-            await DictionaryApi.create('payments', {
-                shipmentId: item.shipmentId,
-                paymentTypeId,
-                amount: item.remainingAmount || item.totalPrice,
-            });
-            onSuccess('Платіж оформлено успішно');
-            onClose();
-        } catch (e) {
-            setError(e?.response?.data?.message || 'Помилка оформлення платежу');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const amount = item?.remainingAmount || item?.totalPrice;
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
-            PaperProps={{ sx: { borderRadius: 3 } }}>
-            <Box sx={{
-                p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'linear-gradient(135deg, #2e7d32, #388e3c)',
-            }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Payment sx={{ color: 'white', fontSize: 20 }} />
-                    <Box>
-                        <Typography variant="subtitle2" fontWeight={700} color="white">
-                            Оформлення платежу
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                            ТТН: {item?.trackingNumber}
-                        </Typography>
-                    </Box>
-                </Box>
-                <IconButton onClick={onClose} size="small" sx={{ color: 'white' }}>
-                    <Close fontSize="small" />
-                </IconButton>
-            </Box>
-
-            <DialogContent sx={{ pt: 2.5, pb: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
-
-                <Box sx={{
-                    p: 1.5, borderRadius: 2,
-                    bgcolor: alpha('#2e7d32', 0.04),
-                    border: `1px solid ${alpha('#2e7d32', 0.15)}`,
-                }}>
-                    <Typography variant="body2" fontWeight={700}>{item?.recipientFullName}</Typography>
-                    <Typography variant="caption" color="text.secondary">{item?.deliveryAddress}</Typography>
-                    {amount && (
-                        <Typography variant="body2" fontWeight={800} color="#2e7d32" sx={{ mt: 0.5 }}>
-                            До оплати: {amount} ₴
-                        </Typography>
-                    )}
-                </Box>
-
-                <FormControl fullWidth size="small" error={!!fieldError}>
-                    <InputLabel>Тип оплати *</InputLabel>
-                    <Select
-                        value={paymentTypeId}
-                        label="Тип оплати *"
-                        onChange={e => { setPaymentTypeId(e.target.value); setFieldError(null); }}
-                        sx={{ borderRadius: 2 }}
-                    >
-                        {(paymentTypes || []).map(t => (
-                            <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
-                        ))}
-                    </Select>
-                    {fieldError && <FormHelperText>{fieldError}</FormHelperText>}
-                </FormControl>
-            </DialogContent>
-
-            <DialogActions sx={{ p: 2, pt: 1, gap: 1 }}>
-                <Button onClick={onClose} sx={{ color: '#666' }}>Скасувати</Button>
-                <Button
-                    variant="contained"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <Payment />}
-                    sx={{ bgcolor: '#2e7d32', borderRadius: 2, fontWeight: 700, '&:hover': { bgcolor: '#1b5e20' } }}
-                >
-                    Підтвердити оплату
-                </Button>
-            </DialogActions>
-        </Dialog>
-    );
-};
-
-// ─── ShipmentCard ─────────────────────────────────────────────────────────────
 const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotify }) => {
     const [loading, setLoading] = useState(false);
     const [returnOpen, setReturnOpen] = useState(false);
@@ -252,7 +34,6 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
     const handleAction = async (action) => {
         if (!routeListId || !item.id) return;
 
-        // REFUSED → спочатку діалог повернення
         if (action === 'REFUSED') {
             setReturnOpen(true);
             return;
@@ -262,7 +43,6 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
         try {
             await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
 
-            // DELIVERED + є накладний платіж → відкрити платіж
             if (action === 'DELIVERED' && item.hasCod && item.remainingAmount > 0) {
                 setPaymentOpen(true);
             } else {
@@ -277,7 +57,6 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
     };
 
     const handleReturnSuccess = (msg) => {
-        // після повернення — оновити статус на REFUSED
         DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action: 'REFUSED' })
             .catch(console.error)
             .finally(() => {
