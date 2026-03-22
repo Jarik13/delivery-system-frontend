@@ -1,20 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Box, Paper, Typography, Button, TextField,
     Select, FormControl, InputLabel, Alert, CircularProgress, MenuItem,
 } from '@mui/material';
-import { Add, PersonAdd, Business } from '@mui/icons-material';
+import { Add, PersonAdd } from '@mui/icons-material';
 import { ROLES_META } from '../../constants/roles';
-import RouteBranchSelector from '../RouteBranchSelector';
+import BranchPicker from './BranchPicker';
 
-const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
+const UserForm = ({ form, setForm, onSubmit, creating, formError, fieldErrors = {} }) => {
+    const [submitted, setSubmitted] = useState(false);
     const isEmployee = form.role === 'EMPLOYEE';
 
+    const handleSubmit = () => {
+        setSubmitted(true);
+        if (isEmployee && !form.branchId) return;
+        onSubmit();
+    };
+
     const field = (label, key, props = {}) => (
-        <TextField size="small" label={label} value={form[key]}
+        <TextField
+            size="small"
+            label={label}
+            value={form[key] || ''}
             onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
-            onKeyDown={e => e.key === 'Enter' && onSubmit()}
-            {...props} />
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+            error={!!fieldErrors[key]}
+            helperText={fieldErrors[key] || ''}
+            {...props}
+        />
     );
 
     return (
@@ -23,7 +36,10 @@ const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
                 <PersonAdd fontSize="small" color="primary" />
                 Додати користувача
             </Typography>
-            {formError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{formError}</Alert>}
+
+            {formError && (
+                <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{formError}</Alert>
+            )}
 
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
                 {field('Email *', 'email', { sx: { flex: '1 1 220px' }, type: 'email' })}
@@ -33,11 +49,21 @@ const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
             </Box>
 
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start', mb: 2 }}>
-                {field('Телефон', 'phoneNumber', { sx: { flex: '1 1 180px' }, placeholder: '+380XXXXXXXXX' })}
+                {field('Телефон', 'phoneNumber', {
+                    sx: { flex: '1 1 180px' },
+                    placeholder: '+380XXXXXXXXX',
+                })}
                 <FormControl size="small" sx={{ flex: '1 1 160px' }}>
                     <InputLabel>Роль</InputLabel>
-                    <Select value={form.role} label="Роль"
-                        onChange={e => setForm(p => ({ ...p, role: e.target.value, branchId: '', cityId: '' }))}>
+                    <Select
+                        value={form.role}
+                        label="Роль"
+                        onChange={e => setForm(p => ({
+                            ...p,
+                            role: e.target.value,
+                            branchId: '',
+                            cityId: '',
+                        }))}>
                         {ROLES_META.map(r => (
                             <MenuItem key={r.value} value={r.value}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -52,25 +78,30 @@ const UserForm = ({ form, setForm, onSubmit, creating, formError }) => {
 
             {isEmployee && (
                 <Box sx={{ mb: 2 }}>
-                    <RouteBranchSelector
-                        title="Відділення працівника"
-                        icon={Business}
-                        color="#673ab7"
+                    <BranchPicker
                         cityId={form.cityId || ''}
                         branchId={form.branchId || ''}
-                        onCityChange={(cityId) => setForm(p => ({ ...p, cityId, branchId: '' }))}
-                        onBranchChange={(branchId) => setForm(p => ({ ...p, branchId }))}
-                        error={!form.branchId}
+                        onCityChange={cityId => setForm(p => ({ ...p, cityId, branchId: '' }))}
+                        onBranchChange={branchId => setForm(p => ({ ...p, branchId }))}
+                        error={submitted && !form.branchId}
                         errorText="Оберіть відділення для працівника"
                     />
                 </Box>
             )}
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button variant="contained"
-                    startIcon={creating ? <CircularProgress size={16} color="inherit" /> : <Add />}
-                    onClick={onSubmit} disabled={creating}
-                    sx={{ bgcolor: '#673ab7', borderRadius: 2, textTransform: 'none', fontWeight: 600, '&:hover': { bgcolor: '#512da8' }, height: 40 }}>
+                <Button
+                    variant="contained"
+                    startIcon={creating
+                        ? <CircularProgress size={16} color="inherit" />
+                        : <Add />}
+                    onClick={handleSubmit}
+                    disabled={creating}
+                    sx={{
+                        bgcolor: '#673ab7', borderRadius: 2,
+                        textTransform: 'none', fontWeight: 600,
+                        '&:hover': { bgcolor: '#512da8' }, height: 40,
+                    }}>
                     Створити
                 </Button>
             </Box>

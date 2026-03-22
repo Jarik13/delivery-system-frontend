@@ -7,6 +7,7 @@ const ShipmentGrid = ({
     shipments, mainColor, statusColors,
     expandedHistory, expandedFinance, movements,
     onDelete, onToggleHistory, onToggleFinance, onEdit,
+    onSuccess,
 }) => (
     <Grid container spacing={3} sx={{ m: 0, width: '100%', display: 'flex', flexWrap: 'wrap' }}>
         {shipments.map((s) => (
@@ -22,6 +23,9 @@ const ShipmentGrid = ({
                     onToggleHistory={onToggleHistory}
                     onToggleFinance={onToggleFinance}
                     onEdit={onEdit}
+                    onSuccess={(msg) => {
+                        onSuccess?.(msg);
+                    }}
                     editable={isShipmentEditable(s.shipmentStatusName)}
                 />
             </Grid>

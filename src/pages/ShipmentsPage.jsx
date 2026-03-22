@@ -331,6 +331,10 @@ const ShipmentsPage = () => {
                 onDelete={handleDelete} onToggleHistory={toggleHistory}
                 onToggleFinance={(id) => setExpandedFinance(prev => ({ ...prev, [id]: !prev[id] }))}
                 onEdit={handleEdit}
+                onSuccess={(msg) => {
+                    loadTableData();
+                    setNotification({ open: true, message: msg, severity: 'success' });
+                }}
             />
 
             <DataPagination

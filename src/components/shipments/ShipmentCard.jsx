@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Card, CardContent, Box, Chip, IconButton, Typography,
     Divider, Collapse, Button, useTheme, alpha, Tooltip,
@@ -8,10 +8,11 @@ import {
     AccessTime, EventAvailable, ErrorOutline, CheckCircle, PendingActions,
     ExpandLess, ExpandMore, Inventory2, LocalShipping,
     ArticleOutlined, RouteOutlined, OpenInNew,
-    Edit,
+    Edit, AssignmentReturn
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getTypeColor, SHIPMENT_TYPE_COLORS } from '../../constants/typeColors';
+import ReturnDialog from './ReturnDialog';
 
 const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
     const theme = useTheme();
@@ -52,11 +53,14 @@ const ShipmentCard = ({
     s, mainColor, statusColors,
     isHistoryExpanded, isFinanceExpanded, history,
     onDelete, onToggleHistory, onToggleFinance,
-    onEdit, editable = true,
+    onEdit, editable = true, onSuccess,
 }) => {
     const theme = useTheme();
     const navigate = useNavigate();
     const statusColor = statusColors[s.shipmentStatusName] || statusColors.default;
+    const [returnOpen, setReturnOpen] = useState(false);
+
+    const canReturn = ['Доставлено'].includes(s.shipmentStatusName);
 
     const handleWaybillClick = () => {
         if (s.waybillId) {
@@ -389,6 +393,40 @@ const ShipmentCard = ({
                                         </Typography>
                                     </Box>
                                 ))}
+
+                                {s.returns?.length > 0 && (
+                                    <Box sx={{ mt: 0.5 }}>
+                                        <Typography variant="caption" sx={{
+                                            fontSize: '0.58rem', fontWeight: 800, color: 'text.disabled',
+                                            textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 0.5,
+                                        }}>
+                                            Повернення
+                                        </Typography>
+                                        {s.returns.map(r => (
+                                            <Box key={r.id} sx={{
+                                                p: 0.8, borderRadius: 1,
+                                                bgcolor: alpha('#f44336', 0.03),
+                                                borderLeft: `2px solid #f44336`,
+                                                display: 'flex', justifyContent: 'space-between',
+                                                mb: 0.5,
+                                            }}>
+                                                <Box>
+                                                    <Typography variant="caption" sx={{
+                                                        fontWeight: 800, display: 'block', lineHeight: 1, color: '#f44336',
+                                                    }}>
+                                                        -{r.refundAmount} ₴
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.secondary' }}>
+                                                        {r.returnReasonName}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>
+                                                    {new Date(r.initiationDate).toLocaleDateString()}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
                             </Box>
                         </Collapse>
                     </Box>
@@ -421,8 +459,40 @@ const ShipmentCard = ({
                             {s.actualWeight} кг
                         </Typography>
                     </Box>
+
+                    {canReturn && (
+                        <Button
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AssignmentReturn fontSize="small" />}
+                            onClick={() => setReturnOpen(true)}
+                            sx={{
+                                mt: 1.5, borderRadius: 2,
+                                borderColor: '#f44336', color: '#f44336',
+                                fontSize: '0.75rem', fontWeight: 700,
+                                textTransform: 'none',
+                                '&:hover': {
+                                    bgcolor: alpha('#f44336', 0.06),
+                                    borderColor: '#c62828',
+                                },
+                            }}
+                        >
+                            Оформити повернення
+                        </Button>
+                    )}
                 </Box>
             </CardContent>
+
+            <ReturnDialog
+                open={returnOpen}
+                onClose={() => setReturnOpen(false)}
+                shipment={s}
+                onSuccess={(msg) => {
+                    setReturnOpen(false);
+                    onSuccess?.(msg);
+                }}
+            />
         </Card>
     );
 };
