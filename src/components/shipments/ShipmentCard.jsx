@@ -96,18 +96,6 @@ const ShipmentCard = ({
                         sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
 
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        {canReturn && (
-                            <Tooltip title="Оформити повернення">
-                                <IconButton
-                                    size="small"
-                                    onClick={() => setReturnOpen(true)}
-                                    sx={{ color: '#f44336' }}
-                                >
-                                    <AssignmentReturn fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
-
                         <Tooltip title={editable ? 'Редагувати' : `Редагування недоступне для статусу "${s.shipmentStatusName}"`}>
                             <span>
                                 <IconButton
@@ -471,6 +459,28 @@ const ShipmentCard = ({
                             {s.actualWeight} кг
                         </Typography>
                     </Box>
+
+                    {canReturn && (
+                        <Button
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AssignmentReturn fontSize="small" />}
+                            onClick={() => setReturnOpen(true)}
+                            sx={{
+                                mt: 1.5, borderRadius: 2,
+                                borderColor: '#f44336', color: '#f44336',
+                                fontSize: '0.75rem', fontWeight: 700,
+                                textTransform: 'none',
+                                '&:hover': {
+                                    bgcolor: alpha('#f44336', 0.06),
+                                    borderColor: '#c62828',
+                                },
+                            }}
+                        >
+                            Оформити повернення
+                        </Button>
+                    )}
                 </Box>
             </CardContent>
 
