@@ -3,9 +3,9 @@ import {
     Box, Paper, Typography, Button, TextField,
     Select, FormControl, InputLabel, Alert, CircularProgress, MenuItem,
 } from '@mui/material';
-import { Add, PersonAdd, Business } from '@mui/icons-material';
+import { Add, PersonAdd } from '@mui/icons-material';
 import { ROLES_META } from '../../constants/roles';
-import RouteBranchSelector from '../RouteBranchSelector';
+import BranchPicker from './BranchPicker';
 
 const UserForm = ({ form, setForm, onSubmit, creating, formError, fieldErrors = {} }) => {
     const [submitted, setSubmitted] = useState(false);
@@ -78,10 +78,7 @@ const UserForm = ({ form, setForm, onSubmit, creating, formError, fieldErrors = 
 
             {isEmployee && (
                 <Box sx={{ mb: 2 }}>
-                    <RouteBranchSelector
-                        title="Відділення працівника"
-                        icon={Business}
-                        color="#673ab7"
+                    <BranchPicker
                         cityId={form.cityId || ''}
                         branchId={form.branchId || ''}
                         onCityChange={cityId => setForm(p => ({ ...p, cityId, branchId: '' }))}
