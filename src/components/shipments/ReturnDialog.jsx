@@ -3,6 +3,7 @@ import {
     Dialog, DialogContent, DialogActions, Box, Typography,
     Button, TextField, FormControl, InputLabel, Select, MenuItem,
     CircularProgress, Alert, alpha, IconButton,
+    FormHelperText,
 } from '@mui/material';
 import { AssignmentReturn, Close, CheckCircle } from '@mui/icons-material';
 import { DictionaryApi } from '../../api/dictionaries';
@@ -13,6 +14,7 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
     const [form, setForm] = useState({ returnReasonId: '', refundAmount: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         if (open) {
@@ -29,11 +31,12 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
 
     const handleSubmit = async () => {
         if (!form.returnReasonId) {
-            setError('Оберіть причину повернення');
+            setFieldErrors({ returnReasonId: 'Оберіть причину повернення' });
             return;
         }
         setLoading(true);
         setError(null);
+        setFieldErrors({});
         try {
             const res = await DictionaryApi.create('returns', {
                 shipmentId: shipment.id,
@@ -43,7 +46,12 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
             onSuccess(`Повернення оформлено. Зворотне ТТН: ${res.data.returnShipmentTrackingNumber}`);
             onClose();
         } catch (e) {
-            setError(e?.response?.data?.message || 'Помилка оформлення повернення');
+            const ve = e?.response?.data?.validationErrors;
+            if (ve) {
+                setFieldErrors(ve);
+            } else {
+                setError(e?.response?.data?.message || 'Помилка оформлення повернення');
+            }
         } finally {
             setLoading(false);
         }
@@ -103,18 +111,24 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
                     </Typography>
                 </Box>
 
-                <FormControl fullWidth size="small">
+                <FormControl fullWidth size="small" error={!!fieldErrors.returnReasonId}>
                     <InputLabel>Причина повернення *</InputLabel>
                     <Select
                         value={form.returnReasonId}
                         label="Причина повернення *"
-                        onChange={e => setForm(p => ({ ...p, returnReasonId: e.target.value }))}
+                        onChange={e => {
+                            setForm(p => ({ ...p, returnReasonId: e.target.value }));
+                            setFieldErrors(p => ({ ...p, returnReasonId: null }));
+                        }}
                         sx={{ borderRadius: 2 }}
                     >
                         {reasons.map(r => (
                             <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
                         ))}
                     </Select>
+                    {fieldErrors.returnReasonId && (
+                        <FormHelperText>{fieldErrors.returnReasonId}</FormHelperText>
+                    )}
                 </FormControl>
 
                 <TextField
@@ -122,8 +136,12 @@ const ReturnDialog = ({ open, onClose, shipment, onSuccess }) => {
                     label="Сума повернення (₴)"
                     type="number"
                     value={form.refundAmount}
-                    onChange={e => setForm(p => ({ ...p, refundAmount: e.target.value }))}
-                    helperText="За замовчуванням — повна вартість відправлення"
+                    onChange={e => {
+                        setForm(p => ({ ...p, refundAmount: e.target.value }));
+                        setFieldErrors(p => ({ ...p, refundAmount: null }));
+                    }}
+                    error={!!fieldErrors.refundAmount}
+                    helperText={fieldErrors.refundAmount || 'За замовчуванням — повна вартість відправлення'}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
             </DialogContent>
