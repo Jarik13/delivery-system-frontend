@@ -405,6 +405,40 @@ const ShipmentCard = ({
                                         </Typography>
                                     </Box>
                                 ))}
+
+                                {s.returns?.length > 0 && (
+                                    <Box sx={{ mt: 0.5 }}>
+                                        <Typography variant="caption" sx={{
+                                            fontSize: '0.58rem', fontWeight: 800, color: 'text.disabled',
+                                            textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 0.5,
+                                        }}>
+                                            Повернення
+                                        </Typography>
+                                        {s.returns.map(r => (
+                                            <Box key={r.id} sx={{
+                                                p: 0.8, borderRadius: 1,
+                                                bgcolor: alpha('#f44336', 0.03),
+                                                borderLeft: `2px solid #f44336`,
+                                                display: 'flex', justifyContent: 'space-between',
+                                                mb: 0.5,
+                                            }}>
+                                                <Box>
+                                                    <Typography variant="caption" sx={{
+                                                        fontWeight: 800, display: 'block', lineHeight: 1, color: '#f44336',
+                                                    }}>
+                                                        -{r.refundAmount} ₴
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ fontSize: '0.55rem', color: 'text.secondary' }}>
+                                                        {r.returnReasonName}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>
+                                                    {new Date(r.initiationDate).toLocaleDateString()}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                )}
                             </Box>
                         </Collapse>
                     </Box>
