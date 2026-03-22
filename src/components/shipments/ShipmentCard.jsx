@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Card, CardContent, Box, Chip, IconButton, Typography,
     Divider, Collapse, Button, useTheme, alpha, Tooltip,
@@ -8,10 +8,11 @@ import {
     AccessTime, EventAvailable, ErrorOutline, CheckCircle, PendingActions,
     ExpandLess, ExpandMore, Inventory2, LocalShipping,
     ArticleOutlined, RouteOutlined, OpenInNew,
-    Edit,
+    Edit, AssignmentReturn
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getTypeColor, SHIPMENT_TYPE_COLORS } from '../../constants/typeColors';
+import ReturnDialog from './ReturnDialog';
 
 const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
     const theme = useTheme();
@@ -57,6 +58,9 @@ const ShipmentCard = ({
     const theme = useTheme();
     const navigate = useNavigate();
     const statusColor = statusColors[s.shipmentStatusName] || statusColors.default;
+    const [returnOpen, setReturnOpen] = useState(false);
+
+    const canReturn = ['Доставлено'].includes(s.shipmentStatusName);
 
     const handleWaybillClick = () => {
         if (s.waybillId) {
@@ -92,6 +96,18 @@ const ShipmentCard = ({
                         sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
 
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {canReturn && (
+                            <Tooltip title="Оформити повернення">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setReturnOpen(true)}
+                                    sx={{ color: '#f44336' }}
+                                >
+                                    <AssignmentReturn fontSize="small" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+
                         <Tooltip title={editable ? 'Редагувати' : `Редагування недоступне для статусу "${s.shipmentStatusName}"`}>
                             <span>
                                 <IconButton
@@ -423,6 +439,16 @@ const ShipmentCard = ({
                     </Box>
                 </Box>
             </CardContent>
+
+            <ReturnDialog
+                open={returnOpen}
+                onClose={() => setReturnOpen(false)}
+                shipment={s}
+                onSuccess={(msg) => {
+                    setReturnOpen(false);
+                    onSuccess?.(msg);
+                }}
+            />
         </Card>
     );
 };
