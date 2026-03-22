@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box, Typography, CircularProgress, alpha,
-    Snackbar, Alert, Grid,
+    Snackbar, Alert,
 } from '@mui/material';
 import { LocalShipping, TaskAlt } from '@mui/icons-material';
 import { DictionaryApi } from '../api/dictionaries';
@@ -18,7 +18,14 @@ const CourierPage = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState('active');
+    const [paymentTypes, setPaymentTypes] = useState([]);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
+
+    useEffect(() => {
+        DictionaryApi.getAll('payment-types', 0, 100)
+            .then(r => setPaymentTypes(r.data.content || []))
+            .catch(console.error);
+    }, []);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -34,6 +41,10 @@ const CourierPage = () => {
     }, [tab]);
 
     useEffect(() => { load(); }, [load]);
+
+    const handleNotify = (message, severity = 'success') => {
+        setNotification({ open: true, message, severity });
+    };
 
     const activeCount = items.filter(r => TAB_STATUSES.active.includes(r.statusName)).length;
 
@@ -107,17 +118,17 @@ const CourierPage = () => {
                 ) : (
                     <Box sx={{
                         display: 'grid',
-                        gridTemplateColumns: {
-                            xs: '1fr',
-                            sm: '1fr 1fr',
-                            md: '1fr 1fr 1fr',
-                        },
-                        gap: 2,
-                        width: '100%',
-                        alignItems: 'start',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
+                        gap: 2, width: '100%', alignItems: 'start',
                     }}>
                         {items.map(r => (
-                            <RouteListCard key={r.id} routeList={r} onStatusChange={load} />
+                            <RouteListCard
+                                key={r.id}
+                                routeList={r}
+                                paymentTypes={paymentTypes}
+                                onStatusChange={load}
+                                onNotify={handleNotify}
+                            />
                         ))}
                     </Box>
                 )}
