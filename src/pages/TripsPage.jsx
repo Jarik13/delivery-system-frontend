@@ -12,12 +12,16 @@ import TripsList from '../components/trips/TripsList';
 import LeafletMap from '../components/trips/LeafletMap';
 import DataPagination from '../components/pagination/DataPagination';
 import TripWizardDialog from '../components/trips/TripWizardDialog';
+import { useAuth } from '../context/AuthContext';
+import { ROLES } from '../constants/roles';
 import { useSearchParams } from 'react-router-dom';
 
 const ARCHIVE_TRIP_STATUSES = ['Завершено', 'Аварійна зупинка'];
 
 const TripsPage = () => {
     const mainColor = GROUP_COLORS[ITEM_GROUP_MAP['trips']] || '#1976d2';
+    const { auth } = useAuth();
+    const isDriver = auth?.role === ROLES.DRIVER;
 
     const [trips, setTrips] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -182,11 +186,13 @@ const TripsPage = () => {
                                 }}
                             />
                         )}
-                        <Button variant="contained" size="small"
-                            sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
-                            startIcon={<Add />} onClick={() => setWizardTrip(null)}>
-                            Створити новий рейс
-                        </Button>
+                        {!isDriver && (
+                            <Button variant="contained" size="small"
+                                sx={{ bgcolor: 'white', color: mainColor, fontWeight: 'bold', '&:hover': { bgcolor: '#f5f5f5' } }}
+                                startIcon={<Add />} onClick={() => setWizardTrip(null)}>
+                                Створити новий рейс
+                            </Button>
+                        )}
                     </Box>
                 </Box>
 
