@@ -14,7 +14,7 @@ const RouteStep = ({
     employeeProfile, profileLoading,
     onOpenCreateClient,
 }) => {
-    const selectedSender    = localClients.find(c => c.id === formData.senderId) ?? null;
+    const selectedSender = localClients.find(c => c.id === formData.senderId) ?? null;
     const selectedRecipient = localClients.find(c => c.id === formData.recipientId) ?? null;
     const selectedShipmentType = shipmentTypes.find(t => t.id === formData.shipmentTypeId) ?? null;
 
