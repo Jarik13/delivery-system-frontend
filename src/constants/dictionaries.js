@@ -64,9 +64,10 @@ export const MENU_GROUPS = [
     },
     {
         title: "Адміністрування",
-        roles: SA,
+        roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
         items: [
-            { label: 'Управління користувачами', path: 'admin', isCustomPage: true, endpoint: 'admin', roles: SA },
+            { label: 'Управління користувачами', path: 'super-admin', isCustomPage: true, endpoint: 'super-admin', roles: [ROLES.SUPER_ADMIN] },
+            { label: 'Аналітика', path: 'admin', isCustomPage: true, endpoint: 'admin', roles: [ROLES.ADMIN] },
         ]
     },
 ];

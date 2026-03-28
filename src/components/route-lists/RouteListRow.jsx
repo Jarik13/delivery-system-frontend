@@ -6,16 +6,18 @@ import {
 import {
     ListAlt, ExpandMore, ExpandLess,
     Person, Scale, CalendarToday, Schedule,
-    Inventory2, CheckCircle,
+    Inventory2, CheckCircle, Add
 } from '@mui/icons-material';
 import RouteSheetPanel from './RouteSheetPanel';
 import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
+import { isRouteListEditable } from '../../constants/routeListConstants';
 
 const RouteListRow = ({
     item, mainColor, selected, onToggle,
     isHighlighted = false,
     highlightRowRef = null,
     visibleCols = new Set(),
+    onAddShipment,
 }) => {
     const [expanded, setExpanded] = useState(false);
 
@@ -68,7 +70,7 @@ const RouteListRow = ({
                     />
                 </TableCell>
 
-                <TableCell>
+                <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
                     <IconButton size="small" sx={{ color: mainColor }} onClick={handleExpandClick}>
                         {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
                     </IconButton>
@@ -203,6 +205,25 @@ const RouteListRow = ({
                         </Box>
                     </TableCell>
                 )}
+
+                <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                    {isRouteListEditable(item.statusName) && (
+                        <Tooltip title="Додати відправлення" placement="left">
+                            <IconButton
+                                size="small"
+                                onClick={(e) => { e.stopPropagation(); onAddShipment?.(item); }}
+                                sx={{
+                                    color: mainColor,
+                                    '&:hover': {
+                                        bgcolor: alpha(mainColor, 0.1),
+                                    },
+                                }}
+                            >
+                                <Add fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </TableCell>
             </TableRow>
 
             <RouteSheetPanel

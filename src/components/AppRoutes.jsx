@@ -15,6 +15,7 @@ import PaymentsPage from '../pages/PaymentsPage';
 import ReturnsPage from '../pages/ReturnsPage';
 import LoginPage from '../pages/LoginPage';
 import SuperAdminPage from '../pages/SuperAdminPage';
+import AdminPage from '../pages/AdminPage';
 import CourierPage from '../pages/CourierPage';
 import ProfilePage from '../pages/ProfilePage';
 import { useAuth } from '../context/AuthContext';
@@ -32,7 +33,8 @@ const getDefaultPath = (role) => {
     switch (role) {
         case ROLES.COURIER: return '/courier';
         case ROLES.DRIVER: return '/trips';
-        case ROLES.ADMIN: return '/box-types';
+        case ROLES.ADMIN: return '/admin';
+        case ROLES.SUPER_ADMIN: return '/super-admin';
         default: return '/shipments';
     }
 };
@@ -44,13 +46,19 @@ const AppRoutes = () => {
         <Routes>
             <Route path="/login" element={
                 auth
-                    ? <Navigate to={auth.role === ROLES.SUPER_ADMIN ? '/admin' : getDefaultPath(auth.role)} replace />
+                    ? <Navigate to={auth.role === ROLES.SUPER_ADMIN ? '/super-admin' : getDefaultPath(auth.role)} replace />
                     : <LoginPage />
             } />
 
-            <Route path="/admin" element={
+            <Route path="/super-admin" element={
                 <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
                     <SuperAdminPage />
+                </ProtectedRoute>
+            } />
+
+            <Route path="/admin" element={
+                <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}>
+                    <AdminPage />
                 </ProtectedRoute>
             } />
 

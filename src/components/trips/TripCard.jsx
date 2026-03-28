@@ -11,7 +11,7 @@ import {
 } from '@mui/icons-material';
 import StatusChip from './StatusChip';
 
-const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false, highlightRowRef = null }) => {
+const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false, highlightRowRef = null, editable = true }) => {
     const [expanded, setExpanded] = useState(false);
 
     const formatTime = (dateStr) => dateStr
@@ -295,20 +295,40 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                         </Paper>
 
                         <Box sx={{ mt: 2.5, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
-                            <Button variant="text" size="small" startIcon={<Delete />} color="error"
-                                onClick={() => onDelete(trip.id)}
-                                sx={{ fontWeight: 800, borderRadius: 2 }}>
-                                Видалити
-                            </Button>
-                            <Button variant="outlined" size="small" startIcon={<Edit />}
-                                onClick={() => onEdit?.(trip)}
-                                sx={{
-                                    fontWeight: 800, borderRadius: 2, px: 2.5,
-                                    borderColor: color, color,
-                                    '&:hover': { bgcolor: alpha(color, 0.06), borderColor: color },
-                                }}>
-                                Редагувати
-                            </Button>
+                            <Tooltip title={editable ? 'Редагувати' : `Редагування недоступне для статусу "${trip.status}"`}>
+                                <span>
+                                    <Button
+                                        variant="outlined" size="small"
+                                        startIcon={<Edit />}
+                                        onClick={() => editable && onEdit?.(trip)}
+                                        disabled={!editable}
+                                        sx={{
+                                            fontWeight: 800, borderRadius: 2, px: 2.5,
+                                            borderColor: editable ? color : '#ccc',
+                                            color: editable ? color : '#ccc',
+                                            '&:hover': { bgcolor: editable ? alpha(color, 0.06) : 'transparent', borderColor: editable ? color : '#ccc' },
+                                            '&.Mui-disabled': { borderColor: '#ddd', color: '#bbb' }
+                                        }}
+                                    >
+                                        Редагувати
+                                    </Button>
+                                </span>
+                            </Tooltip>
+
+                            <Tooltip title={editable ? 'Видалити' : 'Видалення недоступне'}>
+                                <span>
+                                    <Button
+                                        variant="text" size="small"
+                                        startIcon={<Delete />}
+                                        color="error"
+                                        onClick={() => editable && onDelete(trip.id)}
+                                        disabled={!editable}
+                                        sx={{ fontWeight: 800, borderRadius: 2 }}
+                                    >
+                                        Видалити
+                                    </Button>
+                                </span>
+                            </Tooltip>
                             <Button variant="contained" size="small" startIcon={<MapIcon />}
                                 onClick={() => onMap(trip)}
                                 sx={{
