@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Divider, Chip, Stack, alpha } from '@mui/material';
 import TripCard from './TripCard';
+import { isTripEditable } from '../../constants/tripConstants';
 
 const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit, highlightId, highlightRowRef }) => {
     const grouped = trips.reduce((acc, trip) => {
@@ -48,6 +49,7 @@ const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit, highlightId, hig
                                 onEdit={onEdit}
                                 isHighlighted={trip.id === highlightId}
                                 highlightRowRef={trip.id === highlightId ? highlightRowRef : null}
+                                editable={isTripEditable(trip.status)}
                             />
                         ))}
                     </Stack>
