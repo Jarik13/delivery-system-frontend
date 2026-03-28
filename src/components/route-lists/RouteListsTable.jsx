@@ -97,6 +97,7 @@ const RouteListsTable = ({
                                         {headerLabel[col.key]}
                                     </TableCell>
                                 ))}
+                                <TableCell padding="checkbox" />
                             </TableRow>
                         </TableHead>
                         <TableBody>

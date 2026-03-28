@@ -70,30 +70,10 @@ const RouteListRow = ({
                     />
                 </TableCell>
 
-                <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <IconButton size="small" sx={{ color: mainColor }} onClick={handleExpandClick}>
-                            {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-                        </IconButton>
-                        {isRouteListEditable(item.statusName) && (
-                            <Tooltip title="Додати відправлення">
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => { e.stopPropagation(); onAddShipment?.(item); }}
-                                    sx={{
-                                        color: mainColor,
-                                        bgcolor: alpha(mainColor, 0.08),
-                                        border: `1px solid ${alpha(mainColor, 0.2)}`,
-                                        borderRadius: 1.5,
-                                        p: '3px',
-                                        '&:hover': { bgcolor: alpha(mainColor, 0.15) },
-                                    }}
-                                >
-                                    <Add fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
-                    </Box>
+                <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                    <IconButton size="small" sx={{ color: mainColor }} onClick={handleExpandClick}>
+                        {expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+                    </IconButton>
                 </TableCell>
 
                 {show('number') && (
@@ -225,6 +205,25 @@ const RouteListRow = ({
                         </Box>
                     </TableCell>
                 )}
+
+                <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
+                    {isRouteListEditable(item.statusName) && (
+                        <Tooltip title="Додати відправлення" placement="left">
+                            <IconButton
+                                size="small"
+                                onClick={(e) => { e.stopPropagation(); onAddShipment?.(item); }}
+                                sx={{
+                                    color: mainColor,
+                                    '&:hover': {
+                                        bgcolor: alpha(mainColor, 0.1),
+                                    },
+                                }}
+                            >
+                                <Add fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </TableCell>
             </TableRow>
 
             <RouteSheetPanel
