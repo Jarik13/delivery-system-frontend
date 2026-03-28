@@ -98,9 +98,8 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
 
                     <Typography variant="caption" color="text.secondary" sx={{
                         display: 'block', mt: 0.25,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                        {item.deliveryAddress || 'Самовивіз з відділення'}
+                        {item.deliveryAddress || '—'}
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75, flexWrap: 'wrap' }}>
