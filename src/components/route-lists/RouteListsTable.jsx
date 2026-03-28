@@ -26,6 +26,7 @@ const RouteListsTable = ({
     items, loading, mainColor,
     selected = [], onToggle, onToggleAll,
     highlightId, highlightRowRef,
+    onAddShipment,
 }) => {
     const [visibleCols, setVisibleCols] = useState(DEFAULT_VISIBLE);
 
@@ -119,6 +120,7 @@ const RouteListsTable = ({
                                         isHighlighted={item.id === highlightId}
                                         highlightRowRef={item.id === highlightId ? highlightRowRef : null}
                                         visibleCols={visibleCols}
+                                        onAddShipment={onAddShipment}
                                     />
                                 ))
                             )}

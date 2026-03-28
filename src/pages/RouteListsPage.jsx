@@ -4,8 +4,7 @@ import {
     Menu, MenuItem, ListItemIcon, ListItemText, Divider, LinearProgress, Tooltip,
 } from '@mui/material';
 import {
-    Assignment, Add, FlashOn, Archive, FileDownload, Close,
-    TableChart, PictureAsPdf, Description, DataObject,
+    Assignment, Add, FlashOn, Archive, FileDownload, Close
 } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import { DictionaryApi } from '../api/dictionaries';
@@ -14,6 +13,7 @@ import DataPagination from '../components/pagination/DataPagination';
 import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import RouteListsTable from '../components/route-lists/RouteListsTable';
 import RouteListWizardDialog from '../components/route-lists/RouteListWizardDialog';
+import AddShipmentDialog from '../components/route-lists/AddShipmentDialog';
 import { EXPORT_FORMATS, NO_PROGRESS, formatBytes, formatEta } from '../constants/export';
 
 const ARCHIVE_ROUTE_LIST_STATUSES = ['Завершено', 'Скасовано'];
@@ -38,6 +38,7 @@ const RouteListsPage = () => {
     const [activeTab, setActiveTab] = useState(0);
     const [exportAnchor, setExportAnchor] = useState(null);
     const [progress, setProgress] = useState(NO_PROGRESS);
+    const [addShipmentRouteList, setAddShipmentRouteList] = useState(null);
 
     const abortRef = useRef(null);
     const statsRef = useRef({ startTime: 0, lastLoaded: 0, lastTime: 0 });
@@ -258,8 +259,8 @@ const RouteListsPage = () => {
     ];
 
     const isIndeterminate = progress.active && progress.percent === null;
-    const isDeterminate   = progress.active && progress.percent !== null;
-    const selectionCount  = selectedIds.size;
+    const isDeterminate = progress.active && progress.percent !== null;
+    const selectionCount = selectedIds.size;
 
     return (
         <Box sx={{ p: 2, pt: 0, width: '100%' }}>
@@ -455,6 +456,7 @@ const RouteListsPage = () => {
                 onToggleAll={handleToggleAll}
                 highlightId={highlightId}
                 highlightRowRef={highlightRowRef}
+                onAddShipment={(item) => setAddShipmentRouteList(item)}
             />
 
             <DataPagination
@@ -472,6 +474,18 @@ const RouteListsPage = () => {
                 onSuccess={() => { setOpenWizard(false); load(); }}
                 mainColor={mainColor}
                 references={references}
+            />
+
+            <AddShipmentDialog
+                open={Boolean(addShipmentRouteList)}
+                onClose={() => setAddShipmentRouteList(null)}
+                onSuccess={(msg) => {
+                    setAddShipmentRouteList(null);
+                    load();
+                    setNotification({ open: true, message: msg, severity: 'success' });
+                }}
+                mainColor={mainColor}
+                routeList={addShipmentRouteList}
             />
 
             <Snackbar
