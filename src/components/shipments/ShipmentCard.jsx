@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { getTypeColor, SHIPMENT_TYPE_COLORS } from '../../constants/typeColors';
 import ReturnDialog from './ReturnDialog';
 import PaymentDialog from './PaymentDialog';
+import ShipmentExportButton from './ShipmentExportButton';
 
 const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
     const theme = useTheme();
@@ -96,34 +97,25 @@ const ShipmentCard = ({
                 '&:last-child': { pb: 2.5 },
             }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                    <Chip label={s.trackingNumber} size="small"
-                        sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
-
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                        <Chip label={s.trackingNumber} size="small"
+                            sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
+                        <ShipmentExportButton shipmentId={s.id} mainColor={mainColor} />
+                    </Box>
+ 
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Tooltip title={editable ? 'Редагувати' : `Редагування недоступне для статусу "${s.shipmentStatusName}"`}>
+                        <Tooltip title={editable ? 'Редагувати' : `Недоступно для статусу "${s.shipmentStatusName}"`}>
                             <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => editable && onEdit?.(s)}
-                                    disabled={!editable}
-                                    sx={{
-                                        color: editable ? mainColor : '#ccc',
-                                        '&.Mui-disabled': { color: '#ccc' }
-                                    }}
-                                >
+                                <IconButton size="small" onClick={() => editable && onEdit?.(s)} disabled={!editable}
+                                    sx={{ color: editable ? mainColor : '#ccc', '&.Mui-disabled': { color: '#ccc' } }}>
                                     <Edit fontSize="small" />
                                 </IconButton>
                             </span>
                         </Tooltip>
-
                         <Tooltip title={editable ? 'Видалити' : 'Видалення недоступне'}>
                             <span>
-                                <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => editable && onDelete(s.id)}
-                                    disabled={!editable}
-                                >
+                                <IconButton size="small" color="error"
+                                    onClick={() => editable && onDelete(s.id)} disabled={!editable}>
                                     <Delete fontSize="small" />
                                 </IconButton>
                             </span>
