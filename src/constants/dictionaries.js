@@ -18,17 +18,17 @@ export const MENU_GROUPS = [
     },
     {
         title: "Мережа доставки",
-        roles: [ROLES.EMPLOYEE],
+        roles: [ROLES.ADMIN],
         items: [
-            { label: 'Відділення', path: 'branches', isCustomPage: true, endpoint: 'branches', roles: [ROLES.EMPLOYEE] },
-            { label: 'Поштомати', path: 'postomats', isCustomPage: true, endpoint: 'postomats', roles: [ROLES.EMPLOYEE] },
+            { label: 'Відділення', path: 'branches', isCustomPage: true, endpoint: 'branches', roles: [ROLES.ADMIN] },
+            { label: 'Поштомати', path: 'postomats', isCustomPage: true, endpoint: 'postomats', roles: [ROLES.ADMIN] },
         ]
     },
     {
         title: "Логістика та Автопарк",
         roles: [ROLES.DRIVER, ROLES.ADMIN],
         items: [
-            { label: 'Магістральні маршрути', path: 'routes', isCustomPage: true, endpoint: 'routes', roles: [ROLES.DRIVER] },
+            { label: 'Магістральні маршрути', path: 'routes', isCustomPage: true, endpoint: 'routes', roles: [ROLES.DRIVER, ROLES.ADMIN] },
             { label: 'Марки авто', path: 'fleet-brands', endpoint: 'fleet-brands', columns: DEFAULT_COLS, roles: [ROLES.ADMIN] },
             { label: 'Типи кузовів', path: 'fleet-body-types', endpoint: 'fleet-body-types', columns: DEFAULT_COLS, roles: [ROLES.ADMIN] },
             { label: 'Типи пального', path: 'fleet-fuel-types', endpoint: 'fleet-fuel-types', columns: DEFAULT_COLS, roles: [ROLES.ADMIN] },

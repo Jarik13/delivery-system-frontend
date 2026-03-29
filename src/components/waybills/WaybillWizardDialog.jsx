@@ -77,6 +77,9 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
     const [suggestedLoading, setSuggestedLoading] = useState(false);
     const [selectedShipmentIds, setSelectedShipmentIds] = useState(new Set());
 
+    const [justCreated, setJustCreated] = useState(false);
+    const [lastCreatedInfo, setLastCreatedInfo] = useState(null);
+
     useEffect(() => {
         if (!open) return;
         const t = setTimeout(async () => {
@@ -155,7 +158,8 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             };
             await DictionaryApi.create('waybills', payload);
             onSuccess?.(`Накладну для рейсу #${selectedTrip.tripNumber} успішно створено`);
-            handleClose();
+            setLastCreatedInfo({ tripNumber: selectedTrip.tripNumber });
+            setJustCreated(true);
         } catch (e) {
             const validationErrors = e.response?.data?.validationErrors;
             if (validationErrors) {
@@ -179,15 +183,37 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
 
     const handleClose = () => {
         setStep(0);
-        setTripSearch(''); setTrips([]); setSelectedTrip(null);
-        setSegments([]); setSelectedSegment(null);
-        setShipmentSearch(''); setShipments([]);
+        setTripSearch('');
+        setTrips([]);
+        setSelectedTrip(null);
+        setSegments([]);
+        setSelectedSegment(null);
+        setShipmentSearch('');
+        setShipments([]);
         setSuggestedShipments([]);
         setSelectedShipmentIds(new Set());
         setShipmentTab(0);
         setError('');
         setFieldErrors({});
+        setJustCreated(false);
+        setLastCreatedInfo(null);
         onClose();
+    };
+
+    const handleCreateAnother = () => {
+        setStep(0);
+        setSelectedTrip(null);
+        setSegments([]);
+        setSelectedSegment(null);
+        setShipmentSearch('');
+        setShipments([]);
+        setSuggestedShipments([]);
+        setSelectedShipmentIds(new Set());
+        setShipmentTab(0);
+        setError('');
+        setFieldErrors({});
+        setJustCreated(false);
+        setLastCreatedInfo(null);
     };
 
     const toggleShipment = (id) => {
@@ -285,98 +311,141 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                     </Alert>
                 </Collapse>
 
-                {step === 0 && (
-                    <StepTrip
-                        mainColor={mainColor}
-                        tripSearch={tripSearch}
-                        setTripSearch={setTripSearch}
-                        trips={trips}
-                        tripsLoading={tripsLoading}
-                        selectedTrip={selectedTrip}
-                        setSelectedTrip={setSelectedTrip}
-                    />
-                )}
-
-                {step === 1 && (
-                    <StepSegment
-                        mainColor={mainColor}
-                        selectedTrip={selectedTrip}
-                        segments={segments}
-                        segmentsLoading={segmentsLoading}
-                        selectedSegment={selectedSegment}
-                        setSelectedSegment={setSelectedSegment}
-                    />
-                )}
-
-                {step === 2 && (
-                    <StepShipments
-                        mainColor={mainColor}
-                        selectedTrip={selectedTrip}
-                        selectedSegment={selectedSegment}
-                        shipmentTab={shipmentTab}
-                        setShipmentTab={setShipmentTab}
-                        shipmentSearch={shipmentSearch}
-                        setShipmentSearch={setShipmentSearch}
-                        shipments={shipments}
-                        shipmentsLoading={shipmentsLoading}
-                        suggestedShipments={suggestedShipments}
-                        suggestedLoading={suggestedLoading}
-                        selectedShipmentIds={selectedShipmentIds}
-                        toggleShipment={toggleShipment}
-                        toggleAll={toggleAll}
-                        fieldErrors={fieldErrors}
-                    />
+                {justCreated ? (
+                    <Box sx={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', minHeight: 420, gap: 3, p: 4,
+                    }}>
+                        <Box sx={{
+                            width: 72, height: 72, borderRadius: '50%',
+                            bgcolor: alpha('#4caf50', 0.1),
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <CheckCircle sx={{ fontSize: 44, color: '#4caf50' }} />
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h6" fontWeight={700} gutterBottom>
+                                Накладну успішно створено!
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Накладна для рейсу #{lastCreatedInfo?.tripNumber} оформлена
+                            </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button
+                                variant="outlined"
+                                onClick={handleClose}
+                                sx={{ borderColor: mainColor, color: mainColor }}
+                            >
+                                Закрити
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<Add />}
+                                onClick={handleCreateAnother}
+                                sx={{ bgcolor: mainColor, '&:hover': { bgcolor: alpha(mainColor, 0.85) } }}
+                            >
+                                Створити ще одну
+                            </Button>
+                        </Box>
+                    </Box>
+                ) : (
+                    <>
+                        {step === 0 && (
+                            <StepTrip
+                                mainColor={mainColor}
+                                tripSearch={tripSearch}
+                                setTripSearch={setTripSearch}
+                                trips={trips}
+                                tripsLoading={tripsLoading}
+                                selectedTrip={selectedTrip}
+                                setSelectedTrip={setSelectedTrip}
+                            />
+                        )}
+                        {step === 1 && (
+                            <StepSegment
+                                mainColor={mainColor}
+                                selectedTrip={selectedTrip}
+                                segments={segments}
+                                segmentsLoading={segmentsLoading}
+                                selectedSegment={selectedSegment}
+                                setSelectedSegment={setSelectedSegment}
+                            />
+                        )}
+                        {step === 2 && (
+                            <StepShipments
+                                mainColor={mainColor}
+                                selectedTrip={selectedTrip}
+                                selectedSegment={selectedSegment}
+                                shipmentTab={shipmentTab}
+                                setShipmentTab={setShipmentTab}
+                                shipmentSearch={shipmentSearch}
+                                setShipmentSearch={setShipmentSearch}
+                                shipments={shipments}
+                                shipmentsLoading={shipmentsLoading}
+                                suggestedShipments={suggestedShipments}
+                                suggestedLoading={suggestedLoading}
+                                selectedShipmentIds={selectedShipmentIds}
+                                toggleShipment={toggleShipment}
+                                toggleAll={toggleAll}
+                                fieldErrors={fieldErrors}
+                            />
+                        )}
+                    </>
                 )}
             </DialogContent>
 
-            <Divider />
+            {!justCreated && (
+                <>
+                    <Divider />
+                    <Box sx={{
+                        px: 3, py: 2,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        bgcolor: 'grey.50',
+                    }}>
+                        <Button
+                            startIcon={<ArrowBack />}
+                            onClick={() => step === 0 ? handleClose() : setStep(s => s - 1)}
+                            sx={{ color: 'text.secondary' }}
+                        >
+                            {step === 0 ? 'Скасувати' : 'Назад'}
+                        </Button>
 
-            <Box sx={{
-                px: 3, py: 2,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                bgcolor: 'grey.50',
-            }}>
-                <Button
-                    startIcon={<ArrowBack />}
-                    onClick={() => step === 0 ? handleClose() : setStep(s => s - 1)}
-                    sx={{ color: 'text.secondary' }}
-                >
-                    {step === 0 ? 'Скасувати' : 'Назад'}
-                </Button>
-
-                {step < 2 ? (
-                    <Button
-                        variant="contained"
-                        endIcon={<ArrowForward />}
-                        disabled={!canNext()}
-                        onClick={() => setStep(s => s + 1)}
-                        sx={{
-                            bgcolor: mainColor,
-                            '&:hover': { bgcolor: alpha(mainColor, 0.85) },
-                            fontWeight: 700,
-                        }}
-                    >
-                        Далі
-                    </Button>
-                ) : (
-                    <Button
-                        variant="contained"
-                        startIcon={saving
-                            ? <CircularProgress size={16} sx={{ color: 'white' }} />
-                            : <Add />
-                        }
-                        disabled={!canNext() || saving}
-                        onClick={handleSave}
-                        sx={{
-                            bgcolor: mainColor,
-                            '&:hover': { bgcolor: alpha(mainColor, 0.85) },
-                            fontWeight: 700,
-                        }}
-                    >
-                        {saving ? 'Збереження...' : 'Створити накладну'}
-                    </Button>
-                )}
-            </Box>
+                        {step < 2 ? (
+                            <Button
+                                variant="contained"
+                                endIcon={<ArrowForward />}
+                                disabled={!canNext()}
+                                onClick={() => setStep(s => s + 1)}
+                                sx={{
+                                    bgcolor: mainColor,
+                                    '&:hover': { bgcolor: alpha(mainColor, 0.85) },
+                                    fontWeight: 700,
+                                }}
+                            >
+                                Далі
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="contained"
+                                startIcon={saving
+                                    ? <CircularProgress size={16} sx={{ color: 'white' }} />
+                                    : <Add />
+                                }
+                                disabled={!canNext() || saving}
+                                onClick={handleSave}
+                                sx={{
+                                    bgcolor: mainColor,
+                                    '&:hover': { bgcolor: alpha(mainColor, 0.85) },
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {saving ? 'Збереження...' : 'Створити накладну'}
+                            </Button>
+                        )}
+                    </Box>
+                </>
+            )}
         </Dialog>
     );
 };

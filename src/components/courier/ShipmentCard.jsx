@@ -41,15 +41,20 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
 
         setLoading(true);
         try {
-            await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
+            const response = await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
+            const updatedItem = response.data;
 
-            if (action === 'DELIVERED' && item.hasCod && item.remainingAmount > 0) {
+            const isDelivered = action === 'DELIVERED';
+
+            const hasMoney = Number(updatedItem.remainingAmount || updatedItem.codAmount || 0) > 0;
+            const needsCod = updatedItem.hasCod === true || hasMoney;
+
+            if (isDelivered && needsCod && hasMoney) {
                 setPaymentOpen(true);
             } else {
-                onStatusChange?.();
+                onStatusChange?.(); 
             }
         } catch (e) {
-            console.error(e);
             onNotify?.('Помилка оновлення статусу', 'error');
         } finally {
             setLoading(false);
@@ -156,17 +161,19 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
                                         </IconButton>
                                     </Tooltip>
 
-                                    <Tooltip title="Спроба вручення провалена">
-                                        <IconButton size="small" onClick={() => handleAction('FAILED')}
-                                            sx={{
-                                                bgcolor: alpha('#ff9800', 0.1), color: '#ff9800',
-                                                border: `1px solid ${alpha('#ff9800', 0.3)}`,
-                                                borderRadius: 1.5, p: 0.5,
-                                                '&:hover': { bgcolor: alpha('#ff9800', 0.2) },
-                                            }}>
-                                            <ErrorOutline sx={{ fontSize: 16 }} />
-                                        </IconButton>
-                                    </Tooltip>
+                                    {statusName !== 'Спроба вручення провалена' && (
+                                        <Tooltip title="Спроба вручення провалена">
+                                            <IconButton size="small" onClick={() => handleAction('FAILED')}
+                                                sx={{
+                                                    bgcolor: alpha('#ff9800', 0.1), color: '#ff9800',
+                                                    border: `1px solid ${alpha('#ff9800', 0.3)}`,
+                                                    borderRadius: 1.5, p: 0.5,
+                                                    '&:hover': { bgcolor: alpha('#ff9800', 0.2) },
+                                                }}>
+                                                <ErrorOutline sx={{ fontSize: 16 }} />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
 
                                     <Tooltip title="Відмова — оформити повернення">
                                         <IconButton size="small" onClick={() => handleAction('REFUSED')}

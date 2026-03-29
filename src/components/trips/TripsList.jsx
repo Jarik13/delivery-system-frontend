@@ -3,7 +3,7 @@ import { Box, Typography, Divider, Chip, Stack, alpha } from '@mui/material';
 import TripCard from './TripCard';
 import { isTripEditable } from '../../constants/tripConstants';
 
-const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit, highlightId, highlightRowRef }) => {
+const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit, highlightId, highlightRowRef, onMarkArrived }) => {
     const grouped = trips.reduce((acc, trip) => {
         const date = trip.scheduledDepartureTime
             ? new Date(trip.scheduledDepartureTime).toLocaleDateString('uk-UA', {
@@ -50,6 +50,7 @@ const TripsList = ({ trips, mainColor, onMap, onDelete, onEdit, highlightId, hig
                                 isHighlighted={trip.id === highlightId}
                                 highlightRowRef={trip.id === highlightId ? highlightRowRef : null}
                                 editable={isTripEditable(trip.status)}
+                                onMarkArrived={onMarkArrived}
                             />
                         ))}
                     </Stack>
