@@ -19,8 +19,12 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
     const [expanded, setExpanded] = useState(false);
     const [segments, setSegments] = useState([]);
     const [segmentsLoading, setSegmentsLoading] = useState(false);
+
     const [arriveDialog, setArriveDialog] = useState(null);
     const [arriving, setArriving] = useState(false);
+
+    const [departDialog, setDepartDialog] = useState(null);
+    const [departing, setDeparting] = useState(false);
 
     const { auth } = useAuth();
     const isDriver = auth?.role === ROLES.DRIVER;
@@ -50,6 +54,25 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
             console.error(e);
         } finally {
             setArriving(false);
+        }
+    };
+
+    const handleMarkDeparted = async () => {
+        if (!departDialog) return;
+        setDeparting(true);
+        try {
+            await DictionaryApi.patch(`trips/waybill-routes/${departDialog.waybillRouteId}/depart`, {});
+            setSegments(prev => prev.map(s =>
+                s.waybillRouteId === departDialog.waybillRouteId
+                    ? { ...s, isDeparted: true }
+                    : s
+            ));
+            setDepartDialog(null);
+            onMarkArrived?.();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setDeparting(false);
         }
     };
 
@@ -243,23 +266,34 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                                     p: 1.25, borderRadius: 2,
                                                     bgcolor: seg.isCompleted
                                                         ? alpha('#4caf50', 0.06)
-                                                        : alpha(color, 0.04),
+                                                        : seg.isDeparted
+                                                            ? alpha('#2196f3', 0.06)
+                                                            : alpha(color, 0.04),
                                                     border: `1px solid ${seg.isCompleted
                                                         ? alpha('#4caf50', 0.2)
-                                                        : alpha(color, 0.12)}`,
+                                                        : seg.isDeparted
+                                                            ? alpha('#2196f3', 0.2)
+                                                            : alpha(color, 0.12)}`,
                                                 }}>
                                                     <Box sx={{
                                                         width: 24, height: 24, borderRadius: '50%',
-                                                        bgcolor: seg.isCompleted ? '#4caf50' : alpha(color, 0.15),
-                                                        color: seg.isCompleted ? 'white' : color,
+                                                        bgcolor: seg.isCompleted
+                                                            ? '#4caf50'
+                                                            : seg.isDeparted
+                                                                ? '#2196f3'
+                                                                : alpha(color, 0.15),
+                                                        color: seg.isCompleted || seg.isDeparted ? 'white' : color,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontWeight: 700, fontSize: 11, flexShrink: 0,
                                                     }}>
                                                         {seg.isCompleted
                                                             ? <CheckCircle sx={{ fontSize: 14 }} />
-                                                            : idx + 1
+                                                            : seg.isDeparted
+                                                                ? <DirectionsCar sx={{ fontSize: 14 }} />
+                                                                : idx + 1
                                                         }
                                                     </Box>
+
                                                     <Box sx={{ flex: 1 }}>
                                                         <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.8rem' }}>
                                                             {seg.originCity} → {seg.destCity}
@@ -270,6 +304,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                                             </Typography>
                                                         )}
                                                     </Box>
+
                                                     {seg.isCompleted ? (
                                                         <Chip
                                                             label="Прибуто"
@@ -280,13 +315,41 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                                                 border: `1px solid ${alpha('#4caf50', 0.3)}`,
                                                             }}
                                                         />
+                                                    ) : seg.isDeparted ? (
+                                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                            <Chip
+                                                                label="В дорозі"
+                                                                size="small"
+                                                                sx={{
+                                                                    height: 22, fontSize: '0.65rem', fontWeight: 700,
+                                                                    bgcolor: alpha('#2196f3', 0.1), color: '#1565c0',
+                                                                    border: `1px solid ${alpha('#2196f3', 0.3)}`,
+                                                                }}
+                                                            />
+                                                            <Tooltip title="Позначити прибуття в цю точку">
+                                                                <Button
+                                                                    size="small"
+                                                                    variant="outlined"
+                                                                    startIcon={<FlightLand sx={{ fontSize: '14px !important' }} />}
+                                                                    onClick={() => setArriveDialog(seg)}
+                                                                    sx={{
+                                                                        fontSize: '0.7rem', fontWeight: 700,
+                                                                        borderRadius: 2, py: 0.5, px: 1.5,
+                                                                        borderColor: '#4caf50', color: '#4caf50',
+                                                                        '&:hover': { bgcolor: alpha('#4caf50', 0.06) },
+                                                                    }}
+                                                                >
+                                                                    Прибув
+                                                                </Button>
+                                                            </Tooltip>
+                                                        </Box>
                                                     ) : (
-                                                        <Tooltip title="Позначити прибуття в цю точку">
+                                                        <Tooltip title="Позначити виїзд з цієї точки">
                                                             <Button
                                                                 size="small"
                                                                 variant="outlined"
-                                                                startIcon={<FlightLand sx={{ fontSize: '14px !important' }} />}
-                                                                onClick={() => setArriveDialog(seg)}
+                                                                startIcon={<DirectionsCar sx={{ fontSize: '14px !important' }} />}
+                                                                onClick={() => setDepartDialog(seg)}
                                                                 sx={{
                                                                     fontSize: '0.7rem', fontWeight: 700,
                                                                     borderRadius: 2, py: 0.5, px: 1.5,
@@ -294,7 +357,7 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                                                     '&:hover': { bgcolor: alpha(color, 0.06) },
                                                                 }}
                                                             >
-                                                                Прибув
+                                                                Виїхав
                                                             </Button>
                                                         </Tooltip>
                                                     )}
@@ -530,6 +593,55 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                         sx={{ bgcolor: '#4caf50', '&:hover': { bgcolor: '#388e3c' }, fontWeight: 700 }}
                     >
                         {arriving ? 'Збереження...' : 'Підтвердити'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={!!departDialog}
+                onClose={() => setDepartDialog(null)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+                    Підтвердити виїзд
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary">
+                        Підтвердити виїзд з точки{' '}
+                        <strong>{departDialog?.originCity}</strong>?
+                    </Typography>
+                    {departDialog?.distance != null && (
+                        <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }}>
+                            Сегмент: {departDialog.originCity} → {departDialog.destCity} · {Number(departDialog.distance).toFixed(2)} км
+                        </Typography>
+                    )}
+                    <Box sx={{
+                        mt: 2, p: 1.5, borderRadius: 2,
+                        bgcolor: alpha('#ff9800', 0.06),
+                        border: `1px solid ${alpha('#ff9800', 0.2)}`,
+                    }}>
+                        <Typography variant="caption" color="warning.main" fontWeight={600}>
+                            Цю дію неможливо скасувати. Час виїзду буде зафіксовано автоматично.
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                    <Button onClick={() => setDepartDialog(null)} sx={{ color: 'text.secondary' }}>
+                        Скасувати
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleMarkDeparted}
+                        disabled={departing}
+                        startIcon={departing
+                            ? <CircularProgress size={16} color="inherit" />
+                            : <DirectionsCar fontSize="small" />
+                        }
+                        sx={{ bgcolor: '#2196f3', '&:hover': { bgcolor: '#1565c0' }, fontWeight: 700 }}
+                    >
+                        {departing ? 'Збереження...' : 'Підтвердити виїзд'}
                     </Button>
                 </DialogActions>
             </Dialog>
