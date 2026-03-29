@@ -236,6 +236,7 @@ const TripsPage = () => {
                     highlightId={highlightId}
                     highlightRowRef={highlightRowRef}
                     onClearHighlight={() => setSearchParams({})}
+                    onMarkArrived={loadData}
                 />
             )}
 
