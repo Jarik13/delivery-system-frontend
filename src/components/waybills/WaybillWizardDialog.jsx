@@ -88,6 +88,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                 const res = await DictionaryApi.getAll('trips', 0, 20, {
                     ...(tripSearch ? { tripNumber: tripSearch } : {}),
                     tripStatuses: ACTIVE_TRIP_STATUSES,
+                    hasMissingWaybills: true,
                 });
                 setTrips(res.data.content || []);
             } catch {
