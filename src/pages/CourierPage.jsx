@@ -32,25 +32,42 @@ const CourierPage = () => {
         try {
             const res = await DictionaryApi.getAll('route-lists', 0, 50, {});
             const all = res.data.content || res.data || [];
-            setItems(all.filter(r => TAB_STATUSES[tab].includes(r.statusName)));
-        } catch {
-            setNotification({ open: true, message: 'Помилка завантаження', severity: 'error' });
+
+            const filtered = all.filter(r => TAB_STATUSES[tab].includes(r.statusName));
+            setItems(filtered);
+        } catch (error) {
+            console.error('Load error:', error);
+            handleNotify('Помилка завантаження даних', 'error');
         } finally {
             setLoading(false);
         }
     }, [tab]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => {
+        load();
+    }, [load]);
+
+    const handleAcceptRouteList = async (id) => {
+        try {
+            await DictionaryApi.patch(`route-lists/${id}/accept`, {});
+
+            handleNotify('Маршрутний лист прийнято в роботу');
+
+            await load();
+        } catch (error) {
+            console.error('Accept error:', error);
+            handleNotify('Не вдалося прийняти маршрутний лист', 'error');
+        }
+    };
 
     const handleNotify = (message, severity = 'success') => {
         setNotification({ open: true, message, severity });
     };
 
-    const activeCount = items.filter(r => TAB_STATUSES.active.includes(r.statusName)).length;
+    const activeCount = items.filter(r => ['Сформовано', 'Видано кур\'єру', 'У процесі доставки'].includes(r.statusName)).length;
 
     return (
-        <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: 'background.default' }}>
-
+        <Box sx={{ width: '100%', minHeight: '100vh', bgcolor: '#f8f9fa' }}>
             <Box sx={{
                 position: 'sticky', top: 0, zIndex: 10,
                 background: `linear-gradient(135deg, ${mainColor}, ${alpha(mainColor, 0.85)})`,
@@ -65,10 +82,10 @@ const CourierPage = () => {
                             <Typography variant="h6" fontWeight={700} color="white" sx={{ lineHeight: 1.2 }}>
                                 Мої маршрути
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-                                {activeCount > 0
-                                    ? `${activeCount} активних завдань`
-                                    : 'Немає активних завдань'}
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
+                                {tab === 'active'
+                                    ? (activeCount > 0 ? `${activeCount} активних завдань` : 'Немає активних завдань')
+                                    : 'Історія завершених маршрутів'}
                             </Typography>
                         </Box>
                     </Box>
@@ -82,12 +99,13 @@ const CourierPage = () => {
                                 key={t.key}
                                 onClick={() => setTab(t.key)}
                                 sx={{
-                                    px: 2.5, py: 1,
+                                    px: 2.5, py: 1.2,
                                     borderRadius: '12px 12px 0 0',
-                                    cursor: 'pointer', fontWeight: 600, fontSize: 13,
+                                    cursor: 'pointer', fontWeight: 700, fontSize: 13,
                                     color: tab === t.key ? mainColor : 'rgba(255,255,255,0.7)',
-                                    bgcolor: tab === t.key ? 'background.paper' : 'transparent',
-                                    transition: 'all 0.2s',
+                                    bgcolor: tab === t.key ? '#f8f9fa' : 'transparent',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': { color: tab === t.key ? mainColor : 'white' }
                                 }}
                             >
                                 {t.label}
@@ -98,28 +116,28 @@ const CourierPage = () => {
             </Box>
 
             <Box sx={{ px: { xs: 2, md: 4 }, py: 2.5 }}>
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+                {loading && items.length === 0 ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
                         <CircularProgress sx={{ color: mainColor }} />
                     </Box>
                 ) : items.length === 0 ? (
                     <Box sx={{
                         textAlign: 'center', py: 8,
-                        border: `2px dashed ${alpha(mainColor, 0.2)}`,
-                        borderRadius: 3, mt: 1,
+                        border: `2px dashed ${alpha('#000', 0.1)}`,
+                        borderRadius: 4, mt: 2, bgcolor: 'white'
                     }}>
-                        <TaskAlt sx={{ fontSize: 48, color: alpha(mainColor, 0.3), mb: 1 }} />
-                        <Typography color="text.secondary" variant="body2">
+                        <TaskAlt sx={{ fontSize: 48, color: alpha('#000', 0.1), mb: 1.5 }} />
+                        <Typography color="text.secondary" variant="body2" fontWeight={500}>
                             {tab === 'active'
-                                ? 'Немає активних маршрутних листів'
-                                : 'Архів порожній'}
+                                ? 'На сьогодні активних маршрутів немає'
+                                : 'В архіві поки порожньо'}
                         </Typography>
                     </Box>
                 ) : (
                     <Box sx={{
                         display: 'grid',
                         gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
-                        gap: 2, width: '100%', alignItems: 'start',
+                        gap: 2.5, width: '100%', alignItems: 'start',
                     }}>
                         {items.map(r => (
                             <RouteListCard
@@ -128,6 +146,7 @@ const CourierPage = () => {
                                 paymentTypes={paymentTypes}
                                 onStatusChange={load}
                                 onNotify={handleNotify}
+                                onAccept={handleAcceptRouteList}
                             />
                         ))}
                     </Box>
@@ -140,7 +159,12 @@ const CourierPage = () => {
                 onClose={() => setNotification(n => ({ ...n, open: false }))}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert severity={notification.severity} variant="filled" sx={{ borderRadius: 3 }}>
+                <Alert
+                    severity={notification.severity}
+                    variant="filled"
+                    sx={{ borderRadius: 3, fontWeight: 600 }}
+                    onClose={() => setNotification(n => ({ ...n, open: false }))}
+                >
                     {notification.message}
                 </Alert>
             </Snackbar>

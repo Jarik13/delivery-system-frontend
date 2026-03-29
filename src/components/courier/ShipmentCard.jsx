@@ -41,15 +41,20 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
 
         setLoading(true);
         try {
-            await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
+            const response = await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
+            const updatedItem = response.data;
 
-            if (action === 'DELIVERED' && item.hasCod && item.remainingAmount > 0) {
+            const isDelivered = action === 'DELIVERED';
+
+            const hasMoney = Number(updatedItem.remainingAmount || updatedItem.codAmount || 0) > 0;
+            const needsCod = updatedItem.hasCod === true || hasMoney;
+
+            if (isDelivered && needsCod && hasMoney) {
                 setPaymentOpen(true);
             } else {
-                onStatusChange?.();
+                onStatusChange?.(); 
             }
         } catch (e) {
-            console.error(e);
             onNotify?.('Помилка оновлення статусу', 'error');
         } finally {
             setLoading(false);
