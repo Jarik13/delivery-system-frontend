@@ -2,19 +2,25 @@ import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogContent, Box, Typography, Button, alpha,
     Stepper, Step, StepLabel, StepConnector, stepConnectorClasses,
-    TextField, InputAdornment, CircularProgress, Chip, Checkbox,
-    Table, TableBody, TableCell, TableHead, TableRow, TableContainer,
-    Paper, Divider, IconButton, Alert, Collapse, Tabs, Tab, Tooltip,
+    CircularProgress, Divider, IconButton, Alert, Collapse,
 } from '@mui/material';
 import {
-    Close, Search, DirectionsBus, Route, LocalShipping,
+    Close, DirectionsBus, Route, LocalShipping,
     CheckCircle, ArrowBack, ArrowForward, Add, Receipt,
-    AutoAwesome, Warning,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { DictionaryApi } from '../../api/dictionaries';
+import StepTrip from './steps/StepTrip';
+import StepSegment from './steps/StepSegment';
+import StepShipments from './steps/StepShipments';
 
 const ACTIVE_TRIP_STATUSES = [1, 2, 3, 4];
+const STEPS = ['Рейс', 'Сегмент маршруту', 'Відправлення'];
+const STEP_ICONS = [
+    <DirectionsBus fontSize="small" />,
+    <Route fontSize="small" />,
+    <LocalShipping fontSize="small" />,
+];
 
 const ColorConnector = styled(StepConnector)(({ theme, maincolor }) => ({
     [`&.${stepConnectorClasses.alternativeLabel}`]: { top: 22 },
@@ -40,13 +46,6 @@ const ColorStepIconRoot = styled('div')(({ ownerState, maincolor }) => ({
     transition: 'all 0.3s ease',
 }));
 
-const STEP_ICONS = [
-    <DirectionsBus fontSize="small" />,
-    <Route fontSize="small" />,
-    <LocalShipping fontSize="small" />,
-];
-const STEPS = ['Рейс', 'Сегмент маршруту', 'Відправлення'];
-
 function ColorStepIcon({ active, completed, icon, maincolor }) {
     return (
         <ColorStepIconRoot ownerState={{ active, completed }} maincolor={maincolor}>
@@ -55,47 +54,11 @@ function ColorStepIcon({ active, completed, icon, maincolor }) {
     );
 }
 
-const statusColor = (status) => {
-    if (!status) return 'default';
-    const s = status.toLowerCase();
-    if (s.includes('доставлено')) return 'success';
-    if (s.includes('дорозі') || s.includes('сортування') || s.includes('завантаження') || s.includes('розвантаження')) return 'warning';
-    if (s.includes('відмова') || s.includes('втрат') || s.includes('аварій')) return 'error';
-    return 'default';
-};
-
-const ShipmentRow = ({ s, selected, onToggle, mainColor }) => (
-    <TableRow hover selected={selected}
-        onClick={() => onToggle(s.id)}
-        sx={{
-            cursor: 'pointer',
-            '&.Mui-selected': {
-                bgcolor: alpha(mainColor, 0.07),
-                '&:hover': { bgcolor: alpha(mainColor, 0.11) },
-            },
-        }}>
-        <TableCell padding="checkbox">
-            <Checkbox size="small" checked={selected}
-                sx={{ '&.Mui-checked': { color: mainColor } }} />
-        </TableCell>
-        <TableCell>
-            <Typography variant="caption" fontWeight={600} sx={{ fontFamily: 'monospace' }}>
-                {s.trackingNumber}
-            </Typography>
-        </TableCell>
-        <TableCell><Typography variant="caption">{s.senderFullName || '—'}</Typography></TableCell>
-        <TableCell><Typography variant="caption">{s.recipientFullName || '—'}</Typography></TableCell>
-        <TableCell>
-            <Chip label={s.shipmentStatusName || '—'} size="small"
-                color={statusColor(s.shipmentStatusName)} variant="outlined" />
-        </TableCell>
-    </TableRow>
-);
-
 const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }) => {
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const [tripSearch, setTripSearch] = useState('');
     const [trips, setTrips] = useState([]);
@@ -113,8 +76,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
     const [suggestedShipments, setSuggestedShipments] = useState([]);
     const [suggestedLoading, setSuggestedLoading] = useState(false);
     const [selectedShipmentIds, setSelectedShipmentIds] = useState(new Set());
-
-    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         if (!open) return;
@@ -154,10 +115,7 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                 setSuggestedShipments(data);
                 setSelectedShipmentIds(new Set(data.map(s => s.id)));
             })
-            .catch((e) => {
-                console.error('❌ Помилка:', e);
-                setError('Помилка завантаження рекомендованих відправлень');
-            })
+            .catch(() => setError('Помилка завантаження рекомендованих відправлень'))
             .finally(() => setSuggestedLoading(false));
     }, [step, selectedSegment]);
 
@@ -202,9 +160,12 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             const validationErrors = e.response?.data?.validationErrors;
             if (validationErrors) {
                 setFieldErrors(validationErrors);
-                if (validationErrors.tripId) { setStep(0); setError(validationErrors.tripId); }
-                else if (validationErrors.routeId || validationErrors.tripSequenceNumber) {
-                    setStep(1); setError(validationErrors.routeId || validationErrors.tripSequenceNumber);
+                if (validationErrors.tripId) {
+                    setStep(0);
+                    setError(validationErrors.tripId);
+                } else if (validationErrors.routeId || validationErrors.tripSequenceNumber) {
+                    setStep(1);
+                    setError(validationErrors.routeId || validationErrors.tripSequenceNumber);
                 } else if (validationErrors.shipmentIds) {
                     setError(validationErrors.shipmentIds);
                 }
@@ -254,56 +215,6 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
         return selectedShipmentIds.size > 0;
     };
 
-    const renderShipmentsTable = (list, loading, emptyText, showSelectAll = true) => (
-        loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
-                <CircularProgress size={28} sx={{ color: mainColor }} />
-            </Box>
-        ) : (
-            <TableContainer component={Paper} variant="outlined"
-                sx={{ borderRadius: 2, maxHeight: 280, overflow: 'auto' }}>
-                <Table size="small" stickyHeader>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell padding="checkbox" sx={{ bgcolor: alpha(mainColor, 0.05) }}>
-                                {showSelectAll && (
-                                    <Checkbox size="small"
-                                        indeterminate={
-                                            list.some(s => selectedShipmentIds.has(s.id)) &&
-                                            !list.every(s => selectedShipmentIds.has(s.id))
-                                        }
-                                        checked={list.length > 0 && list.every(s => selectedShipmentIds.has(s.id))}
-                                        onChange={() => toggleAll(list)}
-                                        sx={{ '&.Mui-checked, &.MuiCheckbox-indeterminate': { color: mainColor } }}
-                                    />
-                                )}
-                            </TableCell>
-                            {['Трек-номер', 'Відправник', 'Отримувач', 'Статус'].map(h => (
-                                <TableCell key={h} sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>{h}</TableCell>
-                            ))}
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {list.map(s => (
-                            <ShipmentRow key={s.id} s={s}
-                                selected={selectedShipmentIds.has(s.id)}
-                                onToggle={toggleShipment}
-                                mainColor={mainColor}
-                            />
-                        ))}
-                        {!loading && list.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                                    {emptyText}
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        )
-    );
-
     return (
         <Dialog
             open={open}
@@ -311,7 +222,10 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
             maxWidth="md"
             fullWidth
             PaperProps={{
-                sx: { borderRadius: 3, overflow: 'hidden', boxShadow: `0 24px 80px ${alpha(mainColor, 0.3)}` }
+                sx: {
+                    borderRadius: 3, overflow: 'hidden',
+                    boxShadow: `0 24px 80px ${alpha(mainColor, 0.3)}`,
+                }
             }}
         >
             <Box sx={{
@@ -331,16 +245,29 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
                         </Typography>
                     </Box>
                 </Box>
-                <IconButton onClick={handleClose} sx={{ color: 'white' }}><Close /></IconButton>
+                <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+                    <Close />
+                </IconButton>
             </Box>
 
             <Box sx={{ px: 3, pt: 2.5, pb: 1, bgcolor: alpha(mainColor, 0.03) }}>
-                <Stepper activeStep={step} connector={<ColorConnector maincolor={mainColor} />} alternativeLabel>
+                <Stepper
+                    activeStep={step}
+                    connector={<ColorConnector maincolor={mainColor} />}
+                    alternativeLabel
+                >
                     {STEPS.map((label, idx) => (
                         <Step key={label} completed={idx < step}>
-                            <StepLabel StepIconComponent={(props) => <ColorStepIcon {...props} maincolor={mainColor} />}>
-                                <Typography variant="caption" fontWeight={idx === step ? 700 : 400}
-                                    color={idx === step ? mainColor : 'text.secondary'}>
+                            <StepLabel
+                                StepIconComponent={(props) =>
+                                    <ColorStepIcon {...props} maincolor={mainColor} />
+                                }
+                            >
+                                <Typography
+                                    variant="caption"
+                                    fontWeight={idx === step ? 700 : 400}
+                                    color={idx === step ? mainColor : 'text.secondary'}
+                                >
                                     {label}
                                 </Typography>
                             </StepLabel>
@@ -353,293 +280,99 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
 
             <DialogContent sx={{ p: 0, minHeight: 420 }}>
                 <Collapse in={!!error}>
-                    <Alert severity="error" onClose={() => setError('')} sx={{ m: 2, mb: 0 }}>{error}</Alert>
+                    <Alert severity="error" onClose={() => setError('')} sx={{ m: 2, mb: 0 }}>
+                        {error}
+                    </Alert>
                 </Collapse>
 
                 {step === 0 && (
-                    <Box sx={{ p: 3 }}>
-                        <TextField
-                            fullWidth size="small"
-                            placeholder="Пошук за номером рейсу..."
-                            value={tripSearch}
-                            onChange={e => setTripSearch(e.target.value)}
-                            InputProps={{
-                                startAdornment: <InputAdornment position="start"><Search fontSize="small" color="action" /></InputAdornment>,
-                            }}
-                            sx={{ mb: 2 }}
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, px: 0.5 }}>
-                            Показуються тільки активні рейси
-                        </Typography>
-                        {tripsLoading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress size={32} sx={{ color: mainColor }} />
-                            </Box>
-                        ) : (
-                            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-                                <Table size="small">
-                                    <TableHead>
-                                        <TableRow sx={{ bgcolor: alpha(mainColor, 0.05) }}>
-                                            <TableCell sx={{ fontWeight: 700, width: 40 }} />
-                                            <TableCell sx={{ fontWeight: 700 }}>№ рейсу</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Відправлення</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Прибуття</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Статус</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        {trips.map(trip => (
-                                            <TableRow key={trip.id} hover selected={selectedTrip?.id === trip.id}
-                                                onClick={() => setSelectedTrip(trip)}
-                                                sx={{
-                                                    cursor: 'pointer',
-                                                    '&.Mui-selected': {
-                                                        bgcolor: alpha(mainColor, 0.08),
-                                                        '&:hover': { bgcolor: alpha(mainColor, 0.12) },
-                                                    },
-                                                }}>
-                                                <TableCell padding="checkbox">
-                                                    <Checkbox checked={selectedTrip?.id === trip.id} size="small"
-                                                        sx={{ '&.Mui-checked': { color: mainColor } }} />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" fontWeight={600}>#{trip.tripNumber}</Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {trip.scheduledDepartureTime
-                                                            ? new Date(trip.scheduledDepartureTime).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-                                                            : '—'}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {trip.scheduledArrivalTime
-                                                            ? new Date(trip.scheduledArrivalTime).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-                                                            : '—'}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Chip label={trip.status || '—'} size="small"
-                                                        color={statusColor(trip.status)} variant="outlined" />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {!tripsLoading && trips.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                                                    Активних рейсів не знайдено
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </TableContainer>
-                        )}
-                    </Box>
+                    <StepTrip
+                        mainColor={mainColor}
+                        tripSearch={tripSearch}
+                        setTripSearch={setTripSearch}
+                        trips={trips}
+                        tripsLoading={tripsLoading}
+                        selectedTrip={selectedTrip}
+                        setSelectedTrip={setSelectedTrip}
+                    />
                 )}
 
                 {step === 1 && (
-                    <Box sx={{ p: 3 }}>
-                        <Box sx={{
-                            mb: 2, p: 1.5, borderRadius: 2,
-                            bgcolor: alpha(mainColor, 0.06), border: `1px solid ${alpha(mainColor, 0.2)}`,
-                            display: 'flex', alignItems: 'center', gap: 1,
-                        }}>
-                            <DirectionsBus sx={{ color: mainColor, fontSize: 18 }} />
-                            <Typography variant="body2" fontWeight={600} color={mainColor}>
-                                Рейс #{selectedTrip?.tripNumber}
-                            </Typography>
-                        </Box>
-                        {segmentsLoading ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress size={32} sx={{ color: mainColor }} />
-                            </Box>
-                        ) : (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                {segments.map(seg => {
-                                    const isSelected = selectedSegment?.routeId === seg.routeId;
-                                    return (
-                                        <Paper key={seg.routeId} variant="outlined"
-                                            onClick={() => !seg.hasWaybill && setSelectedSegment(seg)}
-                                            sx={{
-                                                p: 2, borderRadius: 2,
-                                                cursor: seg.hasWaybill ? 'not-allowed' : 'pointer',
-                                                opacity: seg.hasWaybill ? 0.55 : 1,
-                                                borderColor: isSelected ? mainColor : 'divider',
-                                                bgcolor: isSelected ? alpha(mainColor, 0.06) : 'white',
-                                                transition: 'all 0.2s',
-                                                '&:hover': !seg.hasWaybill
-                                                    ? { borderColor: mainColor, bgcolor: alpha(mainColor, 0.04) } : {},
-                                                display: 'flex', alignItems: 'center', gap: 2,
-                                            }}>
-                                            <Box sx={{
-                                                width: 32, height: 32, borderRadius: '50%',
-                                                bgcolor: isSelected ? mainColor : alpha(mainColor, 0.1),
-                                                color: isSelected ? 'white' : mainColor,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontWeight: 700, fontSize: 13, flexShrink: 0,
-                                            }}>
-                                                {seg.sequenceNumber}
-                                            </Box>
-                                            <Box sx={{ flex: 1 }}>
-                                                <Typography variant="body2" fontWeight={600}>
-                                                    {seg.originCity} → {seg.destCity}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {seg.distance ? `${seg.distance} км` : ''}
-                                                </Typography>
-                                            </Box>
-                                            {seg.hasWaybill && (
-                                                <Chip label="Вже є накладна" size="small" color="warning" variant="outlined" />
-                                            )}
-                                            {isSelected && <CheckCircle sx={{ color: mainColor }} />}
-                                        </Paper>
-                                    );
-                                })}
-                                {!segmentsLoading && segments.length === 0 && (
-                                    <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-                                        Сегменти не знайдено
-                                    </Box>
-                                )}
-                            </Box>
-                        )}
-                    </Box>
+                    <StepSegment
+                        mainColor={mainColor}
+                        selectedTrip={selectedTrip}
+                        segments={segments}
+                        segmentsLoading={segmentsLoading}
+                        selectedSegment={selectedSegment}
+                        setSelectedSegment={setSelectedSegment}
+                    />
                 )}
 
                 {step === 2 && (
-                    <Box sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', gap: 1.5, mb: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: 2, flex: 1, bgcolor: alpha(mainColor, 0.06), border: `1px solid ${alpha(mainColor, 0.2)}` }}>
-                                <Typography variant="caption" color="text.secondary">Рейс</Typography>
-                                <Typography variant="body2" fontWeight={600}>#{selectedTrip?.tripNumber}</Typography>
-                            </Box>
-                            <Box sx={{ p: 1.5, borderRadius: 2, flex: 2, bgcolor: alpha(mainColor, 0.06), border: `1px solid ${alpha(mainColor, 0.2)}` }}>
-                                <Typography variant="caption" color="text.secondary">Сегмент</Typography>
-                                <Typography variant="body2" fontWeight={600}>
-                                    {selectedSegment?.originCity} → {selectedSegment?.destCity}
-                                </Typography>
-                            </Box>
-                            {selectedShipmentIds.size > 0 && (
-                                <Chip label={`Вибрано: ${selectedShipmentIds.size}`}
-                                    sx={{ alignSelf: 'center', bgcolor: mainColor, color: 'white', fontWeight: 700 }} />
-                            )}
-                        </Box>
-
-                        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                            <Tabs value={shipmentTab} onChange={(_, v) => setShipmentTab(v)}
-                                sx={{
-                                    '& .MuiTab-root': { minHeight: 40, py: 0.5, textTransform: 'none', fontWeight: 600 },
-                                    '& .Mui-selected': { color: mainColor },
-                                    '& .MuiTabs-indicator': { bgcolor: mainColor },
-                                }}>
-                                <Tab
-                                    icon={<AutoAwesome sx={{ fontSize: 15 }} />}
-                                    iconPosition="start"
-                                    label={
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                            Рекомендовані
-                                            {suggestedLoading
-                                                ? <CircularProgress size={12} sx={{ color: mainColor }} />
-                                                : suggestedShipments.length > 0 && (
-                                                    <Chip label={suggestedShipments.length} size="small"
-                                                        sx={{
-                                                            height: 18, fontSize: 10, fontWeight: 800,
-                                                            bgcolor: mainColor, color: 'white',
-                                                            '& .MuiChip-label': { px: 0.75 },
-                                                        }}
-                                                    />
-                                                )
-                                            }
-                                        </Box>
-                                    }
-                                />
-                                <Tab label="Всі відправлення" />
-                            </Tabs>
-                        </Box>
-
-                        {shipmentTab === 0 && (
-                            <>
-                                {!suggestedLoading && suggestedShipments.length > 0 && (
-                                    <Box sx={{
-                                        mb: 1.5, px: 1.5, py: 1, borderRadius: 2,
-                                        bgcolor: alpha(mainColor, 0.05),
-                                        border: `1px solid ${alpha(mainColor, 0.15)}`,
-                                        display: 'flex', alignItems: 'center', gap: 1,
-                                    }}>
-                                        <AutoAwesome sx={{ fontSize: 14, color: mainColor }} />
-                                        <Typography variant="caption" color="text.secondary">
-                                            Відправлення відповідають маршруту{' '}
-                                            <strong>{selectedSegment?.originCity} → {selectedSegment?.destCity}</strong>
-                                            {' '}і ще не прив'язані до жодної накладної
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {renderShipmentsTable(
-                                    suggestedShipments,
-                                    suggestedLoading,
-                                    'Рекомендованих відправлень не знайдено. Спробуйте вкладку "Всі відправлення".'
-                                )}
-                            </>
-                        )}
-
-                        {shipmentTab === 1 && (
-                            <>
-                                <TextField
-                                    fullWidth size="small"
-                                    placeholder="Пошук за трек-номером..."
-                                    value={shipmentSearch}
-                                    onChange={e => setShipmentSearch(e.target.value)}
-                                    InputProps={{
-                                        startAdornment: <InputAdornment position="start"><Search fontSize="small" color="action" /></InputAdornment>,
-                                    }}
-                                    sx={{ mb: 2 }}
-                                />
-                                {renderShipmentsTable(
-                                    shipments,
-                                    shipmentsLoading,
-                                    'Відправлення в активних статусах не знайдено'
-                                )}
-                            </>
-                        )}
-
-                        {fieldErrors.shipmentIds && (
-                            <Box sx={{
-                                mt: 1.5, p: 1.5, borderRadius: 2,
-                                bgcolor: 'rgba(211,47,47,0.06)',
-                                border: '1px solid rgba(211,47,47,0.3)',
-                                display: 'flex', alignItems: 'center', gap: 1,
-                            }}>
-                                <Warning sx={{ fontSize: 16, color: 'error.main' }} />
-                                <Typography variant="caption" color="error" fontWeight={600}>
-                                    {fieldErrors.shipmentIds}
-                                </Typography>
-                            </Box>
-                        )}
-                    </Box>
+                    <StepShipments
+                        mainColor={mainColor}
+                        selectedTrip={selectedTrip}
+                        selectedSegment={selectedSegment}
+                        shipmentTab={shipmentTab}
+                        setShipmentTab={setShipmentTab}
+                        shipmentSearch={shipmentSearch}
+                        setShipmentSearch={setShipmentSearch}
+                        shipments={shipments}
+                        shipmentsLoading={shipmentsLoading}
+                        suggestedShipments={suggestedShipments}
+                        suggestedLoading={suggestedLoading}
+                        selectedShipmentIds={selectedShipmentIds}
+                        toggleShipment={toggleShipment}
+                        toggleAll={toggleAll}
+                        fieldErrors={fieldErrors}
+                    />
                 )}
             </DialogContent>
 
             <Divider />
 
-            <Box sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: 'grey.50' }}>
-                <Button startIcon={<ArrowBack />}
+            <Box sx={{
+                px: 3, py: 2,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                bgcolor: 'grey.50',
+            }}>
+                <Button
+                    startIcon={<ArrowBack />}
                     onClick={() => step === 0 ? handleClose() : setStep(s => s - 1)}
-                    sx={{ color: 'text.secondary' }}>
+                    sx={{ color: 'text.secondary' }}
+                >
                     {step === 0 ? 'Скасувати' : 'Назад'}
                 </Button>
 
                 {step < 2 ? (
-                    <Button variant="contained" endIcon={<ArrowForward />}
-                        disabled={!canNext()} onClick={() => setStep(s => s + 1)}
-                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: alpha(mainColor, 0.85) }, fontWeight: 700 }}>
+                    <Button
+                        variant="contained"
+                        endIcon={<ArrowForward />}
+                        disabled={!canNext()}
+                        onClick={() => setStep(s => s + 1)}
+                        sx={{
+                            bgcolor: mainColor,
+                            '&:hover': { bgcolor: alpha(mainColor, 0.85) },
+                            fontWeight: 700,
+                        }}
+                    >
                         Далі
                     </Button>
                 ) : (
-                    <Button variant="contained"
-                        startIcon={saving ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Add />}
-                        disabled={!canNext() || saving} onClick={handleSave}
-                        sx={{ bgcolor: mainColor, '&:hover': { bgcolor: alpha(mainColor, 0.85) }, fontWeight: 700 }}>
+                    <Button
+                        variant="contained"
+                        startIcon={saving
+                            ? <CircularProgress size={16} sx={{ color: 'white' }} />
+                            : <Add />
+                        }
+                        disabled={!canNext() || saving}
+                        onClick={handleSave}
+                        sx={{
+                            bgcolor: mainColor,
+                            '&:hover': { bgcolor: alpha(mainColor, 0.85) },
+                            fontWeight: 700,
+                        }}
+                    >
                         {saving ? 'Збереження...' : 'Створити накладну'}
                     </Button>
                 )}
