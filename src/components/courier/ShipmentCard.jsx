@@ -156,17 +156,19 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
                                         </IconButton>
                                     </Tooltip>
 
-                                    <Tooltip title="Спроба вручення провалена">
-                                        <IconButton size="small" onClick={() => handleAction('FAILED')}
-                                            sx={{
-                                                bgcolor: alpha('#ff9800', 0.1), color: '#ff9800',
-                                                border: `1px solid ${alpha('#ff9800', 0.3)}`,
-                                                borderRadius: 1.5, p: 0.5,
-                                                '&:hover': { bgcolor: alpha('#ff9800', 0.2) },
-                                            }}>
-                                            <ErrorOutline sx={{ fontSize: 16 }} />
-                                        </IconButton>
-                                    </Tooltip>
+                                    {statusName !== 'Спроба вручення провалена' && (
+                                        <Tooltip title="Спроба вручення провалена">
+                                            <IconButton size="small" onClick={() => handleAction('FAILED')}
+                                                sx={{
+                                                    bgcolor: alpha('#ff9800', 0.1), color: '#ff9800',
+                                                    border: `1px solid ${alpha('#ff9800', 0.3)}`,
+                                                    borderRadius: 1.5, p: 0.5,
+                                                    '&:hover': { bgcolor: alpha('#ff9800', 0.2) },
+                                                }}>
+                                                <ErrorOutline sx={{ fontSize: 16 }} />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
 
                                     <Tooltip title="Відмова — оформити повернення">
                                         <IconButton size="small" onClick={() => handleAction('REFUSED')}
