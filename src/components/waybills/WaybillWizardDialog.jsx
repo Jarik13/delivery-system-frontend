@@ -124,23 +124,27 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
     }, [step, selectedSegment]);
 
     useEffect(() => {
-        if (step !== 2 || shipmentTab !== 1) return;
+        if (step !== 2 || shipmentTab !== 1 || !selectedSegment?.routeId) return;
+
         const t = setTimeout(async () => {
             setShipmentsLoading(true);
             try {
-                const res = await DictionaryApi.getAll('shipments', 0, 100, {
-                    ...(shipmentSearch ? { trackingNumber: shipmentSearch } : {}),
-                    shipmentStatuses: [1, 2, 4],
+                const res = await DictionaryApi.getAll('shipments/available-for-segment', 0, 100, {
+                    routeId: selectedSegment.routeId,
+                    trackingNumber: shipmentSearch,
                 });
+                
                 setShipments(res.data.content || []);
-            } catch {
-                setError('Помилка завантаження відправлень');
+            } catch (err) {
+                console.error(err);
+                setError('Помилка завантаження відправлень для цього напрямку');
             } finally {
                 setShipmentsLoading(false);
             }
         }, 300);
+
         return () => clearTimeout(t);
-    }, [step, shipmentTab, shipmentSearch]);
+    }, [step, shipmentTab, shipmentSearch, selectedSegment]);
 
     const handleSave = async () => {
         if (selectedShipmentIds.size === 0) {
