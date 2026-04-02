@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
     Box, Paper, Typography, TextField, Button,
     Alert, CircularProgress, InputAdornment, IconButton, alpha,
-    Container, Stack
+    Container, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Link
 } from '@mui/material';
-import { LocalShipping, Visibility, VisibilityOff, Login, Email, LockOutlined } from '@mui/icons-material';
+import { 
+    LocalShipping, Visibility, VisibilityOff, 
+    Login, Email, LockOutlined, CheckCircle 
+} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { AuthApi } from '../api/dictionaries';
 
@@ -19,8 +22,17 @@ const LoginPage = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const [forgotOpen, setForgotOpen] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotLoading, setForgotLoading] = useState(false);
+    const [forgotSuccess, setForgotSuccess] = useState(false);
+    const [forgotError, setForgotError] = useState('');
+
     const handleSubmit = async () => {
-        if (!email || !password) { setError('Заповніть всі поля'); return; }
+        if (!email || !password) { 
+            setError('Заповніть всі поля'); 
+            return; 
+        }
         setLoading(true);
         setError('');
         try {
@@ -28,11 +40,32 @@ const LoginPage = () => {
             login(data);
             if (data.role === 'ROLE_SUPER_ADMIN') navigate('/super-admin');
             else navigate('/');
-        } catch {
-            setError('Невірний email або пароль');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Невірний email або пароль');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!forgotEmail) return;
+        setForgotLoading(true);
+        setForgotError('');
+        try {
+            await AuthApi.forgotPassword(forgotEmail);
+            setForgotSuccess(true);
+        } catch (err) {
+            setForgotError('Користувача з таким email не знайдено');
+        } finally {
+            setForgotLoading(false);
+        }
+    };
+
+    const handleCloseForgot = () => {
+        setForgotOpen(false);
+        setForgotSuccess(false);
+        setForgotEmail('');
+        setForgotError('');
     };
 
     return (
@@ -97,21 +130,13 @@ const LoginPage = () => {
                             <Typography variant="h4" fontWeight="800" sx={{ color: 'white', mb: 1, letterSpacing: '-0.02em' }}>
                                 Вітаємо знову
                             </Typography>
-                            <Typography variant="body1" sx={{ color: 'slate.400', color: alpha('#fff', 0.6) }}>
+                            <Typography variant="body1" sx={{ color: alpha('#fff', 0.6) }}>
                                 Введіть дані для доступу до системи
                             </Typography>
                         </Box>
 
                         {error && (
-                            <Alert
-                                severity="error"
-                                variant="filled"
-                                sx={{
-                                    borderRadius: 3,
-                                    bgcolor: alpha('#ef4444', 0.8),
-                                    '& .MuiAlert-icon': { color: 'white' }
-                                }}
-                            >
+                            <Alert severity="error" variant="filled" sx={{ borderRadius: 3, bgcolor: alpha('#ef4444', 0.8) }}>
                                 {error}
                             </Alert>
                         )}
@@ -124,18 +149,7 @@ const LoginPage = () => {
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                sx={{
-                                    mb: 2.5,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'white',
-                                        borderRadius: 3,
-                                        bgcolor: alpha('#fff', 0.05),
-                                        transition: '0.3s',
-                                        '& fieldset': { borderColor: alpha('#fff', 0.1) },
-                                        '&:hover fieldset': { borderColor: alpha('#fff', 0.2) },
-                                        '&.Mui-focused fieldset': { borderColor: '#6366f1' },
-                                    }
-                                }}
+                                sx={inputStyles}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -152,18 +166,7 @@ const LoginPage = () => {
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-                                sx={{
-                                    mb: 4,
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'white',
-                                        borderRadius: 3,
-                                        bgcolor: alpha('#fff', 0.05),
-                                        transition: '0.3s',
-                                        '& fieldset': { borderColor: alpha('#fff', 0.1) },
-                                        '&:hover fieldset': { borderColor: alpha('#fff', 0.2) },
-                                        '&.Mui-focused fieldset': { borderColor: '#6366f1' },
-                                    }
-                                }}
+                                sx={{ ...inputStyles, mb: 1 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -172,9 +175,9 @@ const LoginPage = () => {
                                     ),
                                     endAdornment: (
                                         <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() => setShowPassword(p => !p)}
-                                                edge="end"
+                                            <IconButton 
+                                                onClick={() => setShowPassword(p => !p)} 
+                                                edge="end" 
                                                 sx={{ color: alpha('#fff', 0.4) }}
                                             >
                                                 {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -184,34 +187,30 @@ const LoginPage = () => {
                                 }}
                             />
 
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+                                <Link
+                                    component="button"
+                                    type="button"
+                                    variant="body2"
+                                    onClick={() => { setForgotOpen(true); }}
+                                    sx={{ 
+                                        color: '#6366f1', 
+                                        textDecoration: 'none', 
+                                        fontWeight: 600,
+                                        '&:hover': { color: '#a855f7' }
+                                    }}
+                                >
+                                    Забули пароль?
+                                </Link>
+                            </Box>
+
                             <Button
                                 fullWidth
                                 variant="contained"
                                 size="large"
                                 onClick={handleSubmit}
                                 disabled={loading}
-                                sx={{
-                                    height: 56,
-                                    borderRadius: 3,
-                                    textTransform: 'none',
-                                    fontSize: '1.05rem',
-                                    fontWeight: 700,
-                                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                                    boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.4)',
-                                    transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    '&:hover': {
-                                        boxShadow: '0 20px 25px -5px rgba(99, 102, 241, 0.4)',
-                                        transform: 'translateY(-2px)',
-                                        filter: 'brightness(1.1)',
-                                    },
-                                    '&:active': {
-                                        transform: 'translateY(0)',
-                                    },
-                                    '&.Mui-disabled': {
-                                        background: alpha('#6366f1', 0.3),
-                                        color: alpha('#fff', 0.5)
-                                    }
-                                }}
+                                sx={buttonStyles}
                             >
                                 {loading ? (
                                     <CircularProgress size={24} color="inherit" />
@@ -226,20 +225,110 @@ const LoginPage = () => {
                     </Stack>
                 </Paper>
 
-                <Typography
-                    variant="body2"
-                    sx={{
-                        mt: 4,
-                        textAlign: 'center',
-                        color: alpha('#fff', 0.4),
-                        fontWeight: 500
-                    }}
+                <Typography 
+                    variant="body2" 
+                    sx={{ mt: 4, textAlign: 'center', color: alpha('#fff', 0.4), fontWeight: 500 }}
                 >
                     &copy; {new Date().getFullYear()} Delivery System. Всі права захищені.
                 </Typography>
             </Container>
+
+            <Dialog 
+                open={forgotOpen} 
+                onClose={handleCloseForgot}
+                PaperProps={{
+                    sx: { 
+                        borderRadius: 5, 
+                        bgcolor: '#1e293b', 
+                        color: 'white',
+                        backgroundImage: 'none',
+                        maxWidth: 400
+                    }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, pt: 3 }}>Скидання пароля</DialogTitle>
+                <DialogContent>
+                    {!forgotSuccess ? (
+                        <>
+                            <Typography sx={{ mb: 3, color: alpha('#fff', 0.7), fontSize: '0.95rem' }}>
+                                Введіть ваш email, і ми надішлемо вам інструкції для створення нового пароля.
+                            </Typography>
+                            {forgotError && (
+                                <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{forgotError}</Alert>
+                            )}
+                            <TextField
+                                fullWidth
+                                placeholder="Email"
+                                value={forgotEmail}
+                                onChange={e => setForgotEmail(e.target.value)}
+                                sx={inputStyles}
+                            />
+                        </>
+                    ) : (
+                        <Box sx={{ textAlign: 'center', py: 2 }}>
+                            <CheckCircle sx={{ fontSize: 64, color: '#22c55e', mb: 2 }} />
+                            <Typography variant="h6" fontWeight="700" sx={{ mb: 1 }}>Перевірте пошту</Typography>
+                            <Typography sx={{ color: alpha('#fff', 0.7) }}>
+                                Ми надіслали інструкції для скидання на <strong>{forgotEmail}</strong>
+                            </Typography>
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button onClick={handleCloseForgot} sx={{ color: alpha('#fff', 0.5), textTransform: 'none' }}>
+                        Закрити
+                    </Button>
+                    {!forgotSuccess && (
+                        <Button
+                            variant="contained"
+                            disabled={forgotLoading || !forgotEmail}
+                            onClick={handleForgotPassword}
+                            sx={{ 
+                                ...buttonStyles, 
+                                height: 44, 
+                                px: 4,
+                                boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)' 
+                            }}
+                        >
+                            {forgotLoading ? <CircularProgress size={20} color="inherit" /> : 'Надіслати'}
+                        </Button>
+                    )}
+                </DialogActions>
+            </Dialog>
         </Box>
     );
+};
+
+const inputStyles = {
+    mb: 2.5,
+    '& .MuiOutlinedInput-root': {
+        color: 'white',
+        borderRadius: 3,
+        bgcolor: alpha('#fff', 0.05),
+        transition: '0.3s',
+        '& fieldset': { borderColor: alpha('#fff', 0.1) },
+        '&:hover fieldset': { borderColor: alpha('#fff', 0.2) },
+        '&.Mui-focused fieldset': { borderColor: '#6366f1' },
+    }
+};
+
+const buttonStyles = {
+    height: 56,
+    borderRadius: 3,
+    textTransform: 'none',
+    fontSize: '1.05rem',
+    fontWeight: 700,
+    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+    transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    '&:hover': {
+        transform: 'translateY(-2px)',
+        filter: 'brightness(1.1)',
+        boxShadow: '0 10px 20px -5px rgba(99, 102, 241, 0.5)',
+    },
+    '&.Mui-disabled': {
+        background: alpha('#6366f1', 0.3),
+        color: alpha('#fff', 0.5)
+    }
 };
 
 export default LoginPage;
