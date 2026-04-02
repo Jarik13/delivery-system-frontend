@@ -1,8 +1,10 @@
 import axios from 'axios';
 import qs from 'qs';
 
+const BASE_URL = import.meta.env.VITE_API_URL;
+
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1',
+    baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
     withCredentials: true,
     paramsSerializer: params => qs.stringify(params, { arrayFormat: 'repeat' })
@@ -11,8 +13,12 @@ const api = axios.create({
 api.interceptors.request.use(config => {
     const auth = localStorage.getItem('auth');
     if (auth) {
-        const { accessToken } = JSON.parse(auth);
-        if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+        try {
+            const { accessToken } = JSON.parse(auth);
+            if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+        } catch (e) {
+            console.error("Auth parsing error", e);
+        }
     }
     return config;
 });
@@ -21,54 +27,59 @@ let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
-    failedQueue.forEach(p => error ? p.reject(error) : p.resolve(token));
+    failedQueue.forEach(p => {
+        if (error) p.reject(error);
+        else p.resolve(token);
+    });
     failedQueue = [];
 };
 
 api.interceptors.response.use(
     response => response,
     async error => {
-        const original = error.config;
+        const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !original._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/auth/refresh')) {
+            
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 }).then(token => {
-                    original.headers.Authorization = `Bearer ${token}`;
-                    return api(original);
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return api(originalRequest);
                 }).catch(err => Promise.reject(err));
             }
 
-            original._retry = true;
+            originalRequest._retry = true;
             isRefreshing = true;
 
-            try {
-                const res = await axios.post(
-                    `${import.meta.env.VITE_API_URL || 'http://localhost:4000/api/v1'}/auth/refresh`,
-                    {},
-                    { withCredentials: true }
-                );
+            return new Promise((resolve, reject) => {
+                axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true })
+                    .then(({ data }) => {
+                        const { accessToken } = data;
 
-                const { accessToken } = res.data;
+                        const saved = localStorage.getItem('auth');
+                        if (saved) {
+                            const auth = JSON.parse(saved);
+                            localStorage.setItem('auth', JSON.stringify({ ...auth, accessToken }));
+                        }
 
-                const saved = localStorage.getItem('auth');
-                if (saved) {
-                    const auth = JSON.parse(saved);
-                    localStorage.setItem('auth', JSON.stringify({ ...auth, accessToken }));
-                }
-
-                processQueue(null, accessToken);
-                original.headers.Authorization = `Bearer ${accessToken}`;
-                return api(original);
-            } catch (refreshError) {
-                processQueue(refreshError, null);
-                localStorage.removeItem('auth');
-                window.location.href = '/login';
-                return Promise.reject(refreshError);
-            } finally {
-                isRefreshing = false;
-            }
+                        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+                        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                        
+                        processQueue(null, accessToken);
+                        resolve(api(originalRequest));
+                    })
+                    .catch((err) => {
+                        processQueue(err, null);
+                        localStorage.removeItem('auth');
+                        window.location.href = '/login';
+                        reject(err);
+                    })
+                    .finally(() => {
+                        isRefreshing = false;
+                    });
+            });
         }
 
         return Promise.reject(error);

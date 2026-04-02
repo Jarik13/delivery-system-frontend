@@ -49,7 +49,7 @@ const ShipmentRow = ({ s, selected, onToggle, mainColor }) => (
     </TableRow>
 );
 
-const ShipmentsTable = ({ list, loading, emptyText, selectedShipmentIds, toggleShipment, toggleAll, mainColor, showSelectAll = true }) => {
+const ShipmentsTable = ({ list, loading, selectedShipmentIds, toggleShipment, toggleAll, mainColor, showSelectAll = true }) => {
     if (loading) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
@@ -60,11 +60,20 @@ const ShipmentsTable = ({ list, loading, emptyText, selectedShipmentIds, toggleS
 
     return (
         <TableContainer component={Paper} variant="outlined"
-            sx={{ borderRadius: 2, maxHeight: 280, overflow: 'auto' }}>
+            sx={{
+                borderRadius: 2,
+                maxHeight: 320,
+                overflow: 'auto',
+                position: 'relative'
+            }}>
             <Table size="small" stickyHeader>
                 <TableHead>
                     <TableRow>
-                        <TableCell padding="checkbox" sx={{ bgcolor: alpha(mainColor, 0.05) }}>
+                        <TableCell padding="checkbox" sx={{
+                            bgcolor: '#fff',
+                            backgroundImage: `linear-gradient(${alpha(mainColor, 0.05)}, ${alpha(mainColor, 0.05)})`,
+                            zIndex: 10
+                        }}>
                             {showSelectAll && (
                                 <Checkbox
                                     size="small"
@@ -79,7 +88,13 @@ const ShipmentsTable = ({ list, loading, emptyText, selectedShipmentIds, toggleS
                             )}
                         </TableCell>
                         {['Трек-номер', 'Відправник', 'Отримувач', 'Статус'].map(h => (
-                            <TableCell key={h} sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.05) }}>
+                            <TableCell key={h} sx={{
+                                fontWeight: 700,
+                                bgcolor: '#fff',
+                                backgroundImage: `linear-gradient(${alpha(mainColor, 0.05)}, ${alpha(mainColor, 0.05)})`,
+                                py: 1.5,
+                                zIndex: 10
+                            }}>
                                 {h}
                             </TableCell>
                         ))}
@@ -95,13 +110,6 @@ const ShipmentsTable = ({ list, loading, emptyText, selectedShipmentIds, toggleS
                             mainColor={mainColor}
                         />
                     ))}
-                    {list.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                                {emptyText}
-                            </TableCell>
-                        </TableRow>
-                    )}
                 </TableBody>
             </Table>
         </TableContainer>

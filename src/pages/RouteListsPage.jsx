@@ -14,6 +14,8 @@ import { GROUP_COLORS, ITEM_GROUP_MAP } from '../constants/menuConfig';
 import RouteListsTable from '../components/route-lists/RouteListsTable';
 import RouteListWizardDialog from '../components/route-lists/RouteListWizardDialog';
 import AddShipmentDialog from '../components/route-lists/AddShipmentDialog';
+import RouteListEditDialog from '../components/route-lists/RouteListEditDialog';
+import RouteListDeleteDialog from '../components/route-lists/RouteListDeleteDialog';
 import { EXPORT_FORMATS, NO_PROGRESS, formatBytes, formatEta } from '../constants/export';
 
 const ARCHIVE_ROUTE_LIST_STATUSES = ['Завершено', 'Скасовано'];
@@ -38,7 +40,11 @@ const RouteListsPage = () => {
     const [activeTab, setActiveTab] = useState(0);
     const [exportAnchor, setExportAnchor] = useState(null);
     const [progress, setProgress] = useState(NO_PROGRESS);
+
     const [addShipmentRouteList, setAddShipmentRouteList] = useState(null);
+    const [editItem, setEditItem] = useState(null);
+    const [deleteItem, setDeleteItem] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const abortRef = useRef(null);
     const statsRef = useRef({ startTime: 0, lastLoaded: 0, lastTime: 0 });
@@ -153,6 +159,20 @@ const RouteListsPage = () => {
             });
         }
     }, [highlightId, items, loading]);
+
+    const handleDeleteConfirm = async () => {
+        setDeleting(true);
+        try {
+            await DictionaryApi.delete('route-lists', deleteItem.id);
+            setNotification({ open: true, message: `Лист ML-${deleteItem.number} видалено`, severity: 'success' });
+            load();
+        } catch (e) {
+            setNotification({ open: true, message: 'Помилка при видаленні', severity: 'error' });
+        } finally {
+            setDeleting(false);
+            setDeleteItem(null);
+        }
+    };
 
     const handleToggle = (id) => {
         setSelectedIds(prev => {
@@ -457,6 +477,8 @@ const RouteListsPage = () => {
                 highlightId={highlightId}
                 highlightRowRef={highlightRowRef}
                 onAddShipment={(item) => setAddShipmentRouteList(item)}
+                onEdit={(item) => setEditItem(item)}
+                onDelete={(item) => setDeleteItem(item)}
             />
 
             <DataPagination
@@ -486,6 +508,27 @@ const RouteListsPage = () => {
                 }}
                 mainColor={mainColor}
                 routeList={addShipmentRouteList}
+            />
+
+            <RouteListEditDialog
+                open={Boolean(editItem)}
+                item={editItem}
+                onClose={() => setEditItem(null)}
+                onSuccess={(msg) => {
+                    setEditItem(null);
+                    load();
+                    setNotification({ open: true, message: msg, severity: 'success' });
+                }}
+                mainColor={mainColor}
+                references={references}
+            />
+
+            <RouteListDeleteDialog
+                open={Boolean(deleteItem)}
+                item={deleteItem}
+                loading={deleting}
+                onClose={() => setDeleteItem(null)}
+                onConfirm={handleDeleteConfirm}
             />
 
             <Snackbar

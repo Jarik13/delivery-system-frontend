@@ -260,109 +260,116 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                         </Box>
                                     ) : (
                                         <Stack spacing={1}>
-                                            {segments.map((seg, idx) => (
-                                                <Box key={seg.waybillRouteId} sx={{
-                                                    display: 'flex', alignItems: 'center', gap: 1.5,
-                                                    p: 1.25, borderRadius: 2,
-                                                    bgcolor: seg.isCompleted
-                                                        ? alpha('#4caf50', 0.06)
-                                                        : seg.isDeparted
-                                                            ? alpha('#2196f3', 0.06)
-                                                            : alpha(color, 0.04),
-                                                    border: `1px solid ${seg.isCompleted
-                                                        ? alpha('#4caf50', 0.2)
-                                                        : seg.isDeparted
-                                                            ? alpha('#2196f3', 0.2)
-                                                            : alpha(color, 0.12)}`,
-                                                }}>
-                                                    <Box sx={{
-                                                        width: 24, height: 24, borderRadius: '50%',
-                                                        bgcolor: seg.isCompleted
-                                                            ? '#4caf50'
-                                                            : seg.isDeparted
-                                                                ? '#2196f3'
-                                                                : alpha(color, 0.15),
-                                                        color: seg.isCompleted || seg.isDeparted ? 'white' : color,
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontWeight: 700, fontSize: 11, flexShrink: 0,
+                                            {segments.map((seg, idx) => {
+                                                const isPreviousCompleted = idx === 0 || segments[idx - 1].isCompleted;
+                                                const isLocked = !isPreviousCompleted;
+
+                                                const isDone = seg.isCompleted;
+                                                const isDeparted = seg.isDeparted;
+
+                                                return (
+                                                    <Box key={seg.waybillRouteId} sx={{
+                                                        display: 'flex', alignItems: 'center', gap: 1.5,
+                                                        p: 1.25, borderRadius: 2,
+                                                        opacity: isLocked ? 0.5 : 1,
+                                                        bgcolor: isDone
+                                                            ? alpha('#4caf50', 0.06)
+                                                            : isDeparted
+                                                                ? alpha('#2196f3', 0.06)
+                                                                : alpha(color, 0.04),
+                                                        border: `1px solid ${isDone
+                                                            ? alpha('#4caf50', 0.2)
+                                                            : isDeparted
+                                                                ? alpha('#2196f3', 0.2)
+                                                                : alpha(color, 0.12)}`,
+                                                        pointerEvents: isLocked ? 'none' : 'auto',
                                                     }}>
-                                                        {seg.isCompleted
-                                                            ? <CheckCircle sx={{ fontSize: 14 }} />
-                                                            : seg.isDeparted
-                                                                ? <DirectionsCar sx={{ fontSize: 14 }} />
-                                                                : idx + 1
-                                                        }
-                                                    </Box>
+                                                        <Box sx={{
+                                                            width: 24, height: 24, borderRadius: '50%',
+                                                            bgcolor: isDone ? '#4caf50' : isDeparted ? '#2196f3' : alpha(color, 0.15),
+                                                            color: isDone || isDeparted ? 'white' : color,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            fontWeight: 700, fontSize: 11, flexShrink: 0,
+                                                        }}>
+                                                            {isDone ? <CheckCircle sx={{ fontSize: 14 }} /> : isDeparted ? <DirectionsCar sx={{ fontSize: 14 }} /> : idx + 1}
+                                                        </Box>
 
-                                                    <Box sx={{ flex: 1 }}>
-                                                        <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.8rem' }}>
-                                                            {seg.originCity} → {seg.destCity}
-                                                        </Typography>
-                                                        {seg.distance != null && (
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                {Number(seg.distance).toFixed(2)} км
+                                                        <Box sx={{ flex: 1 }}>
+                                                            <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.8rem' }}>
+                                                                {seg.originCity} → {seg.destCity}
                                                             </Typography>
-                                                        )}
-                                                    </Box>
+                                                            {seg.distance != null && (
+                                                                <Typography variant="caption" color="text.secondary">
+                                                                    {Number(seg.distance).toFixed(2)} км
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
 
-                                                    {seg.isCompleted ? (
-                                                        <Chip
-                                                            label="Прибуто"
-                                                            size="small"
-                                                            sx={{
-                                                                height: 22, fontSize: '0.65rem', fontWeight: 700,
-                                                                bgcolor: alpha('#4caf50', 0.1), color: '#2e7d32',
-                                                                border: `1px solid ${alpha('#4caf50', 0.3)}`,
-                                                            }}
-                                                        />
-                                                    ) : seg.isDeparted ? (
-                                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                        {isDone ? (
                                                             <Chip
-                                                                label="В дорозі"
+                                                                label="Прибуто"
                                                                 size="small"
                                                                 sx={{
                                                                     height: 22, fontSize: '0.65rem', fontWeight: 700,
-                                                                    bgcolor: alpha('#2196f3', 0.1), color: '#1565c0',
-                                                                    border: `1px solid ${alpha('#2196f3', 0.3)}`,
+                                                                    bgcolor: alpha('#4caf50', 0.1), color: '#2e7d32',
+                                                                    border: `1px solid ${alpha('#4caf50', 0.3)}`,
                                                                 }}
                                                             />
-                                                            <Tooltip title="Позначити прибуття в цю точку">
-                                                                <Button
+                                                        ) : isDeparted ? (
+                                                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                                <Chip
+                                                                    label="В дорозі"
                                                                     size="small"
-                                                                    variant="outlined"
-                                                                    startIcon={<FlightLand sx={{ fontSize: '14px !important' }} />}
-                                                                    onClick={() => setArriveDialog(seg)}
                                                                     sx={{
-                                                                        fontSize: '0.7rem', fontWeight: 700,
-                                                                        borderRadius: 2, py: 0.5, px: 1.5,
-                                                                        borderColor: '#4caf50', color: '#4caf50',
-                                                                        '&:hover': { bgcolor: alpha('#4caf50', 0.06) },
+                                                                        height: 22, fontSize: '0.65rem', fontWeight: 700,
+                                                                        bgcolor: alpha('#2196f3', 0.1), color: '#1565c0',
+                                                                        border: `1px solid ${alpha('#2196f3', 0.3)}`,
                                                                     }}
-                                                                >
-                                                                    Прибув
-                                                                </Button>
+                                                                />
+                                                                <Tooltip title={isLocked ? "Завершіть попередній етап" : "Позначити прибуття"}>
+                                                                    <span>
+                                                                        <Button
+                                                                            size="small"
+                                                                            variant="outlined"
+                                                                            startIcon={<FlightLand sx={{ fontSize: '14px !important' }} />}
+                                                                            onClick={() => setArriveDialog(seg)}
+                                                                            disabled={arriving || isLocked}
+                                                                            sx={{
+                                                                                fontSize: '0.7rem', fontWeight: 700,
+                                                                                borderRadius: 2, py: 0.5, px: 1.5,
+                                                                                borderColor: '#4caf50', color: '#4caf50',
+                                                                                '&:hover': { bgcolor: alpha('#4caf50', 0.06) },
+                                                                            }}
+                                                                        >
+                                                                            Прибув
+                                                                        </Button>
+                                                                    </span>
+                                                                </Tooltip>
+                                                            </Box>
+                                                        ) : (
+                                                            <Tooltip title={isLocked ? "Завершіть попередній етап" : "Позначити виїзд"}>
+                                                                <span>
+                                                                    <Button
+                                                                        size="small"
+                                                                        variant="outlined"
+                                                                        startIcon={<DirectionsCar sx={{ fontSize: '14px !important' }} />}
+                                                                        onClick={() => setDepartDialog(seg)}
+                                                                        disabled={departing || isLocked}
+                                                                        sx={{
+                                                                            fontSize: '0.7rem', fontWeight: 700,
+                                                                            borderRadius: 2, py: 0.5, px: 1.5,
+                                                                            borderColor: color, color,
+                                                                            '&:hover': { bgcolor: alpha(color, 0.06) },
+                                                                        }}
+                                                                    >
+                                                                        Виїхав
+                                                                    </Button>
+                                                                </span>
                                                             </Tooltip>
-                                                        </Box>
-                                                    ) : (
-                                                        <Tooltip title="Позначити виїзд з цієї точки">
-                                                            <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                startIcon={<DirectionsCar sx={{ fontSize: '14px !important' }} />}
-                                                                onClick={() => setDepartDialog(seg)}
-                                                                sx={{
-                                                                    fontSize: '0.7rem', fontWeight: 700,
-                                                                    borderRadius: 2, py: 0.5, px: 1.5,
-                                                                    borderColor: color, color,
-                                                                    '&:hover': { bgcolor: alpha(color, 0.06) },
-                                                                }}
-                                                            >
-                                                                Виїхав
-                                                            </Button>
-                                                        </Tooltip>
-                                                    )}
-                                                </Box>
-                                            ))}
+                                                        )}
+                                                    </Box>
+                                                );
+                                            })}
                                             {segments.length === 0 && (
                                                 <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
                                                     Сегменти маршруту не знайдено

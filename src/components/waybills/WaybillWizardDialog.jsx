@@ -85,13 +85,15 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
         const t = setTimeout(async () => {
             setTripsLoading(true);
             try {
-                const res = await DictionaryApi.getAll('trips', 0, 20, {
+                const res = await DictionaryApi.getAll('trips/by-branch', 0, 20, {
                     ...(tripSearch ? { tripNumber: tripSearch } : {}),
                     tripStatuses: ACTIVE_TRIP_STATUSES,
+                    hasMissingWaybills: true,
                 });
                 setTrips(res.data.content || []);
-            } catch {
-                setError('Помилка завантаження рейсів');
+            } catch (err) {
+                console.error(err);
+                setError('Помилка завантаження рейсів вашого відділення');
             } finally {
                 setTripsLoading(false);
             }
@@ -123,23 +125,26 @@ const WaybillWizardDialog = ({ open, onClose, onSuccess, mainColor = '#673ab7' }
     }, [step, selectedSegment]);
 
     useEffect(() => {
-        if (step !== 2 || shipmentTab !== 1) return;
+        if (step !== 2 || shipmentTab !== 1 || !selectedSegment?.routeId || !selectedTrip?.id) return;
+
         const t = setTimeout(async () => {
             setShipmentsLoading(true);
             try {
-                const res = await DictionaryApi.getAll('shipments', 0, 100, {
-                    ...(shipmentSearch ? { trackingNumber: shipmentSearch } : {}),
-                    shipmentStatuses: [1, 2, 4],
+                const res = await DictionaryApi.getAll('shipments/available-for-segment', 0, 100, {
+                    tripId: selectedTrip.id,
+                    routeId: selectedSegment.routeId,
+                    trackingNumber: shipmentSearch,
                 });
                 setShipments(res.data.content || []);
-            } catch {
-                setError('Помилка завантаження відправлень');
+            } catch (err) {
+                setError('Помилка завантаження транзитних відправлень');
             } finally {
                 setShipmentsLoading(false);
             }
         }, 300);
+
         return () => clearTimeout(t);
-    }, [step, shipmentTab, shipmentSearch]);
+    }, [step, shipmentTab, shipmentSearch, selectedSegment, selectedTrip]);
 
     const handleSave = async () => {
         if (selectedShipmentIds.size === 0) {
