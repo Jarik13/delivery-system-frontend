@@ -6,7 +6,7 @@ import {
 import {
     ListAlt, ExpandMore, ExpandLess,
     Person, Scale, CalendarToday, Schedule,
-    Inventory2, CheckCircle, Add
+    Inventory2, CheckCircle, Add, Edit, Delete
 } from '@mui/icons-material';
 import RouteSheetPanel from './RouteSheetPanel';
 import { ROUTE_LIST_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
@@ -18,6 +18,8 @@ const RouteListRow = ({
     highlightRowRef = null,
     visibleCols = new Set(),
     onAddShipment,
+    onEdit,
+    onDelete,
 }) => {
     const [expanded, setExpanded] = useState(false);
 
@@ -207,7 +209,37 @@ const RouteListRow = ({
                 )}
 
                 <TableCell padding="checkbox" onClick={e => e.stopPropagation()}>
-                    {isRouteListEditable(item.statusName) && (
+                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', pr: 1 }}>
+                        {isRouteListEditable(item.statusName) && (
+                            <>
+                                <Tooltip title="Редагувати дані" placement="top">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => { e.stopPropagation(); onEdit?.(item); }}
+                                        sx={{
+                                            color: 'text.secondary',
+                                            '&:hover': { bgcolor: alpha('#000', 0.04) }
+                                        }}
+                                    >
+                                        <Edit fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+
+                                <Tooltip title="Видалити маршрутний лист" placement="top">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => { e.stopPropagation(); onDelete?.(item); }}
+                                        sx={{
+                                            color: 'error.main',
+                                            '&:hover': { bgcolor: alpha('#d32f2f', 0.08) }
+                                        }}
+                                    >
+                                        <Delete fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
+                        )}
+
                         <Tooltip title="Додати відправлення" placement="left">
                             <IconButton
                                 size="small"
@@ -222,7 +254,7 @@ const RouteListRow = ({
                                 <Add fontSize="small" />
                             </IconButton>
                         </Tooltip>
-                    )}
+                    </Box>
                 </TableCell>
             </TableRow>
 
