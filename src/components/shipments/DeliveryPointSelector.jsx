@@ -2,19 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     FormControl, InputLabel, Select, MenuItem, Box, Collapse,
     TextField, Autocomplete, ToggleButton, ToggleButtonGroup,
-    Typography, Stack, Paper, alpha,
+    Typography, alpha,
 } from '@mui/material';
 import {
-    ArrowDownward, LocationOn, Map, Public,
-    Business, MailOutline, Home,
-    Explore, LocationCity, Lock,
+    LocationOn, Map, Business, MailOutline, Home,
+    Explore, LocationCity,
 } from '@mui/icons-material';
 import { DictionaryApi } from '../../api/dictionaries';
 
 const DeliveryPointSelector = ({
-    point, onChange, label, errors = {}, onClearError,
-    locked = false,
-    lockedLabel = '',
+    point, onChange, label, errors = {}, onClearError
 }) => {
     const [regions, setRegions] = useState([]);
     const [districts, setDistricts] = useState([]);
@@ -66,9 +63,7 @@ const DeliveryPointSelector = ({
                             loadLeafItems(point.cityId, point.type);
                         }
                     }
-                } catch (e) {
-                    console.error("Помилка завантаження ієрархії", e);
-                }
+                } catch (e) { console.error("Помилка ієрархії", e); }
             }
         };
         loadHierarchy();
@@ -81,11 +76,8 @@ const DeliveryPointSelector = ({
             if (type === 'branch') res = await DictionaryApi.getByParam('branches', 'cityId', cityId);
             else if (type === 'postomat') res = await DictionaryApi.getByParam('postomats', 'cityId', cityId);
             else if (type === 'address') res = await DictionaryApi.getByParam('streets', 'cityId', cityId);
-            const data = res?.data?.content || res?.data || [];
-            setLeafItems(data);
-        } catch (e) {
-            console.error(e);
-        }
+            setLeafItems(res?.data?.content || res?.data || []);
+        } catch (e) { console.error(e); }
     };
 
     const handleRegionChange = async (e) => {
@@ -128,83 +120,40 @@ const DeliveryPointSelector = ({
 
     const handleTypeChange = (newType) => {
         if (!newType) return;
-        setSelectedRegion('');
-        setSelectedDistrict('');
-        setSelectedCity('');
-        setDistricts([]);
-        setCities([]);
         setLeafItems([]);
         onChange({
             ...point,
             type: newType,
-            cityId: null, branchId: null, postomatId: null, streetId: null,
-            houseNumber: '', apartmentNumber: ''
+            branchId: null, postomatId: null, streetId: null,
+            houseNumber: '', apartmentNumber: '', deliveryPointId: null
         });
-    };
-
-    const getLeafLabel = () => {
-        if (point.type === 'address') return 'вулицю';
-        if (point.type === 'branch') return 'відділення';
-        return 'поштомат';
+        if (selectedCity) loadLeafItems(selectedCity, newType);
     };
 
     const handleLeafChange = (_, v) => {
+        const base = { ...point };
         if (point.type === 'branch') {
-            onChange({
-                ...point,
-                branchId: v?.id ?? null,
-                deliveryPointId: v?.deliveryPointId || v?.deliveryPoint?.id || null
-            });
+            base.branchId = v?.id ?? null;
+            base.deliveryPointId = v?.deliveryPointId || v?.deliveryPoint?.id || null;
         } else if (point.type === 'postomat') {
-            onChange({
-                ...point,
-                postomatId: v?.id ?? null,
-                deliveryPointId: v?.deliveryPointId || v?.deliveryPoint?.id || null
-            });
+            base.postomatId = v?.id ?? null;
+            base.deliveryPointId = v?.deliveryPointId || v?.deliveryPoint?.id || null;
         } else if (point.type === 'address') {
-            onChange({ ...point, streetId: v?.id ?? null, deliveryPointId: null });
+            base.streetId = v?.id ?? null;
+            base.deliveryPointId = null;
         }
+        onChange(base);
     };
 
     const getLeafValue = () => {
-        if (point.type === 'branch')
-            return leafItems.find(i =>
-                (point.branchId && i.id === point.branchId) ||
-                (point.deliveryPointId && (i.deliveryPointId === point.deliveryPointId || i.deliveryPoint?.id === point.deliveryPointId))
-            ) || null;
-        if (point.type === 'postomat')
-            return leafItems.find(i =>
-                (point.postomatId && i.id === point.postomatId) ||
-                (point.deliveryPointId && (i.deliveryPointId === point.deliveryPointId || i.deliveryPoint?.id === point.deliveryPointId))
-            ) || null;
-        if (point.type === 'address')
-            return leafItems.find(i => i.id === point.streetId) || null;
+        if (point.type === 'branch') return leafItems.find(i => (point.branchId && i.id === point.branchId) || (point.deliveryPointId && (i.deliveryPointId === point.deliveryPointId || i.deliveryPoint?.id === point.deliveryPointId))) || null;
+        if (point.type === 'postomat') return leafItems.find(i => (point.postomatId && i.id === point.postomatId) || (point.deliveryPointId && (i.deliveryPointId === point.deliveryPointId || i.deliveryPoint?.id === point.deliveryPointId))) || null;
+        if (point.type === 'address') return leafItems.find(i => i.id === point.streetId) || null;
         return null;
     };
 
-    if (locked) {
-        return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <Typography variant="subtitle2" color="primary" fontWeight="700" sx={{ mb: 1 }}>
-                    {label}
-                </Typography>
-                <Paper variant="outlined" sx={{
-                    p: 1.5, borderRadius: 2,
-                    bgcolor: alpha('#9e9e9e', 0.05),
-                    border: '1px solid #e0e0e0',
-                    display: 'flex', alignItems: 'center', gap: 1.5,
-                }}>
-                    <Lock sx={{ fontSize: 18, color: 'text.disabled', flexShrink: 0 }} />
-                    <Typography variant="body2" fontWeight={600}>
-                        {lockedLabel || 'Ваше відділення'}
-                    </Typography>
-                </Paper>
-            </Box>
-        );
-    }
-
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', mb: 2 }}>
             <Typography variant="subtitle2" color="primary" fontWeight="700" sx={{ mb: 2 }}>
                 {label}
             </Typography>
@@ -213,15 +162,15 @@ const DeliveryPointSelector = ({
                 value={point.type}
                 exclusive
                 onChange={(_, val) => handleTypeChange(val)}
-                fullWidth size="small" sx={{ mb: 2 }}
+                fullWidth size="small" sx={{ mb: 3 }}
             >
                 <ToggleButton value="branch"><Business sx={{ mr: 1, fontSize: 18 }} />Відділення</ToggleButton>
                 <ToggleButton value="postomat"><MailOutline sx={{ mr: 1, fontSize: 18 }} />Поштомат</ToggleButton>
                 <ToggleButton value="address"><Home sx={{ mr: 1, fontSize: 18 }} />Адреса</ToggleButton>
             </ToggleButtonGroup>
 
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
-                <Explore color="primary" sx={{ mt: 1 }} />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2.5 }}>
+                <Explore color="primary" sx={{ mt: 1, fontSize: 26 }} />
                 <Box sx={{ flex: 1 }}>
                     <FormControl fullWidth size="small" error={!!errors.cityId && !selectedRegion}>
                         <InputLabel>1. Оберіть область</InputLabel>
@@ -229,106 +178,78 @@ const DeliveryPointSelector = ({
                             {regions.map(r => <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>)}
                         </Select>
                     </FormControl>
-                    {!!errors.cityId && !selectedRegion && (
-                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
-                            {errors.cityId}
-                        </Typography>
-                    )}
-                    {!!errors.deliveryPointId && !selectedRegion && (
-                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block', ml: 1.5 }}>
-                            {errors.deliveryPointId}
-                        </Typography>
-                    )}
                 </Box>
             </Box>
 
             <Collapse in={!!selectedRegion} unmountOnExit>
-                <Box sx={{ mt: 1 }}>
-                    <Stack alignItems="center" sx={{ mb: 1 }}>
-                        <ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} />
-                    </Stack>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                        <Map color="primary" />
-                        <Autocomplete
-                            fullWidth size="small" options={districts}
-                            getOptionLabel={(o) => o.name || ''}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            value={districts.find(d => d.id === selectedDistrict) || null}
-                            onChange={handleDistrictChange}
-                            renderOption={(props, option) => <li {...props} key={option.id}>{option.name}</li>}
-                            renderInput={(params) => <TextField {...params} label="2. Оберіть район" />}
-                        />
-                    </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mt: 3 }}>
+                    <Map color="primary" sx={{ fontSize: 26 }} />
+                    <Autocomplete
+                        fullWidth size="small" options={districts}
+                        getOptionLabel={(o) => o.name || ''}
+                        value={districts.find(d => d.id === selectedDistrict) || null}
+                        onChange={handleDistrictChange}
+                        renderInput={(params) => <TextField {...params} label="2. Оберіть район" />}
+                    />
                 </Box>
             </Collapse>
 
             <Collapse in={!!selectedDistrict} unmountOnExit>
-                <Box sx={{ mt: 1 }}>
-                    <Stack alignItems="center" sx={{ mb: 1 }}>
-                        <ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} />
-                    </Stack>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                        <LocationCity color="primary" />
-                        <Autocomplete
-                            fullWidth size="small" options={cities}
-                            getOptionLabel={(o) => o.name || ''}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            value={cities.find(c => c.id === selectedCity) || null}
-                            onChange={handleCityChange}
-                            renderOption={(props, option) => <li {...props} key={option.id}>{option.name}</li>}
-                            renderInput={(params) => (
-                                <TextField {...params} label="3. Оберіть місто / село"
-                                    error={!!errors.cityId}
-                                    helperText={errors.cityId || (!!errors.deliveryPointId && !selectedCity ? errors.deliveryPointId : '')}
-                                />
-                            )}
-                        />
-                    </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mt: 3 }}>
+                    <LocationCity color="primary" sx={{ fontSize: 26 }} />
+                    <Autocomplete
+                        fullWidth size="small" options={cities}
+                        getOptionLabel={(o) => o.name || ''}
+                        value={cities.find(c => c.id === selectedCity) || null}
+                        onChange={handleCityChange}
+                        renderInput={(params) => <TextField {...params} label="3. Оберіть місто / село" error={!!errors.cityId} />}
+                    />
                 </Box>
             </Collapse>
 
             <Collapse in={!!selectedCity} unmountOnExit>
-                <Box sx={{ mt: 1 }}>
-                    <Stack alignItems="center" sx={{ mb: 1 }}>
-                        <ArrowDownward sx={{ color: 'text.disabled', fontSize: 20 }} />
-                    </Stack>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            {point.type === 'branch'
-                                ? <Business color="success" />
-                                : point.type === 'postomat'
-                                    ? <MailOutline color="success" />
-                                    : <LocationOn color="success" />
-                            }
-                            <Autocomplete
-                                fullWidth size="small" options={leafItems}
-                                getOptionLabel={(o) => o.name || o.number || ''}
-                                isOptionEqualToValue={(option, value) => option.id === value.id}
-                                value={getLeafValue()}
-                                onChange={(e, v) => { handleLeafChange(e, v); onClearError?.(); }}
-                                renderOption={(props, option) => <li {...props} key={option.id}>{option.name || option.number || ''}</li>}
-                                renderInput={(params) => (
-                                    <TextField {...params} label={`4. Оберіть ${getLeafLabel()}`}
-                                        error={!!errors.deliveryPointId}
-                                        helperText={errors.deliveryPointId}
-                                    />
-                                )}
-                            />
-                        </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                        {point.type === 'branch' ? <Business color="success" sx={{ fontSize: 26 }} /> :
+                            point.type === 'postomat' ? <MailOutline color="success" sx={{ fontSize: 26 }} /> :
+                                <LocationOn color="success" sx={{ fontSize: 26 }} />}
 
-                        {point.type === 'address' && point.streetId && (
-                            <Box sx={{ display: 'flex', gap: 2, pl: 5, mb: 1 }}>
-                                <TextField label="Будинок" size="small" fullWidth
-                                    value={point.houseNumber || ''}
-                                    onChange={(e) => onChange({ ...point, houseNumber: e.target.value })}
+                        <Autocomplete
+                            fullWidth size="small"
+                            options={leafItems}
+                            getOptionLabel={(o) => o.name || o.number || ''}
+                            value={getLeafValue()}
+                            onChange={(e, v) => { handleLeafChange(e, v); onClearError?.(); }}
+                            renderOption={(props, option) => (
+                                <Box component="li" {...props} key={option.id} sx={{ flexDirection: 'column', alignItems: 'flex-start !important', py: 1 }}>
+                                    <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.9rem' }}>
+                                        {option.name || option.number}
+                                    </Typography>
+                                    {(option.address || option.locationDescription) && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                            {option.address || option.locationDescription}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            )}
+
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label={`4. Оберіть ${point.type === 'address' ? 'вулицю' : point.type === 'branch' ? 'відділення' : 'поштомат'}`}
+                                    error={!!errors.deliveryPointId}
+                                    helperText={errors.deliveryPointId}
                                 />
-                                <TextField label="Кв." size="small" fullWidth
-                                    value={point.apartmentNumber || ''}
-                                    onChange={(e) => onChange({ ...point, apartmentNumber: e.target.value })}
-                                />
-                            </Box>
-                        )}
+                            )}
+                        />
                     </Box>
+
+                    {point.type === 'address' && point.streetId && (
+                        <Box sx={{ display: 'flex', gap: 2, pl: 5.8 }}>
+                            <TextField label="Буд." size="small" fullWidth value={point.houseNumber || ''} onChange={(e) => onChange({ ...point, houseNumber: e.target.value })} />
+                            <TextField label="Кв." size="small" fullWidth value={point.apartmentNumber || ''} onChange={(e) => onChange({ ...point, apartmentNumber: e.target.value })} />
+                        </Box>
+                    )}
                 </Box>
             </Collapse>
         </Box>
