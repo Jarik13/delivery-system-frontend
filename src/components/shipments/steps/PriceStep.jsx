@@ -88,52 +88,33 @@ const PriceStep = ({
                 <RadioGroup
                     row
                     value={formData.senderPay ? 'sender' : 'recipient'}
-                    onChange={e => setFormData(prev => ({
-                        ...prev,
-                        senderPay: e.target.value === 'sender',
-                        fullyPaid: false,
-                        partiallyPaid: false,
-                        partialAmount: '',
-                        paymentTypeId: e.target.value === 'recipient' ? null : prev.paymentTypeId,
-                    }))}
+                    onChange={e => {
+                        const isSender = e.target.value === 'sender';
+                        setFormData(prev => ({
+                            ...prev,
+                            senderPay: isSender,
+                            fullyPaid: isSender,
+                            partiallyPaid: false,
+                            partialAmount: '',
+                            paymentTypeId: isSender ? prev.paymentTypeId : null,
+                        }));
+                    }}
                 >
                     <FormControlLabel value="sender" control={<Radio sx={{ color: mainColor }} />} label="Оплачує відправник" />
                     <FormControlLabel value="recipient" control={<Radio sx={{ color: mainColor }} />} label="Оплачує отримувач" />
                 </RadioGroup>
 
-                {(formData.senderPay || formData.partiallyPaid) && (
-                    <Autocomplete
-                        options={paymentTypes}
-                        value={selectedPaymentType}
-                        getOptionLabel={o => o.name || ''}
-                        onChange={(_, v) => {
-                            setFormData(prev => ({ ...prev, paymentTypeId: v?.id ?? null }));
-                            setFieldErrors(prev => ({ ...prev, paymentTypeId: null }));
-                        }}
-                        renderInput={p => (
-                            <TextField {...p} label="Спосіб оплати"
-                                error={!!fieldErrors.paymentTypeId}
-                                helperText={fieldErrors.paymentTypeId}
-                                InputProps={{
-                                    ...p.InputProps,
-                                    startAdornment: <CreditCard sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
-                                }}
-                            />
-                        )}
-                    />
-                )}
+                <Collapse in={formData.senderPay}>
+                    <Box sx={{
+                        p: 2, borderRadius: 2,
+                        border: `1px solid ${alpha(mainColor, 0.2)}`,
+                        bgcolor: alpha(mainColor, 0.02),
+                        display: 'flex', flexDirection: 'column', gap: 2
+                    }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>
+                            Деталі оплати
+                        </Typography>
 
-                <Box sx={{
-                    p: 2, borderRadius: 2,
-                    border: `1px solid ${alpha(mainColor, 0.2)}`,
-                    bgcolor: alpha(mainColor, 0.02),
-                }}>
-                    <Typography variant="caption" color="text.secondary" fontWeight={700}
-                        sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
-                        Статус оплати
-                    </Typography>
-
-                    {formData.senderPay && (
                         <FormControlLabel
                             control={
                                 <Checkbox
@@ -142,17 +123,14 @@ const PriceStep = ({
                                     onChange={e => setFormData(prev => ({
                                         ...prev,
                                         fullyPaid: e.target.checked,
-                                        partiallyPaid: e.target.checked ? false : prev.partiallyPaid,
+                                        partiallyPaid: !e.target.checked,
                                         partialAmount: e.target.checked ? '' : prev.partialAmount,
                                     }))}
                                 />
                             }
                             label={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                                    <Typography variant="body2" fontWeight={600}
-                                        color={formData.fullyPaid ? '#2e7d32' : 'text.primary'}>
-                                        Повністю оплачено
-                                    </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2" fontWeight={600}>Повна оплата</Typography>
                                     {formData.fullyPaid && (
                                         <Chip label={`${p.totalPrice.toFixed(2)} ₴`} size="small" sx={{
                                             height: 20, fontSize: 10, fontWeight: 700,
@@ -162,50 +140,59 @@ const PriceStep = ({
                                 </Box>
                             }
                         />
-                    )}
 
-                    {!formData.fullyPaid && (
-                        <FormControlLabel
-                            sx={{ mt: formData.senderPay ? 0.5 : 0 }}
-                            control={
-                                <Checkbox
-                                    sx={{ color: mainColor, '&.Mui-checked': { color: mainColor } }}
-                                    checked={formData.partiallyPaid}
+                        <Collapse in={!formData.fullyPaid}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <TextField
+                                    fullWidth size="small" type="number"
+                                    label="Сума першого платежу (аванс)"
+                                    value={formData.partialAmount}
                                     onChange={e => setFormData(prev => ({
                                         ...prev,
-                                        partiallyPaid: e.target.checked,
-                                        partialAmount: e.target.checked ? prev.partialAmount : '',
+                                        partialAmount: e.target.value,
+                                        partiallyPaid: true
                                     }))}
+                                    InputProps={{
+                                        startAdornment: <InputAdornment position="start">₴</InputAdornment>,
+                                    }}
                                 />
-                            }
-                            label="Часткова оплата"
-                        />
-                    )}
+                                {formData.partialAmount && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ pl: 1 }}>
+                                        Залишок: {(p.totalPrice - parseFloat(formData.partialAmount || 0)).toFixed(2)} ₴
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Collapse>
 
-                    <Collapse in={formData.partiallyPaid && !formData.fullyPaid}>
-                        <Box sx={{ mt: 1.5, pl: 1 }}>
-                            <TextField
-                                fullWidth size="small" type="number"
-                                label="Сума авансу"
-                                value={formData.partialAmount}
-                                onChange={e => setFormData(prev => ({ ...prev, partialAmount: e.target.value }))}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <AccountBalanceWallet sx={{ fontSize: 18, color: mainColor }} />
-                                            <Typography sx={{ ml: 0.5 }}>₴</Typography>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                            {formData.partialAmount && p.totalPrice > 0 && (
-                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                    Залишок: {(p.totalPrice - parseFloat(formData.partialAmount || 0)).toFixed(2)} ₴
-                                </Typography>
+                        <Autocomplete
+                            options={paymentTypes}
+                            value={selectedPaymentType}
+                            getOptionLabel={o => o.name || ''}
+                            onChange={(_, v) => {
+                                setFormData(prev => ({ ...prev, paymentTypeId: v?.id ?? null }));
+                                setFieldErrors(prev => ({ ...prev, paymentTypeId: null }));
+                            }}
+                            renderInput={p => (
+                                <TextField {...p} label="Спосіб розрахунку" size="small"
+                                    error={!!fieldErrors.paymentTypeId}
+                                    helperText={fieldErrors.paymentTypeId}
+                                    InputProps={{
+                                        ...p.InputProps,
+                                        startAdornment: <CreditCard sx={{ mr: 1, color: 'text.disabled', fontSize: 20 }} />,
+                                    }}
+                                />
                             )}
-                        </Box>
-                    </Collapse>
-                </Box>
+                        />
+                    </Box>
+                </Collapse>
+
+                <Collapse in={!formData.senderPay}>
+                    <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2, border: '1px dashed #ccc', textAlign: 'center' }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Оплата буде здійснена отримувачем у повному обсязі ({p.totalPrice.toFixed(2)} ₴)
+                        </Typography>
+                    </Box>
+                </Collapse>
             </Box>
         </motion.div>
     );

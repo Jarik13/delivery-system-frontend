@@ -4,7 +4,7 @@ import {
 } from '@mui/material';
 import {
     CheckCircle, LocalShipping, PendingActions, Cancel,
-    RadioButtonUnchecked, TaskAlt, ErrorOutline,
+    RadioButtonUnchecked, TaskAlt, ErrorOutline, LocationOn, MyLocation
 } from '@mui/icons-material';
 import { SHIPMENT_STATUS_COLORS, getStatusColor } from '../../constants/statusColors';
 import { DictionaryApi } from '../../api/dictionaries';
@@ -52,7 +52,7 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
             if (isDelivered && needsCod && hasMoney) {
                 setPaymentOpen(true);
             } else {
-                onStatusChange?.(); 
+                onStatusChange?.();
             }
         } catch (e) {
             onNotify?.('Помилка оновлення статусу', 'error');
@@ -101,11 +101,27 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
                         {item.recipientFullName || '—'}
                     </Typography>
 
-                    <Typography variant="caption" color="text.secondary" sx={{
-                        display: 'block', mt: 0.25,
-                    }}>
-                        {item.deliveryAddress || '—'}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, mt: 0.25 }}>
+                        <MyLocation sx={{ fontSize: 12, color: 'text.disabled', mt: 0.15, flexShrink: 0 }} />
+                        <Typography variant="caption" color="text.secondary">
+                            {item.deliveryAddress || '—'}
+                        </Typography>
+                    </Box>
+
+                    {item.destinationAddress && (
+                        <Box sx={{
+                            display: 'flex', alignItems: 'flex-start', gap: 0.5,
+                            mt: 0.5, p: '4px 8px',
+                            borderRadius: 1,
+                            bgcolor: alpha('#2196f3', 0.06),
+                            border: `1px solid ${alpha('#2196f3', 0.18)}`,
+                        }}>
+                            <LocationOn sx={{ fontSize: 12, color: '#2196f3', mt: 0.15, flexShrink: 0 }} />
+                            <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: 600, fontSize: 11, lineHeight: 1.4 }}>
+                                {item.destinationAddress}
+                            </Typography>
+                        </Box>
+                    )}
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75, flexWrap: 'wrap' }}>
                         <Chip

@@ -51,7 +51,7 @@ const RouteStep = ({
                     color: '#666', fontWeight: 800,
                     display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase',
                 }}>
-                    <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники та тип доставки
+                    <Person sx={{ color: mainColor, fontSize: 18 }} /> Учасники доставки
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
@@ -66,7 +66,7 @@ const RouteStep = ({
                                 setFieldErrors(prev => ({ ...prev, senderId: null }));
                             }}
                             renderInput={p => (
-                                <TextField {...p} label="Відправник" size="small"
+                                <TextField {...p} label="Відправник (Телефон / ПІБ)" size="small"
                                     error={!!fieldErrors.senderId}
                                     helperText={fieldErrors.senderId}
                                 />
@@ -86,7 +86,7 @@ const RouteStep = ({
                                 setFieldErrors(prev => ({ ...prev, recipientId: null }));
                             }}
                             renderInput={p => (
-                                <TextField {...p} label="Отримувач" size="small"
+                                <TextField {...p} label="Отримувач (Телефон / ПІБ)" size="small"
                                     error={!!fieldErrors.recipientId}
                                     helperText={fieldErrors.recipientId}
                                 />
@@ -94,32 +94,20 @@ const RouteStep = ({
                         />
                         <AddClientButton forRole="recipient" />
                     </Box>
-
-                    <Box sx={{ flex: '1 1 160px', minWidth: 0 }}>
-                        <Autocomplete
-                            fullWidth
-                            options={shipmentTypes}
-                            value={selectedShipmentType}
-                            getOptionLabel={o => o.name || ''}
-                            onChange={(_, v) => {
-                                setFormData(prev => ({ ...prev, shipmentTypeId: v?.id ?? null }));
-                                setFieldErrors(prev => ({ ...prev, shipmentTypeId: null }));
-                            }}
-                            renderInput={p => (
-                                <TextField {...p} label="Тип доставки" size="small"
-                                    error={!!fieldErrors.shipmentTypeId}
-                                    helperText={fieldErrors.shipmentTypeId}
-                                />
-                            )}
-                        />
-                    </Box>
                 </Box>
 
                 <Divider />
 
+                <Typography variant="subtitle2" sx={{
+                    color: '#666', fontWeight: 800,
+                    display: 'flex', alignItems: 'center', gap: 1, textTransform: 'uppercase',
+                }}>
+                    <LocalShipping sx={{ color: mainColor, fontSize: 18 }} /> Маршрут та тип доставки
+                </Typography>
+
                 <DeliveryPointSelector
                     point={formData.origin}
-                    label="Звідки"
+                    label="Звідки (Пункт відправлення)"
                     locked={originLocked}
                     lockedLabel={employeeProfile?.branch?.name}
                     onChange={v => setFormData(prev => ({ ...prev, origin: v }))}
@@ -136,7 +124,7 @@ const RouteStep = ({
 
                 <DeliveryPointSelector
                     point={formData.destination}
-                    label="Куди"
+                    label="Куди (Пункт призначення)"
                     onChange={v => setFormData(prev => ({ ...prev, destination: v }))}
                     errors={{
                         cityId: fieldErrors['destination.cityId'],
@@ -148,6 +136,25 @@ const RouteStep = ({
                         'destination.deliveryPointId': null,
                     }))}
                 />
+
+                <Box sx={{ mt: 1 }}>
+                    <Autocomplete
+                        fullWidth
+                        options={shipmentTypes}
+                        value={selectedShipmentType}
+                        getOptionLabel={o => o.name || ''}
+                        onChange={(_, v) => {
+                            setFormData(prev => ({ ...prev, shipmentTypeId: v?.id ?? null }));
+                            setFieldErrors(prev => ({ ...prev, shipmentTypeId: null }));
+                        }}
+                        renderInput={p => (
+                            <TextField {...p} label="Оберіть тип відправлення" size="small"
+                                error={!!fieldErrors.shipmentTypeId}
+                                helperText={fieldErrors.shipmentTypeId}
+                            />
+                        )}
+                    />
+                </Box>
             </Box>
         </motion.div>
     );

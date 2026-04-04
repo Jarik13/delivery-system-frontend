@@ -46,6 +46,9 @@ const RouteListsPage = () => {
     const [deleteItem, setDeleteItem] = useState(null);
     const [deleting, setDeleting] = useState(false);
 
+    const [sortField, setSortField] = useState(null);
+    const [sortDir, setSortDir] = useState('asc');
+
     const abortRef = useRef(null);
     const statsRef = useRef({ startTime: 0, lastLoaded: 0, lastTime: 0 });
 
@@ -108,7 +111,13 @@ const RouteListsPage = () => {
             if (tabStatusIds && tabStatusIds.length > 0) {
                 activeFilters.statuses = tabStatusIds;
             }
-            const res = await DictionaryApi.getAll('route-lists', page, rowsPerPage, activeFilters);
+
+            const params = {
+                ...activeFilters,
+                ...(sortField ? { sort: `${sortField},${sortDir}` } : {}),
+            };
+
+            const res = await DictionaryApi.getAll('route-lists', page, rowsPerPage, params);
             setItems(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
             setSelectedIds(new Set());
@@ -118,7 +127,7 @@ const RouteListsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, filters, getTabStatusIds]);
+    }, [page, rowsPerPage, filters, getTabStatusIds, sortField, sortDir]);
 
     const handleClear = () => {
         setFilters({
@@ -132,7 +141,15 @@ const RouteListsPage = () => {
     const handleTabChange = (_, newValue) => {
         setActiveTab(newValue);
         setPage(0);
+        setSortField(null);
+        setSortDir('asc');
         setFilters(prev => ({ ...prev, statuses: [] }));
+    };
+
+    const handleSortChange = ({ field, dir }) => {
+        setSortField(field);
+        setSortDir(dir);
+        setPage(0);
     };
 
     useEffect(() => {
@@ -479,6 +496,7 @@ const RouteListsPage = () => {
                 onAddShipment={(item) => setAddShipmentRouteList(item)}
                 onEdit={(item) => setEditItem(item)}
                 onDelete={(item) => setDeleteItem(item)}
+                onSortChange={handleSortChange}
             />
 
             <DataPagination

@@ -32,7 +32,6 @@ const ColorlibStepIcon = ({ active, completed, icon, mainColor }) => {
     );
 };
 
-// ── Початковий стан форми ─────────────────────────────────────────────────────
 const initialFormData = {
     parcel: { declaredValue: '', actualWeight: '', contentDescription: '', parcelTypeId: null, storageConditionIds: [] },
     box: { useBox: false, boxVariantId: null },
@@ -53,7 +52,6 @@ const variants = {
     exit: d => ({ x: d < 0 ? 100 : -100, opacity: 0 }),
 };
 
-// ── Головний компонент ────────────────────────────────────────────────────────
 const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references, shipmentToEdit = null }) => {
     const { clients, shipmentTypes, parcelTypes, storageConditions, boxVariants, paymentTypes = [] } = references;
     const isEditMode = !!shipmentToEdit;
@@ -70,7 +68,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
     const [selectedExistingParcelId, setSelectedExistingParcelId] = useState(null);
     const listboxRef = useRef(null);
 
-    // ── Профіль співробітника (для авто-заповнення origin) ───────────────────
     useEffect(() => {
         if (!open || isEditMode) return;
         setProfileLoading(true);
@@ -100,7 +97,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
 
     useEffect(() => { setLocalClients(clients); }, [clients]);
 
-    // ── Заповнення форми у режимі редагування ────────────────────────────────
     useEffect(() => {
         if (open && shipmentToEdit && parcelTypes.length > 0 && storageConditions.length > 0) {
             setFormData({
@@ -159,7 +155,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
         }
     }, [open, shipmentToEdit, parcelTypes, storageConditions]);
 
-    // ── Розрахунок ціни ───────────────────────────────────────────────────────
     const fetchCalculatedPrice = useCallback(async () => {
         if (!formData.parcel.actualWeight || !formData.parcel.parcelTypeId || !formData.shipmentTypeId) return;
         try {
@@ -184,12 +179,10 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
         if (activeStep === 2) fetchCalculatedPrice();
     }, [activeStep, fetchCalculatedPrice]);
 
-    // ── Навігація між кроками ─────────────────────────────────────────────────
     const handleNext = async () => {
         setFieldErrors({});
 
         if (activeStep === 0) {
-            // Якщо вибрана існуюча посилка — пропускаємо валідацію і йдемо далі
             if (selectedExistingParcelId) {
                 setDirection(1);
                 setActiveStep(1);
@@ -249,7 +242,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
         setActiveStep(prev => prev - 1);
     };
 
-    // ── Збереження ────────────────────────────────────────────────────────────
     const handleSave = async () => {
         try {
             const payload = {
@@ -301,7 +293,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
         }
     };
 
-    // ── Клієнт створений ──────────────────────────────────────────────────────
     const handleClientCreated = (newClient) => {
         setLocalClients(prev => [...prev, newClient]);
         if (createClientFor === 'sender') {
@@ -325,10 +316,7 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
 
     return (
         <>
-            <Dialog open={open} onClose={onClose} fullWidth maxWidth="md"
-                PaperProps={{ sx: { borderRadius: 4 } }}>
-
-                {/* Хедер */}
+            <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 4 } }}>
                 <Box sx={{
                     p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5,
                     background: `linear-gradient(135deg, ${mainColor} 0%, ${alpha(mainColor, 0.85)} 100%)`,
@@ -350,7 +338,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                 </Box>
 
                 <DialogContent sx={{ minHeight: 480, pt: 3 }}>
-                    {/* Степпер */}
                     <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 5 }}>
                         {STEP_LABELS.map((label, idx) => (
                             <Step key={label}>
@@ -363,7 +350,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                         ))}
                     </Stepper>
 
-                    {/* Кроки */}
                     <AnimatePresence mode="wait" custom={direction}>
                         {activeStep === 0 && (
                             <ParcelStep
@@ -400,7 +386,6 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                     </AnimatePresence>
                 </DialogContent>
 
-                {/* Кнопки */}
                 <DialogActions sx={{ p: 3, borderTop: '1px solid #f0f0f0' }}>
                     <Button onClick={onClose}>Скасувати</Button>
                     <Box sx={{ flexGrow: 1 }} />

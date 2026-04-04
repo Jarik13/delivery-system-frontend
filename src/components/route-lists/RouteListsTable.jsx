@@ -4,49 +4,55 @@ import {
     TableCell, TableBody, Box, Typography, CircularProgress,
     Divider, alpha, Checkbox, Tooltip,
 } from '@mui/material';
-import { AssignmentInd } from '@mui/icons-material';
+import { AssignmentInd, ArrowUpward, ArrowDownward, UnfoldMore } from '@mui/icons-material';
 import RouteListRow from './RouteListRow';
 import ColumnSelector from '../ColumnSelector';
 
 export const ROUTE_LIST_COLUMNS = [
-    { key: 'number', label: 'Номер листа', required: true, minWidth: 120 },
+    { key: 'number', label: 'Номер листа', required: true, minWidth: 120, sortField: 'number' },
     { key: 'courier', label: "Кур'єр", required: false, minWidth: 160 },
     { key: 'status', label: 'Статус', required: false, minWidth: 130 },
     { key: 'progress', label: 'Прогрес', required: false, minWidth: 130 },
-    { key: 'totalWeight', label: 'Вага (кг)', required: false, minWidth: 110 },
+    { key: 'totalWeight', label: 'Вага (кг)', required: false, minWidth: 110, sortField: 'totalWeight' },
     { key: 'shipmentsCount', label: 'Відправлень', required: false, minWidth: 110 },
     { key: 'delivered', label: 'Доставлено', required: false, minWidth: 110 },
-    { key: 'createdAt', label: 'Дата створення', required: false, minWidth: 150 },
-    { key: 'plannedDepart', label: 'Плановий виїзд', required: false, minWidth: 150 },
+    { key: 'createdAt', label: 'Дата створення', required: false, minWidth: 150, sortField: 'createdAt' },
+    { key: 'plannedDepart', label: 'Плановий виїзд', required: false, minWidth: 150, sortField: 'plannedDepartureTime' },
 ];
 
 const DEFAULT_VISIBLE = new Set(ROUTE_LIST_COLUMNS.map(c => c.key));
+
+const SortIcon = ({ field, sortField, sortDir, color }) => {
+    if (sortField !== field) return <UnfoldMore sx={{ fontSize: 14, color: alpha(color, 0.3) }} />;
+    return sortDir === 'asc'
+        ? <ArrowUpward sx={{ fontSize: 14, color }} />
+        : <ArrowDownward sx={{ fontSize: 14, color }} />;
+};
 
 const RouteListsTable = ({
     items, loading, mainColor,
     selected = [], onToggle, onToggleAll,
     highlightId, highlightRowRef,
     onAddShipment,
-    onEdit, 
-    onDelete
+    onEdit,
+    onDelete,
+    onSortChange,
 }) => {
     const [visibleCols, setVisibleCols] = useState(DEFAULT_VISIBLE);
+    const [sortField, setSortField] = useState(null);
+    const [sortDir, setSortDir] = useState('asc');
 
     const allSelected = items.length > 0 && selected.length === items.length;
     const someSelected = selected.length > 0 && selected.length < items.length;
     const visibleDefs = ROUTE_LIST_COLUMNS.filter(c => visibleCols.has(c.key));
     const colSpan = visibleDefs.length + 2;
 
-    const headerLabel = {
-        number: 'Номер листа',
-        courier: "Кур'єр",
-        status: 'Статус',
-        progress: 'Прогрес',
-        totalWeight: 'Вага (кг)',
-        shipmentsCount: 'Відправлень',
-        delivered: 'Доставлено',
-        createdAt: 'Дата створення',
-        plannedDepart: 'Плановий виїзд',
+    const handleSort = (field) => {
+        if (!field) return;
+        const newDir = sortField === field && sortDir === 'asc' ? 'desc' : 'asc';
+        setSortField(field);
+        setSortDir(newDir);
+        onSortChange?.({ field, dir: newDir });
     };
 
     return (
@@ -94,11 +100,36 @@ const RouteListsTable = ({
                                     </Tooltip>
                                 </TableCell>
                                 <TableCell width={48} />
+
                                 {visibleDefs.map(col => (
-                                    <TableCell key={col.key} sx={{ fontWeight: 700, minWidth: col.minWidth }}>
-                                        {headerLabel[col.key]}
+                                    <TableCell
+                                        key={col.key}
+                                        sx={{
+                                            fontWeight: 700,
+                                            minWidth: col.minWidth,
+                                            whiteSpace: 'nowrap',
+                                            cursor: col.sortField ? 'pointer' : 'default',
+                                            userSelect: 'none',
+                                            '&:hover': col.sortField
+                                                ? { bgcolor: alpha(mainColor, 0.06) }
+                                                : {},
+                                        }}
+                                        onClick={() => handleSort(col.sortField)}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            {col.label}
+                                            {col.sortField && (
+                                                <SortIcon
+                                                    field={col.sortField}
+                                                    sortField={sortField}
+                                                    sortDir={sortDir}
+                                                    color={mainColor}
+                                                />
+                                            )}
+                                        </Box>
                                     </TableCell>
                                 ))}
+
                                 <TableCell padding="checkbox" />
                             </TableRow>
                         </TableHead>

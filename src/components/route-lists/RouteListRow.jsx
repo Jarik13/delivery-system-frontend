@@ -237,23 +237,23 @@ const RouteListRow = ({
                                         <Delete fontSize="small" />
                                     </IconButton>
                                 </Tooltip>
+
+                                <Tooltip title="Додати відправлення" placement="left">
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => { e.stopPropagation(); onAddShipment?.(item); }}
+                                        sx={{
+                                            color: mainColor,
+                                            '&:hover': {
+                                                bgcolor: alpha(mainColor, 0.1),
+                                            },
+                                        }}
+                                    >
+                                        <Add fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
                             </>
                         )}
-
-                        <Tooltip title="Додати відправлення" placement="left">
-                            <IconButton
-                                size="small"
-                                onClick={(e) => { e.stopPropagation(); onAddShipment?.(item); }}
-                                sx={{
-                                    color: mainColor,
-                                    '&:hover': {
-                                        bgcolor: alpha(mainColor, 0.1),
-                                    },
-                                }}
-                            >
-                                <Add fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
                     </Box>
                 </TableCell>
             </TableRow>
