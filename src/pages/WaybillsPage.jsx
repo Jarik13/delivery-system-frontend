@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import {
     Receipt, Add, FileDownload, Close,
-    TableChart, PictureAsPdf, Description, DataObject,
 } from '@mui/icons-material';
 import { useSearchParams } from 'react-router-dom';
 import WaybillsTable from '../components/waybills/WaybillsTable';
@@ -29,6 +28,9 @@ const WaybillsPage = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalElements, setTotalElements] = useState(0);
+    const [sortField, setSortField] = useState(null);
+    const [sortDir, setSortDir] = useState('asc');
+
     const [filters, setFilters] = useState({
         number: '',
         totalWeightMin: 0,
@@ -44,8 +46,8 @@ const WaybillsPage = () => {
     const [progress, setProgress] = useState(NO_PROGRESS);
     const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
     const [selectedIds, setSelectedIds] = useState(new Set());
-
     const [employees, setEmployees] = useState([]);
+    const [statistics, setStatistics] = useState({ totalWeightMin: 0, totalWeightMax: 5000 });
 
     const abortRef = useRef(null);
     const statsRef = useRef({ startTime: 0, lastLoaded: 0, lastTime: 0 });
@@ -56,7 +58,11 @@ const WaybillsPage = () => {
             const activeFilters = Object.fromEntries(
                 Object.entries(filters).filter(([_, v]) => v !== '' && v !== null)
             );
-            const res = await DictionaryApi.getAll('waybills', page, rowsPerPage, activeFilters);
+            const params = {
+                ...activeFilters,
+                ...(sortField ? { sort: `${sortField},${sortDir}` } : {}),
+            };
+            const res = await DictionaryApi.getAll('waybills', page, rowsPerPage, params);
             setWaybills(res.data.content || []);
             setTotalElements(res.data.totalElements || 0);
             setSelectedIds(new Set());
@@ -65,50 +71,19 @@ const WaybillsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage, filters]);
+    }, [page, rowsPerPage, filters, sortField, sortDir]);
+
+    const handleSortChange = ({ field, dir }) => {
+        setSortField(field);
+        setSortDir(dir);
+        setPage(0);
+    };
 
     useEffect(() => {
         DictionaryApi.getAll('employees', 0, 1000, {})
             .then(res => setEmployees(res.data.content || []))
             .catch(console.error);
     }, []);
-
-    const [statistics, setStatistics] = useState({ totalWeightMin: 0, totalWeightMax: 5000 });
-
-    const filterFields = [
-        { name: 'number', label: 'Номер накладної', type: 'text' },
-        {
-            name: 'weightRange',
-            label: 'Вага (кг)',
-            type: 'range',
-            minName: 'totalWeightMin',
-            maxName: 'totalWeightMax',
-            min: statistics.totalWeightMin,
-            max: statistics.totalWeightMax,
-            step: 1,
-        },
-        {
-            name: 'volumeRange',
-            label: 'Об\'єм (м³)',
-            type: 'range',
-            minName: 'volumeMin',
-            maxName: 'volumeMax',
-            min: statistics.volumeMin,
-            max: statistics.volumeMax,
-            step: 1,
-        },
-        { name: 'createdAtFrom', label: 'Створено від', type: 'datetime' },
-        { name: 'createdAtTo', label: 'Створено до', type: 'datetime' },
-        {
-            name: 'createdById',
-            label: 'Оформив',
-            type: 'select',
-            options: employees.map(e => ({
-                id: e.id,
-                name: `${e.lastName} ${e.firstName} ${e.middleName}`,
-            })),
-        },
-    ];
 
     useEffect(() => {
         DictionaryApi.getStatistics('waybills')
@@ -232,6 +207,41 @@ const WaybillsPage = () => {
         }
     };
 
+    const filterFields = [
+        { name: 'number', label: 'Номер накладної', type: 'text' },
+        {
+            name: 'weightRange',
+            label: 'Вага (кг)',
+            type: 'range',
+            minName: 'totalWeightMin',
+            maxName: 'totalWeightMax',
+            min: statistics.totalWeightMin,
+            max: statistics.totalWeightMax,
+            step: 1,
+        },
+        {
+            name: 'volumeRange',
+            label: "Об'єм (м³)",
+            type: 'range',
+            minName: 'volumeMin',
+            maxName: 'volumeMax',
+            min: statistics.volumeMin,
+            max: statistics.volumeMax,
+            step: 1,
+        },
+        { name: 'createdAtFrom', label: 'Створено від', type: 'datetime' },
+        { name: 'createdAtTo', label: 'Створено до', type: 'datetime' },
+        {
+            name: 'createdById',
+            label: 'Оформив',
+            type: 'select',
+            options: employees.map(e => ({
+                id: e.id,
+                name: `${e.lastName} ${e.firstName} ${e.middleName}`,
+            })),
+        },
+    ];
+
     const isIndeterminate = progress.active && progress.percent === null;
     const isDeterminate = progress.active && progress.percent !== null;
     const selectionCount = selectedIds.size;
@@ -331,7 +341,9 @@ const WaybillsPage = () => {
                             </Tooltip>
                         ) : (
                             <>
-                                <Tooltip title={selectionCount > 0 ? `Експортувати ${selectionCount} вибраних` : 'Експортувати всі накладні'}>
+                                <Tooltip title={selectionCount > 0
+                                    ? `Експортувати ${selectionCount} вибраних`
+                                    : 'Експортувати всі накладні'}>
                                     <Button variant="contained" size="small"
                                         startIcon={<FileDownload />}
                                         onClick={(e) => setExportAnchor(e.currentTarget)}
@@ -355,7 +367,9 @@ const WaybillsPage = () => {
                                     <Box sx={{ px: 2, py: 1 }}>
                                         <Typography variant="caption" color="text.secondary"
                                             fontWeight={700} sx={{ textTransform: 'uppercase', fontSize: 10 }}>
-                                            {selectionCount > 0 ? `Експорт ${selectionCount} вибраних` : 'Експорт всіх накладних'}
+                                            {selectionCount > 0
+                                                ? `Експорт ${selectionCount} вибраних`
+                                                : 'Експорт всіх накладних'}
                                         </Typography>
                                     </Box>
                                     <Divider />
@@ -386,10 +400,10 @@ const WaybillsPage = () => {
                 onClear={() => {
                     setFilters({
                         number: '',
-                        totalWeightMin: 0,
-                        totalWeightMax: 5000,
-                        volumeMin: 0,
-                        volumeMax: 100,
+                        totalWeightMin: statistics.totalWeightMin || 0,
+                        totalWeightMax: statistics.totalWeightMax || 5000,
+                        volumeMin: statistics.volumeMin || 0,
+                        volumeMax: statistics.volumeMax || 100,
                         createdAtFrom: null,
                         createdAtTo: null,
                         createdById: null,
@@ -411,6 +425,9 @@ const WaybillsPage = () => {
                 onToggleAll={handleToggleAll}
                 highlightId={highlightId}
                 highlightRowRef={highlightRowRef}
+                onSortChange={handleSortChange}
+                sortField={sortField}
+                sortDir={sortDir}
             />
 
             <WaybillWizardDialog
