@@ -52,12 +52,32 @@ const RouteSheetItemRow = ({ item, idx }) => {
                 <Typography variant="caption" fontWeight={600} sx={{ lineHeight: 1.3 }}>
                     {item.recipientFullName || '—'}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.3 }}>
-                    <LocationOn sx={{ fontSize: 13, color: '#999' }} />
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', overflow: 'hidden', display: 'block' }}>
-                        {item.deliveryAddress || '—'}
-                    </Typography>
-                </Box>
+                {item.deliveryAddress && (
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, mt: 0.3 }}>
+                        <LocationOn sx={{ fontSize: 12, color: '#bbb', mt: 0.1, flexShrink: 0 }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.3 }}>
+                            {item.deliveryAddress}
+                        </Typography>
+                    </Box>
+                )}
+
+                {item.destinationAddress && (
+                    <Box sx={{
+                        display: 'flex', alignItems: 'flex-start', gap: 0.5, mt: 0.4,
+                        px: 0.75, py: 0.3, borderRadius: 1,
+                        bgcolor: alpha('#2196f3', 0.06),
+                        border: `1px solid ${alpha('#2196f3', 0.18)}`,
+                    }}>
+                        <LocationOn sx={{ fontSize: 12, color: '#2196f3', mt: 0.1, flexShrink: 0 }} />
+                        <Typography variant="caption" sx={{ color: '#2196f3', fontWeight: 600, lineHeight: 1.3 }}>
+                            {item.destinationAddress}
+                        </Typography>
+                    </Box>
+                )}
+
+                {!item.originAddress && !item.destinationAddress && (
+                    <Typography variant="caption" color="text.disabled">—</Typography>
+                )}
             </TableCell>
 
             <TableCell sx={{ py: 1.5 }}>

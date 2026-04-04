@@ -107,6 +107,7 @@ const RouteListsTable = ({
                                         sx={{
                                             fontWeight: 700,
                                             minWidth: col.minWidth,
+                                            whiteSpace: 'nowrap',
                                             cursor: col.sortField ? 'pointer' : 'default',
                                             userSelect: 'none',
                                             '&:hover': col.sortField
