@@ -4,14 +4,14 @@ import {
     TableCell, TableBody, Box, Typography, CircularProgress,
     Divider, alpha, Checkbox, Tooltip,
 } from '@mui/material';
-import { LocalShipping } from '@mui/icons-material';
+import { LocalShipping, ArrowUpward, ArrowDownward, UnfoldMore } from '@mui/icons-material';
 import WaybillRow from './WaybillRow';
 import ColumnSelector from '../ColumnSelector';
 
 export const WAYBILL_COLUMNS = [
-    { key: 'number', label: 'Номер', required: true, default: true, minWidth: 110 },
-    { key: 'totalWeight', label: 'Загальна вага', required: false, default: true, minWidth: 120 },
-    { key: 'volume', label: "Об'єм", required: false, default: true, minWidth: 100 },
+    { key: 'number', label: 'Номер', required: true, default: true, minWidth: 110, sortField: 'number' },
+    { key: 'totalWeight', label: 'Загальна вага', required: false, default: true, minWidth: 120, sortField: 'totalWeight' },
+    { key: 'volume', label: "Об'єм", required: false, default: true, minWidth: 100, sortField: 'volume' },
     { key: 'shipmentsCount', label: 'Відправлень', required: false, default: true, minWidth: 110 },
     { key: 'totalDistanceKm', label: 'Відстань (км)', required: false, default: false, minWidth: 120 },
     { key: 'statusSummary', label: 'Статус', required: false, default: false, minWidth: 130 },
@@ -20,17 +20,27 @@ export const WAYBILL_COLUMNS = [
     { key: 'scheduledDeparture', label: 'Відправлення рейсу', required: false, default: false, minWidth: 160 },
     { key: 'scheduledArrival', label: 'Прибуття рейсу', required: false, default: false, minWidth: 160 },
     { key: 'createdByName', label: 'Створив', required: false, default: true, minWidth: 160 },
-    { key: 'createdAt', label: 'Дата створення', required: false, default: true, minWidth: 160 },
+    { key: 'createdAt', label: 'Дата створення', required: false, default: true, minWidth: 160, sortField: 'createdAt' },
 ];
 
 const DEFAULT_VISIBLE = new Set(
     WAYBILL_COLUMNS.filter(c => c.default).map(c => c.key)
 );
 
+const SortIcon = ({ field, sortField, sortDir, color }) => {
+    if (sortField !== field) return <UnfoldMore sx={{ fontSize: 14, color: alpha(color, 0.3) }} />;
+    return sortDir === 'asc'
+        ? <ArrowUpward sx={{ fontSize: 14, color }} />
+        : <ArrowDownward sx={{ fontSize: 14, color }} />;
+};
+
 const WaybillsTable = ({
     waybills, loading, mainColor,
     selected, onToggle, onToggleAll,
     highlightId, highlightRowRef,
+    onSortChange,
+    sortField = null,
+    sortDir = 'asc',
 }) => {
     const [visibleCols, setVisibleCols] = useState(DEFAULT_VISIBLE);
 
@@ -39,6 +49,12 @@ const WaybillsTable = ({
     const visibleDefs = WAYBILL_COLUMNS.filter(c => visibleCols.has(c.key));
     const colSpan = visibleDefs.length + 2;
     const tableMinWidth = visibleDefs.reduce((sum, c) => sum + c.minWidth, 96);
+
+    const handleSort = (field) => {
+        if (!field) return;
+        const newDir = sortField === field && sortDir === 'asc' ? 'desc' : 'asc';
+        onSortChange?.({ field, dir: newDir });
+    };
 
     return (
         <Paper variant="outlined" sx={{ borderRadius: 2 }}>
@@ -71,7 +87,7 @@ const WaybillsTable = ({
                     <Table size="small" sx={{ minWidth: tableMinWidth }}>
                         <TableHead>
                             <TableRow sx={{ bgcolor: alpha(mainColor, 0.05) }}>
-                                <TableCell padding="checkbox" width={48} >
+                                <TableCell padding="checkbox" width={48}>
                                     <Tooltip title={allSelected ? 'Зняти всі' : 'Вибрати всі'}>
                                         <Checkbox
                                             size="small"
@@ -87,8 +103,31 @@ const WaybillsTable = ({
                                 </TableCell>
                                 <TableCell width={48} />
                                 {visibleDefs.map(col => (
-                                    <TableCell key={col.key} sx={{ fontWeight: 700, minWidth: col.minWidth, whiteSpace: 'nowrap' }}>
-                                        {col.label}
+                                    <TableCell
+                                        key={col.key}
+                                        sx={{
+                                            fontWeight: 700,
+                                            minWidth: col.minWidth,
+                                            whiteSpace: 'nowrap',
+                                            cursor: col.sortField ? 'pointer' : 'default',
+                                            userSelect: 'none',
+                                            '&:hover': col.sortField
+                                                ? { bgcolor: alpha(mainColor, 0.06) }
+                                                : {},
+                                        }}
+                                        onClick={() => handleSort(col.sortField)}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            {col.label}
+                                            {col.sortField && (
+                                                <SortIcon
+                                                    field={col.sortField}
+                                                    sortField={sortField}
+                                                    sortDir={sortDir}
+                                                    color={mainColor}
+                                                />
+                                            )}
+                                        </Box>
                                     </TableCell>
                                 ))}
                             </TableRow>
@@ -122,7 +161,6 @@ const WaybillsTable = ({
                     </Table>
                 </TableContainer>
             )}
-
             <Divider />
         </Paper>
     );
