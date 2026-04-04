@@ -15,7 +15,7 @@ const PriceStep = ({
     const p = formData.price;
 
     const priceRows = [
-        { label: 'Базовий тариф', value: p.deliveryPrice, hint: 'Стандарт — 60 ₴, Експрес — 85 ₴' },
+        { label: 'Базовий тариф', value: p.deliveryPrice, hint: 'Стандарт — 60 ₴, Експрес — 85 ₴ (+20 ₴ за поштомат)' },
         { label: 'За вагу', value: p.weightPrice, hint: `${formData.parcel.actualWeight} кг × 3.5 ₴` },
         { label: 'За відстань', value: p.distancePrice, hint: 'Відстань × 0.8 ₴/км (макс. 500 ₴)' },
         { label: 'Коробка', value: p.boxVariantPrice, hint: 'Вартість обраної коробки' },
