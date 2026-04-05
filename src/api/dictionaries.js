@@ -62,7 +62,7 @@ export const UserApi = {
 
 export const DdlApi = {
     getAllTables: () => api.get('/ddl/tables'),
-    getTableInfo: (tableName) => api.get(`/admin/ddl/tables/${tableName}`),
+    getTableInfo: (tableName) => api.get(`/ddl/tables/${tableName}`),
  
     addColumn: (data) => api.post('/ddl/columns', data),
     dropColumn: (data) => api.delete('/ddl/columns', { data }),
