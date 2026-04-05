@@ -3,13 +3,14 @@ import {
     Box, Typography, Tabs, Tab, CircularProgress, Alert,
     IconButton, Tooltip, Skeleton, alpha, Paper,
 } from '@mui/material';
-import { Refresh, AddBox, TableChart, Storage } from '@mui/icons-material';
+import { Refresh, AddBox, TableChart, Storage, DeleteForever } from '@mui/icons-material';
 import { DdlApi } from '../api/dictionaries';
 import TableList from '../components/ddl/TableList';
 import ColumnsTab from '../components/ddl/ColumnsTab';
 import ConstraintsTab from '../components/ddl/ConstraintsTab';
 import IndexesTab from '../components/ddl/IndexesTab';
 import { CreateTableDialog } from '../components/ddl/dialogs/CreateTableDialog';
+import { ConfirmDialog } from '../components/ddl/dialogs/ConfirmDialog';
 
 const MAIN_COLOR = '#f44336';
 
@@ -22,6 +23,8 @@ export default function DdlPage() {
     const [error, setError] = useState('');
     const [tab, setTab] = useState(0);
     const [createTableOpen, setCreateTableOpen] = useState(false);
+    const [dropTableConfirm, setDropTableConfirm] = useState(false);
+    const [dropTableError, setDropTableError] = useState('');
 
     const fetchTables = useCallback(async () => {
         setLoadingTables(true);
@@ -64,6 +67,19 @@ export default function DdlPage() {
 
     const handleRefresh = () => fetchTableInfo(selectedTable);
 
+    const handleDropTable = async () => {
+        try {
+            await DdlApi.dropTable(selectedTable);
+            setDropTableConfirm(false);
+            setSelectedTable(null);
+            setTableInfo(null);
+            fetchTables();
+        } catch (e) {
+            setDropTableError(e.response?.data?.message ?? 'Не вдалось видалити таблицю');
+            setDropTableConfirm(false);
+        }
+    };
+
     return (
         <Box sx={{
             display: 'flex',
@@ -71,7 +87,6 @@ export default function DdlPage() {
             bgcolor: '#fafafa',
             overflow: 'hidden',
         }}>
-            {/* ── Left panel: table list ── */}
             <TableList
                 tables={tables}
                 loading={loadingTables}
@@ -80,7 +95,6 @@ export default function DdlPage() {
                 mainColor={MAIN_COLOR}
             />
 
-            {/* ── Right panel: table details ── */}
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
                 {/* Header */}
@@ -96,7 +110,7 @@ export default function DdlPage() {
                         <Storage sx={{ color: MAIN_COLOR, fontSize: 22 }} />
                         <Typography variant="h6" fontWeight={700} fontSize={16}>
                             {selectedTable
-                                ? <><span style={{ color: 'text.secondary', fontWeight: 400 }}>Таблиця / </span>{selectedTable}</>
+                                ? <><span style={{ color: '#9e9e9e', fontWeight: 400 }}>Таблиця / </span>{selectedTable}</>
                                 : 'Керування структурою БД'
                             }
                         </Typography>
@@ -113,11 +127,26 @@ export default function DdlPage() {
 
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         {selectedTable && (
-                            <Tooltip title="Оновити">
-                                <IconButton size="small" onClick={handleRefresh} disabled={loadingInfo}>
-                                    <Refresh sx={{ fontSize: 18, color: MAIN_COLOR }} />
-                                </IconButton>
-                            </Tooltip>
+                            <>
+                                <Tooltip title="Оновити">
+                                    <IconButton size="small" onClick={handleRefresh} disabled={loadingInfo}>
+                                        <Refresh sx={{ fontSize: 18, color: MAIN_COLOR }} />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title={`Видалити таблицю ${selectedTable}`}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => { setDropTableError(''); setDropTableConfirm(true); }}
+                                        sx={{
+                                            bgcolor: alpha('#f44336', 0.08),
+                                            color: '#f44336',
+                                            '&:hover': { bgcolor: alpha('#f44336', 0.18) },
+                                        }}
+                                    >
+                                        <DeleteForever sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
                         )}
                         <Tooltip title="Створити нову таблицю">
                             <IconButton
@@ -137,9 +166,9 @@ export default function DdlPage() {
 
                 {/* Content */}
                 <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
-                    {error && (
-                        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-                            {error}
+                    {(error || dropTableError) && (
+                        <Alert severity="error" sx={{ mb: 2 }} onClose={() => { setError(''); setDropTableError(''); }}>
+                            {error || dropTableError}
                         </Alert>
                     )}
 
@@ -151,7 +180,6 @@ export default function DdlPage() {
                             justifyContent: 'center',
                             height: '60%',
                             gap: 2,
-                            color: 'text.disabled',
                         }}>
                             <TableChart sx={{ fontSize: 64, color: alpha(MAIN_COLOR, 0.2) }} />
                             <Typography variant="h6" fontWeight={500} color="text.disabled">
@@ -191,25 +219,13 @@ export default function DdlPage() {
 
                             <Box sx={{ p: 2.5 }}>
                                 {tab === 0 && (
-                                    <ColumnsTab
-                                        tableInfo={tableInfo}
-                                        onRefresh={handleRefresh}
-                                        mainColor={MAIN_COLOR}
-                                    />
+                                    <ColumnsTab tableInfo={tableInfo} onRefresh={handleRefresh} mainColor={MAIN_COLOR} />
                                 )}
                                 {tab === 1 && (
-                                    <ConstraintsTab
-                                        tableInfo={tableInfo}
-                                        onRefresh={handleRefresh}
-                                        mainColor={MAIN_COLOR}
-                                    />
+                                    <ConstraintsTab tableInfo={tableInfo} onRefresh={handleRefresh} mainColor={MAIN_COLOR} />
                                 )}
                                 {tab === 2 && (
-                                    <IndexesTab
-                                        tableInfo={tableInfo}
-                                        onRefresh={handleRefresh}
-                                        mainColor={MAIN_COLOR}
-                                    />
+                                    <IndexesTab tableInfo={tableInfo} onRefresh={handleRefresh} mainColor={MAIN_COLOR} />
                                 )}
                             </Box>
                         </Paper>
@@ -221,10 +237,17 @@ export default function DdlPage() {
                 open={createTableOpen}
                 mainColor={MAIN_COLOR}
                 onClose={() => setCreateTableOpen(false)}
-                onSuccess={() => {
-                    setCreateTableOpen(false);
-                    fetchTables();
-                }}
+                onSuccess={() => { setCreateTableOpen(false); fetchTables(); }}
+            />
+
+            <ConfirmDialog
+                open={dropTableConfirm}
+                title={`Видалити таблицю "${selectedTable}"?`}
+                message={`Таблицю "${selectedTable}" та всі її дані буде безповоротно видалено. Якщо на неї є зовнішні ключі — операція буде відхилена.`}
+                confirmLabel="Видалити таблицю"
+                dangerous
+                onConfirm={handleDropTable}
+                onClose={() => setDropTableConfirm(false)}
             />
         </Box>
     );

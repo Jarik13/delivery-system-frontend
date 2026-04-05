@@ -63,16 +63,22 @@ export const UserApi = {
 export const DdlApi = {
     getAllTables: () => api.get('/ddl/tables'),
     getTableInfo: (tableName) => api.get(`/ddl/tables/${tableName}`),
- 
+    createTable: (data) => api.post('/ddl/tables', data),
+    dropTable: (tableName) => api.delete(`/ddl/tables/${tableName}`),
+
     addColumn: (data) => api.post('/ddl/columns', data),
     dropColumn: (data) => api.delete('/ddl/columns', { data }),
     alterColumn: (data) => api.put('/ddl/columns', data),
- 
+
     setDefault: (data) => api.put('/ddl/columns/default', data),
- 
+
     addConstraint: (data) => api.post('/ddl/constraints', data),
     dropConstraint: (data) => api.delete('/ddl/constraints', { data }),
 
     addIndex: (data) => api.post('/ddl/indexes', data),
     dropIndex: (data) => api.delete('/ddl/indexes', { data }),
+
+    addForeignKey: (data) => api.post('/ddl/foreign-keys', data),
+    dropForeignKey: (data) => api.delete('/ddl/foreign-keys', { data }),
+    getPkColumns: (tableName) => api.get(`/ddl/tables/${tableName}/pk-columns`),
 };
