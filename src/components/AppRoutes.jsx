@@ -18,6 +18,7 @@ import SuperAdminPage from '../pages/SuperAdminPage';
 import AdminPage from '../pages/AdminPage';
 import CourierPage from '../pages/CourierPage';
 import ProfilePage from '../pages/ProfilePage';
+import DdlPage from '../pages/DdlPage';
 import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -71,6 +72,12 @@ const AppRoutes = () => {
             <Route path="/profile" element={
                 <ProtectedRoute allowedRoles={EDCA}>
                     <ProfilePage />
+                </ProtectedRoute>
+            } />
+
+            <Route path="/ddl" element={
+                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                    <DdlPage />
                 </ProtectedRoute>
             } />
 
