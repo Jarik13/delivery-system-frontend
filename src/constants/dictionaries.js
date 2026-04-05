@@ -68,6 +68,7 @@ export const MENU_GROUPS = [
         roles: [ROLES.SUPER_ADMIN, ROLES.ADMIN],
         items: [
             { label: 'Управління користувачами', path: 'super-admin', isCustomPage: true, endpoint: 'super-admin', roles: [ROLES.SUPER_ADMIN] },
+            { label: 'Управління структурою БД', path: 'ddl', isCustomPage: true, endpoint: 'ddl', roles: [ROLES.SUPER_ADMIN] },
             { label: 'Аналітика', path: 'admin', isCustomPage: true, endpoint: 'admin', roles: [ROLES.ADMIN] },
         ]
     },
