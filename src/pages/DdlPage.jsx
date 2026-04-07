@@ -3,7 +3,10 @@ import {
     Box, Typography, Tabs, Tab, CircularProgress, Alert,
     IconButton, Tooltip, Skeleton, alpha, Paper,
 } from '@mui/material';
-import { Refresh, AddBox, TableChart, Storage, DeleteForever } from '@mui/icons-material';
+import { 
+    Refresh, AddBox, TableChart, Storage, 
+    DeleteForever, Key 
+} from '@mui/icons-material';
 import { DdlApi } from '../api/dictionaries';
 import TableList from '../components/ddl/TableList';
 import ColumnsTab from '../components/ddl/ColumnsTab';
@@ -11,6 +14,7 @@ import ConstraintsTab from '../components/ddl/ConstraintsTab';
 import IndexesTab from '../components/ddl/IndexesTab';
 import { CreateTableDialog } from '../components/ddl/dialogs/CreateTableDialog';
 import { ConfirmDialog } from '../components/ddl/dialogs/ConfirmDialog';
+import ForeignKeyDialog from '../components/ddl/dialogs/ForeignKeyDialog';
 
 const MAIN_COLOR = '#f44336';
 
@@ -22,7 +26,9 @@ export default function DdlPage() {
     const [loadingInfo, setLoadingInfo] = useState(false);
     const [error, setError] = useState('');
     const [tab, setTab] = useState(0);
+
     const [createTableOpen, setCreateTableOpen] = useState(false);
+    const [fkDialogOpen, setFkDialogOpen] = useState(false);
     const [dropTableConfirm, setDropTableConfirm] = useState(false);
     const [dropTableError, setDropTableError] = useState('');
 
@@ -96,8 +102,6 @@ export default function DdlPage() {
             />
 
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-                {/* Header */}
                 <Box sx={{
                     display: 'flex',
                     alignItems: 'center',
@@ -128,11 +132,26 @@ export default function DdlPage() {
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         {selectedTable && (
                             <>
+                                <Tooltip title="Зовнішні ключі (FK)">
+                                    <IconButton 
+                                        size="small" 
+                                        onClick={() => setFkDialogOpen(true)}
+                                        sx={{ 
+                                            bgcolor: alpha(MAIN_COLOR, 0.05),
+                                            color: MAIN_COLOR,
+                                            '&:hover': { bgcolor: alpha(MAIN_COLOR, 0.12) }
+                                        }}
+                                    >
+                                        <Key sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                </Tooltip>
+
                                 <Tooltip title="Оновити">
                                     <IconButton size="small" onClick={handleRefresh} disabled={loadingInfo}>
                                         <Refresh sx={{ fontSize: 18, color: MAIN_COLOR }} />
                                     </IconButton>
                                 </Tooltip>
+                                
                                 <Tooltip title={`Видалити таблицю ${selectedTable}`}>
                                     <IconButton
                                         size="small"
@@ -164,7 +183,6 @@ export default function DdlPage() {
                     </Box>
                 </Box>
 
-                {/* Content */}
                 <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
                     {(error || dropTableError) && (
                         <Alert severity="error" sx={{ mb: 2 }} onClose={() => { setError(''); setDropTableError(''); }}>
@@ -238,6 +256,16 @@ export default function DdlPage() {
                 mainColor={MAIN_COLOR}
                 onClose={() => setCreateTableOpen(false)}
                 onSuccess={() => { setCreateTableOpen(false); fetchTables(); }}
+            />
+
+            <ForeignKeyDialog
+                open={fkDialogOpen}
+                onClose={() => {
+                    setFkDialogOpen(false);
+                    handleRefresh();
+                }}
+                tableName={selectedTable}
+                mainColor={MAIN_COLOR}
             />
 
             <ConfirmDialog
