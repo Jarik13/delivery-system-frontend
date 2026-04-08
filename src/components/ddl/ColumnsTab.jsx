@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     Box, Table, TableHead, TableBody, TableRow, TableCell,
     TableContainer, Typography, Chip, IconButton, Tooltip,
-    alpha,
+    alpha, Alert
 } from '@mui/material';
 import { Delete, Edit, AddCircleOutline } from '@mui/icons-material';
 import AddColumnDialog from './dialogs/AddColumnDialog';
@@ -16,6 +16,7 @@ export default function ColumnsTab({ tableInfo, onRefresh, mainColor }) {
     const [alterCol, setAlterCol] = useState(null);
     const [defaultCol, setDefaultCol] = useState(null);
     const [dropCol, setDropCol] = useState(null);
+    const [error, setError] = useState('');
 
     const headSx = {
         fontWeight: 700,
@@ -27,9 +28,16 @@ export default function ColumnsTab({ tableInfo, onRefresh, mainColor }) {
     };
 
     const handleDrop = async () => {
-        await DdlApi.dropColumn({ tableName: tableInfo.tableName, columnName: dropCol });
-        setDropCol(null);
-        onRefresh();
+        try {
+            await DdlApi.dropColumn({ tableName: tableInfo.tableName, columnName: dropCol });
+            setDropCol(null);
+            onRefresh();
+        } catch (e) {
+            setDropCol(null);
+            const msg = e.response?.data?.message ?? 'Не вдалось видалити колонку';
+            const clean = msg.replace(/^Виникла внутрішня помилка сервера:\s*/i, '');
+            setError(clean);
+        }
     };
 
     return (
@@ -48,6 +56,12 @@ export default function ColumnsTab({ tableInfo, onRefresh, mainColor }) {
                     </IconButton>
                 </Tooltip>
             </Box>
+
+            {error && (
+                <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+                    {error}
+                </Alert>
+            )}
 
             <TableContainer sx={{
                 borderRadius: 2,
