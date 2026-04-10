@@ -280,10 +280,13 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                         <Stack spacing={1}>
                                             {segments.map((seg, idx) => {
                                                 const isPreviousCompleted = idx === 0 || segments[idx - 1].isCompleted;
-                                                const isLocked = !isPreviousCompleted;
-
+                                                const isEmergencyStopped = trip.status === 'Аварійна зупинка';
+                                                const isLocked = !isPreviousCompleted || isEmergencyStopped;
+                                                
                                                 const isDone = seg.isCompleted;
                                                 const isDeparted = seg.isDeparted;
+
+                                                const isEmergencySegment = isEmergencyStopped && isDeparted && !isDone;
 
                                                 return (
                                                     <Box key={seg.waybillRouteId} sx={{
@@ -323,7 +326,18 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                                                             )}
                                                         </Box>
 
-                                                        {isDone ? (
+                                                        {isEmergencySegment ? (
+                                                            <Chip
+                                                                label="Аварійна зупинка"
+                                                                size="small"
+                                                                icon={<Warning sx={{ fontSize: '13px !important', color: '#d32f2f !important' }} />}
+                                                                sx={{
+                                                                    height: 22, fontSize: '0.65rem', fontWeight: 700,
+                                                                    bgcolor: alpha('#d32f2f', 0.08), color: '#d32f2f',
+                                                                    border: `1px solid ${alpha('#d32f2f', 0.3)}`,
+                                                                }}
+                                                            />
+                                                        ) : isDone ? (
                                                             <Chip
                                                                 label="Прибуто"
                                                                 size="small"
