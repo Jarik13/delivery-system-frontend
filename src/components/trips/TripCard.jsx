@@ -8,7 +8,7 @@ import {
     ExpandMore, ExpandLess, Scale,
     Straighten, LocationOn, AccessTime,
     Map as MapIcon, Delete, Person, DirectionsCar,
-    Inventory2, Room, History, Edit, CheckCircle, FlightLand,
+    Inventory2, Room, History, Edit, CheckCircle, FlightLand, Warning,
 } from '@mui/icons-material';
 import StatusChip from './StatusChip';
 import { DictionaryApi } from '../../api/dictionaries';
@@ -26,8 +26,13 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
     const [departDialog, setDepartDialog] = useState(null);
     const [departing, setDeparting] = useState(false);
 
+    const [emergencyDialog, setEmergencyDialog] = useState(false);
+    const [emergencyStopping, setEmergencyStopping] = useState(false);
+
     const { auth } = useAuth();
     const isDriver = auth?.role === ROLES.DRIVER;
+
+    const canEmergencyStop = isDriver && trip.status === 'В дорозі';
 
     useEffect(() => {
         if (!expanded || !isDriver) return;
@@ -73,6 +78,19 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
             console.error(e);
         } finally {
             setDeparting(false);
+        }
+    };
+
+    const handleEmergencyStop = async () => {
+        setEmergencyStopping(true);
+        try {
+            await DictionaryApi.patch(`trips/${trip.id}/emergency-stop`, {});
+            setEmergencyDialog(false);
+            onMarkArrived?.();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setEmergencyStopping(false);
         }
     };
 
@@ -539,13 +557,45 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                             )}
 
                             {isDriver && (
-                                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                                    <Button variant="contained" size="small" startIcon={<MapIcon />}
+                                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    {canEmergencyStop && (
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            startIcon={<Warning fontSize="small" />}
+                                            onClick={() => setEmergencyDialog(true)}
+                                            sx={{
+                                                fontWeight: 800,
+                                                borderRadius: 2,
+                                                px: 2.5,
+                                                borderColor: '#d32f2f',
+                                                color: '#d32f2f',
+                                                borderWidth: 2,
+                                                '&:hover': {
+                                                    bgcolor: alpha('#d32f2f', 0.06),
+                                                    borderColor: '#b71c1c',
+                                                    borderWidth: 2,
+                                                },
+                                            }}
+                                        >
+                                            Аварійна зупинка
+                                        </Button>
+                                    )}
+
+                                    <Button
+                                        variant="contained"
+                                        size="small"
+                                        startIcon={<MapIcon />}
                                         onClick={() => onMap(trip)}
                                         sx={{
-                                            bgcolor: color, fontWeight: 800, borderRadius: 2, px: 3,
+                                            bgcolor: color,
+                                            fontWeight: 800,
+                                            borderRadius: 2,
+                                            px: 3,
+                                            ml: 'auto',
                                             '&:hover': { bgcolor: alpha(color, 0.85) },
-                                        }}>
+                                        }}
+                                    >
                                         Карта маршруту
                                     </Button>
                                 </Box>
@@ -649,6 +699,59 @@ const TripCard = ({ trip, color, onMap, onDelete, onEdit, isHighlighted = false,
                         sx={{ bgcolor: '#2196f3', '&:hover': { bgcolor: '#1565c0' }, fontWeight: 700 }}
                     >
                         {departing ? 'Збереження...' : 'Підтвердити виїзд'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={emergencyDialog}
+                onClose={() => !emergencyStopping && setEmergencyDialog(false)}
+                maxWidth="xs"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, pb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Warning sx={{ color: '#d32f2f', fontSize: 22 }} />
+                    Аварійна зупинка
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary">
+                        Підтвердити аварійну зупинку рейсу{' '}
+                        <strong>{trip.tripNumber}</strong>?
+                    </Typography>
+                    <Box sx={{
+                        mt: 2, p: 1.5, borderRadius: 2,
+                        bgcolor: alpha('#d32f2f', 0.05),
+                        border: `1px solid ${alpha('#d32f2f', 0.25)}`,
+                    }}>
+                        <Typography variant="caption" color="error" fontWeight={600}>
+                            Цю дію неможливо скасувати. Рейс буде зупинено, диспетчер отримає сповіщення.
+                        </Typography>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                    <Button
+                        onClick={() => setEmergencyDialog(false)}
+                        disabled={emergencyStopping}
+                        sx={{ color: 'text.secondary' }}
+                    >
+                        Скасувати
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleEmergencyStop}
+                        disabled={emergencyStopping}
+                        startIcon={emergencyStopping
+                            ? <CircularProgress size={16} color="inherit" />
+                            : <Warning fontSize="small" />
+                        }
+                        sx={{
+                            bgcolor: '#d32f2f',
+                            '&:hover': { bgcolor: '#b71c1c' },
+                            fontWeight: 700,
+                        }}
+                    >
+                        {emergencyStopping ? 'Збереження...' : 'Підтвердити зупинку'}
                     </Button>
                 </DialogActions>
             </Dialog>
