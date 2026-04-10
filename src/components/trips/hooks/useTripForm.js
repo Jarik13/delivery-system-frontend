@@ -116,37 +116,34 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         const loadTrip = async () => {
             setLoadingTrip(true);
             try {
-                setForm({
-                    driverId: tripToEdit.driverId ?? null,
-                    vehicleId: tripToEdit.vehicleId ?? null,
-                    scheduledDeparture: toDatetimeLocal(tripToEdit.scheduledDepartureTime),
-                    scheduledArrival: toDatetimeLocal(tripToEdit.scheduledArrivalTime),
-                });
+                const coordsData = tripToEdit?.waypointCoordinates || [];
 
-                const waypoints = tripToEdit.waypoints || [];
-                if (waypoints.length >= 2) {
-                    const segs = await Promise.all(
-                        waypoints
-                            .slice()
-                            .sort((a, b) => (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0))
-                            .map(async (wp) => {
-                                const coords = wp.cityName ? await fetchCoordinates(wp.cityName) : null;
-                                return makeSegment({
-                                    cityId: wp.cityId ?? null,
-                                    cityName: wp.cityName ?? '',
-                                    regionId: wp.regionId ?? null,
-                                    districtId: wp.districtId ?? null,
-                                    lat: coords?.lat ?? null,
-                                    lng: coords?.lng ?? null,
-                                });
-                            })
-                    );
+                if (coordsData.length >= 2) {
+                    const segs = coordsData
+                        .slice()
+                        .sort((a, b) => (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0))
+                        .map((wp) => makeSegment({
+                            cityId: wp.cityId ?? null,
+                            cityName: wp.cityName ?? '',
+                            regionId: wp.regionId ?? null,
+                            districtId: wp.districtId ?? null,
+                            lat: wp.latitude ?? null,
+                            lng: wp.longitude ?? null,
+                        }));
+
                     setSegments(segs);
                 } else {
                     setSegments(initialSegments());
                 }
+
+                setForm({
+                    driverId: tripToEdit.driverId ?? null,
+                    vehicleId: tripToEdit.vehicleId ?? null,
+                    scheduledDeparture: tripToEdit.scheduledDepartureTime ? toDatetimeLocal(tripToEdit.scheduledDepartureTime) : '',
+                    scheduledArrival: tripToEdit.scheduledArrivalTime ? toDatetimeLocal(tripToEdit.scheduledArrivalTime) : '',
+                });
+
             } catch (e) {
-                console.error('Помилка завантаження рейсу для редагування:', e);
                 setSegments(initialSegments());
             } finally {
                 setLoadingTrip(false);
@@ -154,7 +151,7 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         };
 
         loadTrip();
-    }, [open, tripToEdit]);
+    }, [open, tripToEdit, isEditMode]);
 
     const updateSeg = useCallback((id, patch) =>
         setSegments(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s)), []);

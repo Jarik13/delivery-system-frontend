@@ -35,6 +35,8 @@ const TripWizardDialog = ({ open, onClose, onSuccess, mainColor, references = {}
     const [generalError, setGeneralError] = useState(null);
     const { drivers = [], vehicles = [] } = references;
 
+    console.log("TripToEdit in TripWizardDialog:", tripToEdit);
+
     const form$ = useTripForm({ open, tripToEdit, onSuccess, onClose });
     const {
         isEditMode,
