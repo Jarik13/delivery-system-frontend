@@ -69,12 +69,35 @@ function addGradientPolyline(map, coords, colorA, colorB) {
     }
 }
 
-function createDotIcon(color = '#FB8C00') {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" fill="${color}" opacity="0.2"/>
-        <circle cx="12" cy="12" r="6" fill="${color}" stroke="white" stroke-width="2.5"/>
+function getBearing(from, to) {
+    const lat1 = from[0] * Math.PI / 180;
+    const lat2 = to[0] * Math.PI / 180;
+    const dLng = (to[1] - from[1]) * Math.PI / 180;
+    const y = Math.sin(dLng) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+    return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+function createArrowIcon(color = '#FB8C00', bearing = 0) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+        <defs>
+            <filter id="glow">
+                <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="rgba(0,0,0,0.6)"/>
+            </filter>
+        </defs>
+        <g transform="rotate(${bearing}, 20, 20)" filter="url(#glow)">
+            <circle cx="20" cy="20" r="16" fill="${color}" opacity="0.18"/>
+            <polygon points="20,4 29,32 20,25 11,32"
+                fill="${color}" stroke="white" stroke-width="2.2" stroke-linejoin="round"/>
+            <circle cx="20" cy="20" r="3.5" fill="white" opacity="0.95"/>
+        </g>
     </svg>`;
-    return L.divIcon({ html: svg, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+    return L.divIcon({
+        html: svg,
+        className: '',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+    });
 }
 
 function buildDistanceLookup(coords) {
@@ -236,33 +259,51 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
         if (dotMarkerRef.current) { dotMarkerRef.current.remove(); dotMarkerRef.current = null; }
 
         const distLookup = buildDistanceLookup(routeCoords);
-        const startPos = routeCoords[0];
+        const initBearing = getBearing(routeCoords[0], routeCoords[1]);
 
-        dotMarkerRef.current = L.marker(startPos, {
-            icon: createDotIcon(COLOR_ACTIVE),
+        dotMarkerRef.current = L.marker(routeCoords[0], {
+            icon: createArrowIcon(COLOR_ACTIVE, initBearing),
             zIndexOffset: 900,
             interactive: false,
         }).addTo(map);
 
         const startTime = performance.now();
+        animStateRef.current = { active: true, lastBearing: initBearing };
 
         const tick = (now) => {
             if (!dotMarkerRef.current || !animStateRef.current) return;
 
             const elapsed = now - startTime;
-
             const rawT = Math.min(elapsed / TRAVEL_DURATION_MS, 1);
             const t = easeInOut(rawT);
 
             const pos = positionAtProgress(routeCoords, distLookup, t);
+
+            const aheadRaw = Math.min(rawT + 0.02, 1);
+            const aheadPos = positionAtProgress(routeCoords, distLookup, easeInOut(aheadRaw));
+
+            const dlat = aheadPos[0] - pos[0];
+            const dlng = aheadPos[1] - pos[1];
+            const moved = Math.sqrt(dlat * dlat + dlng * dlng);
+            const bearing = moved > 1e-6
+                ? getBearing(pos, aheadPos)
+                : animStateRef.current.lastBearing;
+            animStateRef.current.lastBearing = bearing;
+
             dotMarkerRef.current.setLatLng(pos);
+
+            const gEl = dotMarkerRef.current.getElement()?.querySelector('g');
+            if (gEl) {
+                gEl.setAttribute('transform', `rotate(${bearing}, 20, 20)`);
+            } else {
+                dotMarkerRef.current.setIcon(createArrowIcon(COLOR_ACTIVE, bearing));
+            }
 
             if (rawT < 1) {
                 rafRef.current = requestAnimationFrame(tick);
             }
         };
 
-        animStateRef.current = { active: true };
         rafRef.current = requestAnimationFrame(tick);
     };
 
