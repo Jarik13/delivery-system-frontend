@@ -11,7 +11,7 @@ import {
     Schedule, AccessTime, AllInbox, TrackChanges, AcUnit, HelpOutline,
     TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage,
     Receipt,
-    AdminPanelSettings
+    AdminPanelSettings,
 } from '@mui/icons-material';
 
 export const GROUPS = {
@@ -89,6 +89,7 @@ export const ITEM_GROUP_MAP = {
 
     "users": GROUPS.ADMIN,
     "admin": GROUPS.ADMIN,
+    "ddl": GROUPS.ADMIN,
 };
 
 // --- 5. ІКОНКИ ПУНКТІВ МЕНЮ ---
@@ -126,4 +127,5 @@ export const itemIcons = {
     "returns": <AssignmentReturned />,
     "admin": <AdminPanelSettings />,
     "users": <People />,
+    "ddl": <Storage />,
 };

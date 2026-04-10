@@ -168,6 +168,8 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                 shipmentTypeId: formData.shipmentTypeId,
                 originCityId: formData.origin.cityId,
                 destinationCityId: formData.destination.cityId,
+                originType: formData.origin.type?.toUpperCase() ?? null,
+                destinationType: formData.destination.type?.toUpperCase() ?? null,
             });
             setFormData(prev => ({ ...prev, price: res.data }));
         } catch (e) {
@@ -199,6 +201,8 @@ const ShipmentWizardDialog = ({ open, onClose, onSuccess, mainColor, references,
                     shipmentTypeId: formData.shipmentTypeId || null,
                     originCityId: formData.origin.cityId || null,
                     destinationCityId: formData.destination.cityId || null,
+                    originType: formData.origin.type?.toUpperCase() ?? null,
+                    destinationType: formData.destination.type?.toUpperCase() ?? null,
                 });
             } catch (error) {
                 const serverErrors = error.response?.data?.validationErrors;

@@ -1,0 +1,10 @@
+export const COLUMN_DATA_TYPES = [
+    'VARCHAR', 'NVARCHAR', 'INT', 'BIGINT', 'DECIMAL',
+    'NUMERIC', 'BIT', 'DATE', 'DATETIME', 'DATETIME2',
+    'FLOAT', 'TEXT', 'NTEXT',
+];
+
+export const CONSTRAINT_TYPES = ['NOT_NULL', 'UNIQUE', 'CHECK'];
+
+export const TYPES_WITH_LENGTH = ['VARCHAR', 'NVARCHAR'];
+export const TYPES_WITH_PRECISION = ['DECIMAL', 'NUMERIC'];
