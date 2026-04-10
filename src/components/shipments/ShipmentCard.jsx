@@ -17,6 +17,13 @@ import ReturnDialog from './ReturnDialog';
 import PaymentDialog from './PaymentDialog';
 import ShipmentExportButton from './ShipmentExportButton';
 
+const hexToRgb = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r},${g},${b}`;
+};
+
 const LinkedDocChip = ({ icon, label, number, color, onClick }) => {
     const theme = useTheme();
     return (
@@ -81,15 +88,20 @@ const ShipmentCard = ({
 
     const hasLinkedDocs = s.waybillId || s.routeListId;
 
+    const rgb = hexToRgb(statusColor);
+
     return (
         <Card sx={{
             width: '100%', height: '100%', borderRadius: 4,
-            transition: 'all 0.3s ease', border: '1px solid', borderColor: 'divider',
+            transition: 'all 0.3s ease', border: '1px solid',
+            borderColor: `rgba(${rgb}, 0.22)`,
+            background: `linear-gradient(135deg, rgba(${rgb}, 0.09) 0%, rgba(${rgb}, 0.02) 100%)`,
+            boxShadow: `0 2px 12px rgba(${rgb}, 0.08)`,
             display: 'flex', flexDirection: 'column',
             '&:hover': {
                 transform: 'translateY(-5px)',
-                boxShadow: `0 12px 24px ${alpha(mainColor, 0.15)}`,
-                borderColor: mainColor,
+                boxShadow: `0 12px 24px rgba(${rgb}, 0.18)`,
+                borderColor: `rgba(${rgb}, 0.5)`,
             },
         }} elevation={0}>
             <CardContent sx={{
@@ -102,7 +114,7 @@ const ShipmentCard = ({
                             sx={{ fontWeight: 700, bgcolor: alpha(mainColor, 0.1), color: mainColor }} />
                         <ShipmentExportButton shipmentId={s.id} mainColor={mainColor} />
                     </Box>
- 
+
                     <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <Tooltip title={editable ? 'Редагувати' : `Недоступно для статусу "${s.shipmentStatusName}"`}>
                             <span>
@@ -511,9 +523,10 @@ const ShipmentCard = ({
                 onClose={() => setPaymentOpen(false)}
                 shipment={s}
                 paymentTypes={paymentTypes}
-                onSuccess={(msg) => { 
-                    setPaymentOpen(false); 
-                    onSuccess?.(msg); }}
+                onSuccess={(msg) => {
+                    setPaymentOpen(false);
+                    onSuccess?.(msg);
+                }}
             />
         </Card>
     );
