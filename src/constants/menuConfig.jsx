@@ -1,17 +1,10 @@
 import React from 'react';
 import {
-    Business, Apartment, LocalPostOffice, LocalShipping, DirectionsCar, AttachMoney,
-    LocationCity, Category, People, Inventory,
-    LocalAtm, Assignment, Public, Place, Home,
-    LocationOn, AltRoute, Badge, DeliveryDining,
-    Payments, AssignmentReturned, LocalConvenienceStore,
-    AirportShuttle, AirlineSeatReclineNormal, DirectionsBus,
-    BuildCircle, SettingsEthernet, SettingsInputComponent, EvStation,
-    DirectionsCarFilled, DirectionsCarOutlined,
-    Schedule, AccessTime, AllInbox, TrackChanges, AcUnit, HelpOutline,
-    TripOrigin, ListAlt, ChecklistRtl, Event, Inbox, Storage,
-    Receipt,
-    AdminPanelSettings,
+    Business, Apartment, LocalShipping, DirectionsCar, AttachMoney,
+    LocationCity, Category, People, Inventory, LocalAtm, Public, Place, 
+    Home, AltRoute, Badge, LocalConvenienceStore, AirportShuttle, DirectionsBus,
+    BuildCircle, SettingsEthernet, SettingsInputComponent, EvStation, AllInbox, 
+    AcUnit, HelpOutline, TripOrigin, ListAlt, ChecklistRtl, Inbox, Storage, Receipt, AdminPanelSettings,
 } from '@mui/icons-material';
 
 export const GROUPS = {
@@ -44,10 +37,7 @@ export const groupIcons = {
 
 
 export const ITEM_GROUP_MAP = {
-    "parcels": GROUPS.LOGISTICS,
     "shipments": GROUPS.LOGISTICS,
-    "payments": GROUPS.LOGISTICS,
-    "returns": GROUPS.LOGISTICS,
     "trips": GROUPS.LOGISTICS,
     "waybills": GROUPS.LOGISTICS,
     "route-lists": GROUPS.LOGISTICS,
@@ -94,7 +84,6 @@ export const ITEM_GROUP_MAP = {
 
 // --- 5. ІКОНКИ ПУНКТІВ МЕНЮ ---
 export const itemIcons = {
-    "parcels": <Inventory />,
     "regions": <Public />,
     "districts": <Place />,
     "cities": <LocationCity />,
@@ -123,8 +112,6 @@ export const itemIcons = {
     "waybills": <Receipt />,
     "route-lists": <ListAlt />,
     "route-list-statuses": <ChecklistRtl />,
-    "payments": <Payments />,
-    "returns": <AssignmentReturned />,
     "admin": <AdminPanelSettings />,
     "users": <People />,
     "ddl": <Storage />,

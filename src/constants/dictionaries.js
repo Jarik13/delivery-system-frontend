@@ -8,9 +8,6 @@ export const MENU_GROUPS = [
         roles: [ROLES.EMPLOYEE, ROLES.DRIVER, ROLES.COURIER],
         items: [
             { label: 'Відправлення', path: 'shipments', isCustomPage: true, endpoint: 'shipments', roles: [ROLES.EMPLOYEE] },
-            { label: 'Посилки', path: 'parcels', isCustomPage: true, endpoint: 'parcels', roles: [ROLES.EMPLOYEE] },
-            { label: 'Платежі', path: 'payments', isCustomPage: true, endpoint: 'payments', roles: [ROLES.EMPLOYEE] },
-            { label: 'Повернення', path: 'returns', isCustomPage: true, endpoint: 'returns', roles: [ROLES.EMPLOYEE] },
             { label: 'Рейси', path: 'trips', isCustomPage: true, endpoint: 'trips', roles: [ROLES.EMPLOYEE, ROLES.DRIVER] },
             { label: 'Накладні', path: 'waybills', isCustomPage: true, endpoint: 'waybills', roles: [ROLES.EMPLOYEE] },
             { label: 'Маршрутні листи', path: 'route-lists', isCustomPage: true, endpoint: 'route-lists', roles: [ROLES.EMPLOYEE, ROLES.COURIER] },

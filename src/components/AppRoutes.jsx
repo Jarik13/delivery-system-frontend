@@ -2,17 +2,14 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import GenericTable from './GenericTable';
 import { MENU_GROUPS } from '../constants/dictionaries';
-import { ROLES, E, D, ED, EDC, C, A, EDCA } from '../constants/roles';
+import { ROLES, E, D, ED, EDC, EDCA } from '../constants/roles';
 import BranchesPage from '../pages/BranchesPage';
 import PostomatsPage from '../pages/PostomatsPage';
 import RoutesPage from '../pages/RoutesPage';
-import ParcelsPage from '../pages/ParcelsPage';
 import ShipmentsPage from '../pages/ShipmentsPage';
 import TripsPage from '../pages/TripsPage';
 import WaybillsPage from '../pages/WaybillsPage';
 import RouteListsPage from '../pages/RouteListsPage';
-import PaymentsPage from '../pages/PaymentsPage';
-import ReturnsPage from '../pages/ReturnsPage';
 import LoginPage from '../pages/LoginPage';
 import SuperAdminPage from '../pages/SuperAdminPage';
 import AdminPage from '../pages/AdminPage';
@@ -88,9 +85,6 @@ const AppRoutes = () => {
             } />
 
             <Route path="/shipments" element={<ProtectedRoute allowedRoles={E}><ShipmentsPage /></ProtectedRoute>} />
-            <Route path="/parcels" element={<ProtectedRoute allowedRoles={E}><ParcelsPage /></ProtectedRoute>} />
-            <Route path="/payments" element={<ProtectedRoute allowedRoles={E}><PaymentsPage /></ProtectedRoute>} />
-            <Route path="/returns" element={<ProtectedRoute allowedRoles={E}><ReturnsPage /></ProtectedRoute>} />
             <Route path="/branches" element={<ProtectedRoute allowedRoles={E}><BranchesPage /></ProtectedRoute>} />
             <Route path="/postomats" element={<ProtectedRoute allowedRoles={E}><PostomatsPage /></ProtectedRoute>} />
             <Route path="/trips" element={<ProtectedRoute allowedRoles={ED}><TripsPage /></ProtectedRoute>} />
