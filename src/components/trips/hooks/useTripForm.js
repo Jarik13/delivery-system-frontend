@@ -116,35 +116,55 @@ const useTripForm = ({ open, tripToEdit, onSuccess, onClose }) => {
         const loadTrip = async () => {
             setLoadingTrip(true);
             try {
-                const coordsData = tripToEdit?.waypointCoordinates || [];
-
-                if (coordsData.length >= 2) {
-                    const segs = coordsData
-                        .slice()
-                        .sort((a, b) => (a.sequenceNumber ?? 0) - (b.sequenceNumber ?? 0))
-                        .map((wp) => makeSegment({
-                            cityId: wp.cityId ?? null,
-                            cityName: wp.cityName ?? '',
-                            regionId: wp.regionId ?? null,
-                            districtId: wp.districtId ?? null,
-                            lat: wp.latitude ?? null,
-                            lng: wp.longitude ?? null,
-                        }));
-
-                    setSegments(segs);
-                } else {
-                    setSegments(initialSegments());
-                }
-
                 setForm({
                     driverId: tripToEdit.driverId ?? null,
                     vehicleId: tripToEdit.vehicleId ?? null,
-                    scheduledDeparture: tripToEdit.scheduledDepartureTime ? toDatetimeLocal(tripToEdit.scheduledDepartureTime) : '',
-                    scheduledArrival: tripToEdit.scheduledArrivalTime ? toDatetimeLocal(tripToEdit.scheduledArrivalTime) : '',
+                    scheduledDeparture: toDatetimeLocal(tripToEdit.scheduledDepartureTime),
+                    scheduledArrival: toDatetimeLocal(tripToEdit.scheduledArrivalTime),
                 });
 
+                const segmentsRes = await DictionaryApi.getById('trips', `${tripToEdit.id}/segments`);
+                const segmentsData = segmentsRes.data || [];
+
+                if (segmentsData.length > 0) {
+                    const chain = segmentsData.map(seg => ({
+                        id: seg.routeId,
+                        originCityName: seg.originCity,
+                        destinationCityName: seg.destCity,
+                        originCityId: seg.originCityId,
+                        destinationCityId: seg.destCityId,
+                        distanceKm: seg.distance
+                    }));
+
+                    setRouteChain(chain);
+                    setSelectedRouteIds(chain.map(c => c.id));
+
+                    const waypoints = [
+                        {
+                            id: crypto.randomUUID(),
+                            cityId: segmentsData[0].originCityId,
+                            cityName: segmentsData[0].originCity,
+                            districtId: segmentsData[0].originDistrictId,
+                            regionId: segmentsData[0].originRegionId,
+                            lat: segmentsData[0].originLat,
+                            lng: segmentsData[0].originLng
+                        },
+                        ...segmentsData.map(seg => ({
+                            id: crypto.randomUUID(),
+                            cityId: seg.destCityId,
+                            cityName: seg.destCity,
+                            districtId: seg.destDistrictId,
+                            regionId: seg.destRegionId,
+                            lat: seg.destLat,
+                            lng: seg.destLng
+                        }))
+                    ];
+
+                    console.log("DEBUG: Waypoints with full hierarchy:", waypoints);
+                    setSegments(waypoints);
+                }
             } catch (e) {
-                setSegments(initialSegments());
+                console.error('Помилка відновлення ланцюжка маршруту:', e);
             } finally {
                 setLoadingTrip(false);
             }
