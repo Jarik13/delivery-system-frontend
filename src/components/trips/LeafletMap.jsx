@@ -100,6 +100,38 @@ function createArrowIcon(color = '#FB8C00', bearing = 0) {
     });
 }
 
+function createEmergencyIcon() {
+    const svg = `
+        <style>
+            @keyframes em-pulse {
+                0%   { transform: scale(0.85); opacity: 0.8; }
+                50%  { transform: scale(1.25); opacity: 0.3; }
+                100% { transform: scale(0.85); opacity: 0.8; }
+            }
+            @keyframes em-ring {
+                0%   { transform: scale(1);   opacity: 0.6; }
+                100% { transform: scale(2.2); opacity: 0; }
+            }
+            .em-ring  { animation: em-ring  1.5s ease-out infinite; transform-origin: 20px 20px; }
+            .em-inner { animation: em-pulse 1.5s ease-in-out infinite; transform-origin: 20px 20px; }
+        </style>
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+            <circle class="em-ring"  cx="20" cy="20" r="16" fill="#d32f2f" opacity="0.5"/>
+            <g class="em-inner">
+                <circle cx="20" cy="20" r="14" fill="#d32f2f" stroke="white" stroke-width="2.5"/>
+                <text x="20" y="25" text-anchor="middle"
+                    font-size="18" font-weight="900" fill="white"
+                    font-family="Arial, sans-serif">!</text>
+            </g>
+        </svg>`;
+    return L.divIcon({
+        html: svg,
+        className: '',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+    });
+}
+
 function buildDistanceLookup(coords) {
     const dist = [0];
     for (let i = 1; i < coords.length; i++) {
@@ -157,18 +189,36 @@ const WaybillPanel = ({ data, onClose, mainColor }) => (
                     )}
                 </Stack>
             </Stack>
-            <IconButton onClick={onClose} size="small" sx={{ color: 'white', mt: -0.5 }}><Close fontSize="small" /></IconButton>
+            <IconButton onClick={onClose} size="small" sx={{ color: 'white', mt: -0.5 }}>
+                <Close fontSize="small" />
+            </IconButton>
         </Box>
+
         <Box sx={{ px: 2, py: 1, display: 'flex', gap: 1, borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
-            <Chip icon={<Scale sx={{ fontSize: '13px !important' }} />} label={`${data.totalWeight ?? 0} кг`} size="small" sx={{ fontWeight: 700, fontSize: '0.7rem', bgcolor: 'rgba(255,255,255,0.1)', color: 'white' }} />
-            <Chip label={`${data.shipments?.length || 0} відправлень`} size="small" sx={{ bgcolor: alpha(mainColor, 0.3), color: 'white', fontWeight: 700, fontSize: '0.7rem' }} />
+            <Chip
+                icon={<Scale sx={{ fontSize: '13px !important' }} />}
+                label={`${data.totalWeight ?? 0} кг`}
+                size="small"
+                sx={{ fontWeight: 700, fontSize: '0.7rem', bgcolor: 'rgba(255,255,255,0.1)', color: 'white' }}
+            />
+            <Chip
+                label={`${data.shipments?.length || 0} відправлень`}
+                size="small"
+                sx={{ bgcolor: alpha(mainColor, 0.3), color: 'white', fontWeight: 700, fontSize: '0.7rem' }}
+            />
         </Box>
+
         <Box sx={{ flex: 1, overflow: 'auto' }}>
             <Table size="small" stickyHeader>
                 <TableHead>
                     <TableRow>
                         {['№', 'Трекінг', 'Відправник', 'Отримувач', 'Вага', 'Статус'].map(h => (
-                            <TableCell key={h} sx={{ fontWeight: 800, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: 0.5, bgcolor: '#16213e', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.08)' }}>{h}</TableCell>
+                            <TableCell key={h} sx={{
+                                fontWeight: 800, fontSize: '0.65rem',
+                                textTransform: 'uppercase', letterSpacing: 0.5,
+                                bgcolor: '#16213e', color: 'rgba(255,255,255,0.5)',
+                                whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.08)',
+                            }}>{h}</TableCell>
                         ))}
                     </TableRow>
                 </TableHead>
@@ -176,19 +226,51 @@ const WaybillPanel = ({ data, onClose, mainColor }) => (
                     {(data.shipments || []).map(s => {
                         const sc = SHIPMENT_STATUS_COLORS[s.shipmentStatusName] || SHIPMENT_STATUS_COLORS['default'];
                         return (
-                            <TableRow key={s.id} sx={{ bgcolor: 'transparent', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' }, borderLeft: `3px solid ${alpha(sc, 0.5)}` }}>
+                            <TableRow key={s.id} sx={{
+                                bgcolor: 'transparent',
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
+                                borderLeft: `3px solid ${alpha(sc, 0.5)}`,
+                            }}>
                                 <TableCell sx={{ pl: 1.5, py: 1, width: 40, borderColor: 'rgba(255,255,255,0.06)' }}>
-                                    <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>{s.sequenceNumber ?? '—'}</Box>
+                                    <Box sx={{
+                                        width: 24, height: 24, borderRadius: '50%',
+                                        bgcolor: 'rgba(255,255,255,0.1)',
+                                        color: 'rgba(255,255,255,0.7)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 11, fontWeight: 700,
+                                    }}>{s.sequenceNumber ?? '—'}</Box>
                                 </TableCell>
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}>
-                                    <Typography variant="caption" sx={{ fontFamily: 'monospace', fontWeight: 700, bgcolor: 'rgba(255,255,255,0.08)', px: 1, py: 0.25, borderRadius: 1, color: mainColor === '#7B1FA2' ? '#ce93d8' : mainColor, fontSize: 11 }}>{s.trackingNumber || `#${s.id}`}</Typography>
+                                    <Typography variant="caption" sx={{
+                                        fontFamily: 'monospace', fontWeight: 700,
+                                        bgcolor: 'rgba(255,255,255,0.08)', px: 1, py: 0.25,
+                                        borderRadius: 1,
+                                        color: mainColor === '#7B1FA2' ? '#ce93d8' : mainColor,
+                                        fontSize: 11,
+                                    }}>{s.trackingNumber || `#${s.id}`}</Typography>
                                 </TableCell>
-                                <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}><Typography variant="caption" fontWeight={600} sx={{ color: 'rgba(255,255,255,0.8)' }}>{s.senderFullName || '—'}</Typography></TableCell>
-                                <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}><Typography variant="caption" fontWeight={600} sx={{ color: 'rgba(255,255,255,0.8)' }}>{s.recipientFullName || '—'}</Typography></TableCell>
-                                <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}><Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>{s.actualWeight != null ? `${s.actualWeight} кг` : '—'}</Typography></TableCell>
+                                <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                    <Typography variant="caption" fontWeight={600} sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                                        {s.senderFullName || '—'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                    <Typography variant="caption" fontWeight={600} sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                                        {s.recipientFullName || '—'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                                        {s.actualWeight != null ? `${s.actualWeight} кг` : '—'}
+                                    </Typography>
+                                </TableCell>
                                 <TableCell sx={{ py: 1, whiteSpace: 'nowrap', borderColor: 'rgba(255,255,255,0.06)' }}>
                                     {s.shipmentStatusName
-                                        ? <Chip label={s.shipmentStatusName} size="small" sx={{ bgcolor: alpha(sc, 0.18), color: sc, fontWeight: 700, fontSize: 11, height: 22, border: `1px solid ${alpha(sc, 0.4)}` }} />
+                                        ? <Chip label={s.shipmentStatusName} size="small" sx={{
+                                            bgcolor: alpha(sc, 0.18), color: sc,
+                                            fontWeight: 700, fontSize: 11, height: 22,
+                                            border: `1px solid ${alpha(sc, 0.4)}`,
+                                        }} />
                                         : '—'}
                                 </TableCell>
                             </TableRow>
@@ -197,6 +279,52 @@ const WaybillPanel = ({ data, onClose, mainColor }) => (
                 </TableBody>
             </Table>
         </Box>
+    </Box>
+);
+
+const EmergencyBanner = ({ fromCity, toCity }) => (
+    <Box sx={{
+        position: 'absolute',
+        top: 12,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1050,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.2,
+        px: 2,
+        py: 1,
+        borderRadius: 2.5,
+        bgcolor: 'rgba(26, 10, 10, 0.92)',
+        border: '1.5px solid rgba(211, 47, 47, 0.7)',
+        boxShadow: '0 4px 20px rgba(211, 47, 47, 0.35)',
+        backdropFilter: 'blur(8px)',
+        whiteSpace: 'nowrap',
+        pointerEvents: 'none',
+    }}>
+        <Box sx={{
+            width: 9,
+            height: 9,
+            borderRadius: '50%',
+            bgcolor: '#d32f2f',
+            flexShrink: 0,
+            '@keyframes blink': {
+                '0%, 100%': { opacity: 1 },
+                '50%': { opacity: 0.2 },
+            },
+            animation: 'blink 1.2s ease-in-out infinite',
+        }} />
+        <Typography sx={{
+            fontSize: '0.75rem',
+            fontWeight: 800,
+            color: '#ef5350',
+            letterSpacing: 0.4,
+        }}>
+            АВАРІЙНА ЗУПИНКА
+        </Typography>
+        <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>
+            {fromCity} → {toCity}
+        </Typography>
     </Box>
 );
 
@@ -213,21 +341,26 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
     const [waybillPanel, setWaybillPanel] = useState(null);
     const [routeLoading, setRouteLoading] = useState(false);
 
+    const [emergencySegInfo, setEmergencySegInfo] = useState(null);
+
     const COLOR_COMPLETED = '#43A047';
     const COLOR_ACTIVE = '#FB8C00';
     const COLOR_PENDING = '#90A4AE';
+    const COLOR_EMERGENCY = '#d32f2f';
 
     const TRAVEL_DURATION_MS = 300_000;
 
     const tripStatus = (trip?.statusName ?? trip?.status ?? '').toLowerCase();
-    const isPlanned = tripStatus.includes('заплановано') || tripStatus.includes('формо') || tripStatus.includes('завантаж');
-    const isCompleted = tripStatus.includes('завершено');
-    const isInProgress = !isPlanned && !isCompleted;
+    const isEmergencyStopped = tripStatus.includes('аварійна') || tripStatus.includes('аварійн');
+    const isPlanned = !isEmergencyStopped && (tripStatus.includes('заплановано') || tripStatus.includes('формо') || tripStatus.includes('завантаж'));
+    const isCompleted = !isEmergencyStopped && tripStatus.includes('завершено');
+    const isInProgress = !isPlanned && !isCompleted && !isEmergencyStopped;
 
     useEffect(() => {
         if (!trip?.id) return;
         setSegments([]);
         setIsMapReady(false);
+        setEmergencySegInfo(null);
         DictionaryApi.getById('trips', `${trip.id}/segments`)
             .then(res => setSegments(res.data || []))
             .catch(console.error);
@@ -239,7 +372,9 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
         try {
             const res = await DictionaryApi.getById('waybills', `${waybillId}/details`);
             setWaybillPanel({ loading: false, data: res.data });
-        } catch { setWaybillPanel(null); }
+        } catch {
+            setWaybillPanel(null);
+        }
     };
 
     const toggleFullscreen = () => {
@@ -248,7 +383,9 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
     };
 
     useEffect(() => {
-        const handleKey = e => { if (e.key === 'Escape') { setIsFullscreen(false); setWaybillPanel(null); } };
+        const handleKey = e => {
+            if (e.key === 'Escape') { setIsFullscreen(false); setWaybillPanel(null); }
+        };
         if (isFullscreen) document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
     }, [isFullscreen]);
@@ -272,11 +409,9 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
 
         const tick = (now) => {
             if (!dotMarkerRef.current || !animStateRef.current) return;
-
             const elapsed = now - startTime;
             const rawT = Math.min(elapsed / TRAVEL_DURATION_MS, 1);
             const t = easeInOut(rawT);
-
             const pos = positionAtProgress(routeCoords, distLookup, t);
 
             const aheadRaw = Math.min(rawT + 0.02, 1);
@@ -291,7 +426,6 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
             animStateRef.current.lastBearing = bearing;
 
             dotMarkerRef.current.setLatLng(pos);
-
             const gEl = dotMarkerRef.current.getElement()?.querySelector('g');
             if (gEl) {
                 gEl.setAttribute('transform', `rotate(${bearing}, 20, 20)`);
@@ -299,9 +433,7 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
                 dotMarkerRef.current.setIcon(createArrowIcon(COLOR_ACTIVE, bearing));
             }
 
-            if (rawT < 1) {
-                rafRef.current = requestAnimationFrame(tick);
-            }
+            if (rawT < 1) rafRef.current = requestAnimationFrame(tick);
         };
 
         rafRef.current = requestAnimationFrame(tick);
@@ -347,7 +479,11 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
             }
         });
 
-        if (points.length === 0) { map.setView([49.0, 31.0], 6); setIsMapReady(true); return; }
+        if (points.length === 0) {
+            map.setView([49.0, 31.0], 6);
+            setIsMapReady(true);
+            return;
+        }
 
         setRouteLoading(true);
 
@@ -367,10 +503,95 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
 
                 route.forEach(c => allBounds.push(c));
 
-                const isActiveSeg = seg?.isDeparted && !seg?.isCompleted;
+                const isEmergencySeg = isEmergencyStopped && seg?.isDeparted && !seg?.isCompleted;
+                const isActiveSeg = !isEmergencyStopped && seg?.isDeparted && !seg?.isCompleted;
                 const isCompletedSeg = seg?.isCompleted;
 
-                if (isActiveSeg) {
+                if (isEmergencySeg) {
+                    L.polyline(route, {
+                        color: COLOR_EMERGENCY,
+                        weight: 14,
+                        opacity: 0.12,
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                    }).addTo(map);
+
+                    L.polyline(route, {
+                        color: COLOR_EMERGENCY,
+                        weight: 5,
+                        opacity: 0.9,
+                        dashArray: '12, 7',
+                        lineCap: 'round',
+                        lineJoin: 'round',
+                    }).addTo(map);
+
+                    const midIdx = Math.floor(route.length / 2);
+                    const midPoint = route[midIdx] ?? route[0];
+
+                    const emergencyMarker = L.marker(midPoint, {
+                        icon: createEmergencyIcon(),
+                        zIndexOffset: 1000,
+                    }).addTo(map);
+
+                    const stopTime = trip?.emergencyStopTime
+                        ? new Date(trip.emergencyStopTime).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
+                        : null;
+
+                    emergencyMarker.bindPopup(`
+                        <div style="
+                            background:#1a1a2e;
+                            border-radius:10px;
+                            padding:12px 14px;
+                            min-width:200px;
+                            border-top:3px solid #d32f2f;
+                            font-family:sans-serif;
+                        ">
+                            <div style="
+                                display:flex;align-items:center;gap:7px;
+                                margin-bottom:8px;
+                            ">
+                                <div style="
+                                    width:8px;height:8px;border-radius:50%;
+                                    background:#d32f2f;flex-shrink:0;
+                                "></div>
+                                <span style="
+                                    color:#ef5350;font-weight:800;font-size:13px;
+                                    letter-spacing:0.3px;
+                                ">Аварійна зупинка</span>
+                            </div>
+                            <div style="
+                                color:rgba(255,255,255,0.8);font-size:12px;
+                                font-weight:600;margin-bottom:4px;
+                            ">
+                                ${from.name} → ${to.name}
+                            </div>
+                            ${stopTime ? `
+                            <div style="
+                                color:rgba(255,255,255,0.4);font-size:11px;
+                                margin-bottom:8px;
+                            ">Час зупинки: ${stopTime}</div>` : ''}
+                            <div style="
+                                background:rgba(211,47,47,0.12);
+                                border:1px solid rgba(211,47,47,0.3);
+                                border-radius:6px;
+                                padding:6px 10px;
+                                font-size:11px;color:rgba(255,255,255,0.55);
+                            ">
+                                Рейс зупинено. Диспетчер сповіщений.
+                            </div>
+                        </div>
+                    `, {
+                        maxWidth: 260,
+                        className: 'emergency-popup',
+                    });
+
+                    emergencyMarker.openPopup();
+
+                    if (!destroyed) {
+                        setEmergencySegInfo({ fromCity: from.name, toCity: to.name });
+                    }
+
+                } else if (isActiveSeg) {
                     L.polyline(route, {
                         color: COLOR_ACTIVE, weight: 10, opacity: 0.15,
                         lineCap: 'round', lineJoin: 'round',
@@ -393,12 +614,15 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
             if (destroyed) return;
 
             points.forEach((point, idx) => {
+                const isEmergencyPoint = isEmergencyStopped && point.isDeparted && !point.isCompleted && idx > 0;
+
                 const color =
                     point.type === 'origin' ? '#4CAF50'
                         : point.type === 'destination' ? '#E53935'
-                            : point.isCompleted ? COLOR_COMPLETED
-                                : point.isDeparted ? COLOR_ACTIVE
-                                    : COLOR_PENDING;
+                            : isEmergencyPoint ? COLOR_EMERGENCY
+                                : point.isCompleted ? COLOR_COMPLETED
+                                    : point.isDeparted ? COLOR_ACTIVE
+                                        : COLOR_PENDING;
 
                 const label =
                     point.type === 'origin' ? '▶'
@@ -408,34 +632,44 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
                 const hasWaybill = !!point.waybillId;
 
                 const icon = L.divIcon({
-                    html: `<div style="position:relative">
-                      <div style="
-                        background:${color};color:white;border-radius:50%;
-                        width:30px;height:30px;display:flex;align-items:center;justify-content:center;
-                        font-size:11px;font-weight:bold;
-                        border:2.5px solid rgba(255,255,255,0.9);
-                        box-shadow:0 0 0 3px ${alpha(color, 0.35)}, 0 3px 10px rgba(0,0,0,0.5)">
-                        ${label}
-                      </div>
-                      ${hasWaybill ? `<div style="position:absolute;top:-4px;right:-4px;
-                        background:#1565c0;border-radius:50%;width:13px;height:13px;font-size:8px;
-                        color:white;display:flex;align-items:center;justify-content:center;
-                        border:1.5px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5)">📄</div>` : ''}
-                    </div>`,
-                    className: '', iconSize: [30, 30], iconAnchor: [15, 15],
+                    html: `
+                        <div style="position:relative">
+                            <div style="
+                                background:${color};color:white;border-radius:50%;
+                                width:30px;height:30px;
+                                display:flex;align-items:center;justify-content:center;
+                                font-size:11px;font-weight:bold;
+                                border:2.5px solid rgba(255,255,255,0.9);
+                                box-shadow:0 0 0 3px ${alpha(color, 0.35)}, 0 3px 10px rgba(0,0,0,0.5);
+                            ">${label}</div>
+                            ${hasWaybill ? `
+                                <div style="
+                                    position:absolute;top:-4px;right:-4px;
+                                    background:#1565c0;border-radius:50%;
+                                    width:13px;height:13px;font-size:8px;
+                                    color:white;display:flex;align-items:center;justify-content:center;
+                                    border:1.5px solid white;
+                                    box-shadow:0 1px 4px rgba(0,0,0,0.5);
+                                ">📄</div>` : ''}
+                        </div>`,
+                    className: '',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
                 });
 
                 const marker = L.marker([point.lat, point.lng], { icon }).addTo(map);
+
                 if (hasWaybill) {
                     const pid = `wb-${idx}`;
-                    marker.bindPopup(
-                        `<div style="text-align:center;padding:4px 2px;background:#1a1a2e;color:white;border-radius:6px">
+                    marker.bindPopup(`
+                        <div style="text-align:center;padding:4px 2px;background:#1a1a2e;color:white;border-radius:6px">
                             <b style="font-size:13px">${point.name}</b><br/>
-                            <span id="${pid}" style="display:inline-block;margin-top:6px;
-                                background:#1565c0;color:white;padding:4px 10px;border-radius:6px;
-                                cursor:pointer;font-size:11px;font-weight:700">
-                                📄 Переглянути накладну
-                            </span>
+                            <span id="${pid}" style="
+                                display:inline-block;margin-top:6px;
+                                background:#1565c0;color:white;padding:4px 10px;
+                                border-radius:6px;cursor:pointer;
+                                font-size:11px;font-weight:700;
+                            ">📄 Переглянути накладну</span>
                         </div>`, { maxWidth: 200 }
                     );
                     marker.on('popupopen', () => {
@@ -474,7 +708,7 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
             if (dotMarkerRef.current) { dotMarkerRef.current.remove(); dotMarkerRef.current = null; }
             if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
         };
-    }, [trip, segments, isInProgress]);
+    }, [trip, segments, isInProgress, isEmergencyStopped]);
 
     useEffect(() => {
         const t = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 350);
@@ -485,13 +719,17 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
         <Box sx={{
             position: 'absolute', bottom: 56, left: 12, zIndex: 1000,
             bgcolor: 'rgba(20,20,35,0.92)', borderRadius: 2,
-            p: 1, boxShadow: '0 2px 12px rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)',
+            p: 1, boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(6px)',
             border: '1px solid rgba(255,255,255,0.08)',
         }}>
             {[
                 { color: COLOR_COMPLETED, label: 'Пройдено', dash: false, gradient: false },
                 { color: COLOR_ACTIVE, label: 'У дорозі', dash: false, gradient: true },
                 { color: COLOR_PENDING, label: 'Очікує', dash: true, gradient: false },
+                ...(isEmergencyStopped
+                    ? [{ color: COLOR_EMERGENCY, label: 'Аварійна зупинка', dash: true, gradient: false }]
+                    : []),
             ].map(({ color, label, dash, gradient }) => (
                 <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.4 }}>
                     <Box sx={{
@@ -502,13 +740,47 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
                                 ? `repeating-linear-gradient(90deg,${color} 0,${color} 5px,transparent 5px,transparent 9px)`
                                 : color,
                     }} />
-                    <Typography variant="caption" sx={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{label}</Typography>
+                    <Typography variant="caption" sx={{
+                        fontSize: 10,
+                        color: color === COLOR_EMERGENCY ? '#ef9a9a' : 'rgba(255,255,255,0.75)',
+                        fontWeight: color === COLOR_EMERGENCY ? 700 : 600,
+                    }}>
+                        {label}
+                    </Typography>
                 </Box>
             ))}
             {isInProgress && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, pt: 0.5, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: COLOR_ACTIVE, border: '2px solid rgba(255,255,255,0.7)', boxShadow: `0 0 6px ${COLOR_ACTIVE}` }} />
-                    <Typography variant="caption" sx={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>Позиція рейсу</Typography>
+                <Box sx={{
+                    display: 'flex', alignItems: 'center', gap: 1,
+                    mt: 0.5, pt: 0.5,
+                    borderTop: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                    <Box sx={{
+                        width: 10, height: 10, borderRadius: '50%',
+                        bgcolor: COLOR_ACTIVE,
+                        border: '2px solid rgba(255,255,255,0.7)',
+                        boxShadow: `0 0 6px ${COLOR_ACTIVE}`,
+                    }} />
+                    <Typography variant="caption" sx={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>
+                        Позиція рейсу
+                    </Typography>
+                </Box>
+            )}
+            {isEmergencyStopped && (
+                <Box sx={{
+                    display: 'flex', alignItems: 'center', gap: 1,
+                    mt: 0.5, pt: 0.5,
+                    borderTop: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                    <Box sx={{
+                        width: 10, height: 10, borderRadius: '50%',
+                        bgcolor: COLOR_EMERGENCY,
+                        border: '2px solid rgba(255,255,255,0.7)',
+                        boxShadow: `0 0 6px ${COLOR_EMERGENCY}`,
+                    }} />
+                    <Typography variant="caption" sx={{ fontSize: 10, color: '#ef9a9a', fontWeight: 700 }}>
+                        Місце зупинки
+                    </Typography>
                 </Box>
             )}
         </Box>
@@ -519,13 +791,28 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
             <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
             <Legend />
 
-            <Tooltip title={isFullscreen ? 'Вийти з повноекранного режиму' : 'Повноекранний режим'} placement="left">
+            {isEmergencyStopped && emergencySegInfo && isMapReady && (
+                <EmergencyBanner
+                    fromCity={emergencySegInfo.fromCity}
+                    toCity={emergencySegInfo.toCity}
+                />
+            )}
+
+            <Tooltip
+                title={isFullscreen ? 'Вийти з повноекранного режиму' : 'Повноекранний режим'}
+                placement="left"
+            >
                 <IconButton onClick={toggleFullscreen} sx={{
                     position: 'absolute', bottom: 16, right: 16, zIndex: 1000,
                     bgcolor: 'rgba(20,20,35,0.85)', color: 'white',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                    border: `1px solid ${alpha(mainColor, 0.4)}`, transition: 'all 0.2s ease',
-                    '&:hover': { bgcolor: mainColor, borderColor: mainColor, boxShadow: `0 4px 12px ${alpha(mainColor, 0.5)}` },
+                    border: `1px solid ${alpha(mainColor, 0.4)}`,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                        bgcolor: mainColor,
+                        borderColor: mainColor,
+                        boxShadow: `0 4px 12px ${alpha(mainColor, 0.5)}`,
+                    },
                 }}>
                     {isFullscreen ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
                 </IconButton>
@@ -533,16 +820,34 @@ const LeafletMap = ({ trip, mainColor = '#7B1FA2' }) => {
 
             {waybillPanel && (
                 waybillPanel.loading
-                    ? <Box sx={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: { xs: '100%', sm: 500 }, bgcolor: '#1a1a2e', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, boxShadow: '-4px 0 24px rgba(0,0,0,0.4)' }}>
+                    ? <Box sx={{
+                        position: 'absolute', top: 0, right: 0, bottom: 0,
+                        width: { xs: '100%', sm: 500 },
+                        bgcolor: '#1a1a2e',
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        zIndex: 1100,
+                        boxShadow: '-4px 0 24px rgba(0,0,0,0.4)',
+                    }}>
                         <CircularProgress sx={{ color: mainColor }} />
                     </Box>
                     : waybillPanel.data
-                        ? <WaybillPanel data={waybillPanel.data} onClose={() => setWaybillPanel(null)} mainColor={mainColor} />
+                        ? <WaybillPanel
+                            data={waybillPanel.data}
+                            onClose={() => setWaybillPanel(null)}
+                            mainColor={mainColor}
+                        />
                         : null
             )}
 
             {(!isMapReady || routeLoading) && (
-                <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', bgcolor: 'rgba(10,10,20,0.7)', zIndex: 1000, gap: 1.5 }}>
+                <Box sx={{
+                    position: 'absolute', top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    display: 'flex', flexDirection: 'column',
+                    justifyContent: 'center', alignItems: 'center',
+                    bgcolor: 'rgba(10,10,20,0.7)',
+                    zIndex: 1000, gap: 1.5,
+                }}>
                     <CircularProgress size={32} sx={{ color: mainColor }} />
                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }} fontWeight={600}>
                         {routeLoading ? 'Будуємо маршрут по дорогах...' : 'Завантаження карти...'}
