@@ -14,6 +14,14 @@ export const ROLES_META = [
     { value: 'SUPER_ADMIN', label: 'Супер адмін', color: '#f44336' },
 ];
 
+export const ROLE_LABELS = {
+    'SUPER_ADMIN': 'Super Admin',
+    'ADMIN': 'Admin',
+    'EMPLOYEE': 'Employee',
+    'DRIVER': 'Driver',
+    'COURIER': 'Courier'
+};
+
 export const getRoleMeta = (roleValue) =>
     ROLES_META.find(r => r.value === roleValue) || { label: roleValue, color: '#757575' };
 

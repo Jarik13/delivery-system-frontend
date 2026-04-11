@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import AppRoutes from './components/AppRoutes';
 import { useAuth } from './context/AuthContext';
+import { ROLE_LABELS } from './constants/roles';
 
 const FULLSCREEN_ROUTES = ['/courier'];
 
@@ -12,6 +13,9 @@ function App() {
     const location = useLocation();
     const isFullscreen = FULLSCREEN_ROUTES.includes(location.pathname);
 
+    const rawRole = auth?.role ? auth.role.replace('ROLE_', '') : '';
+    const displayRole = ROLE_LABELS[rawRole] || rawRole;
+
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
@@ -19,7 +23,7 @@ function App() {
                 <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
                     <Toolbar>
                         <Typography variant="h6" noWrap component="div">
-                            Delivery System Admin
+                            Delivery System {displayRole}
                         </Typography>
                     </Toolbar>
                 </AppBar>
