@@ -19,14 +19,14 @@ const STATUS_ICONS = {
     'У процесі доставки': RadioButtonUnchecked,
 };
 
-const ACTIONABLE_STATUSES = ['Видано кур\'єру', 'Спроба вручення провалена', 'У процесі доставки'];
+const ACTIONABLE_STATUSES = ['Видано кур\'єру', 'Спроба вручення провалена', 'У дорозі', 'У процесі доставки'];
 
 const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotify }) => {
     const [loading, setLoading] = useState(false);
     const [returnOpen, setReturnOpen] = useState(false);
     const [paymentOpen, setPaymentOpen] = useState(false);
 
-    const statusName = item.shipmentStatusName || (item.isDelivered ? 'Доставлено' : 'У процесі доставки');
+    const statusName = item.shipmentStatusName || (item.isDelivered ? 'Доставлено' : 'У дорозі');
     const color = getStatusColor(SHIPMENT_STATUS_COLORS, statusName);
     const Icon = STATUS_ICONS[statusName] || RadioButtonUnchecked;
     const canAct = ACTIONABLE_STATUSES.includes(statusName);
@@ -39,21 +39,19 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
             return;
         }
 
+        if (action === 'DELIVERED') {
+            const hasMoney = Number(item.remainingAmount || item.codAmount || 0) > 0;
+            const alreadyPaid = item.isFullyPaid === true;
+            if (hasMoney && !alreadyPaid) {
+                setPaymentOpen(true);
+                return;
+            }
+        }
+
         setLoading(true);
         try {
-            const response = await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
-            const updatedItem = response.data;
-
-            const isDelivered = action === 'DELIVERED';
-
-            const hasMoney = Number(updatedItem.remainingAmount || updatedItem.codAmount || 0) > 0;
-            const needsCod = updatedItem.hasCod === true || hasMoney;
-
-            if (isDelivered && needsCod && hasMoney) {
-                setPaymentOpen(true);
-            } else {
-                onStatusChange?.();
-            }
+            await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action });
+            onStatusChange?.();
         } catch (e) {
             onNotify?.('Помилка оновлення статусу', 'error');
         } finally {
@@ -133,6 +131,26 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
                                 border: `1px solid ${alpha(color, 0.25)}`,
                             }}
                         />
+                        {item.isFullyPaid != null && (
+                            <Chip
+                                label={
+                                    item.isFullyPaid
+                                        ? 'Оплачено'
+                                        : `Не оплачено${item.remainingAmount > 0 ? `: ${item.remainingAmount} ₴` : ''}`
+                                }
+                                size="small"
+                                sx={{
+                                    height: 20, fontSize: 10, fontWeight: 700,
+                                    bgcolor: item.isFullyPaid
+                                        ? alpha('#4caf50', 0.1)
+                                        : alpha('#f44336', 0.1),
+                                    color: item.isFullyPaid ? '#4caf50' : '#f44336',
+                                    border: `1px solid ${item.isFullyPaid
+                                        ? alpha('#4caf50', 0.3)
+                                        : alpha('#f44336', 0.3)}`,
+                                }}
+                            />
+                        )}
                         {item.weight != null && (
                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
                                 {item.weight} кг
@@ -218,13 +236,21 @@ const ShipmentCard = ({ item, routeListId, paymentTypes, onStatusChange, onNotif
 
             <PaymentDialog
                 open={paymentOpen}
-                onClose={() => { setPaymentOpen(false); onStatusChange?.(); }}
+                onClose={() => setPaymentOpen(false)}
                 item={item}
                 paymentTypes={paymentTypes}
-                onSuccess={(msg) => {
+                onSuccess={async (msg) => {
                     setPaymentOpen(false);
-                    onStatusChange?.();
-                    onNotify?.(msg, 'success');
+                    setLoading(true);
+                    try {
+                        await DictionaryApi.patch(`route-lists/items/${item.id}/status`, { action: 'DELIVERED' });
+                        onStatusChange?.();
+                        onNotify?.(msg, 'success');
+                    } catch (e) {
+                        onNotify?.('Оплата збережена, але статус не оновився', 'error');
+                    } finally {
+                        setLoading(false);
+                    }
                 }}
             />
         </>
